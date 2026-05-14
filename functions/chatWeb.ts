@@ -1,0 +1,173 @@
+// chatWeb - Los Hombres chat page server
+export default async function handler(req: Request): Promise<Response> {
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Los Hombres — Atendimento</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b141a; color: #e9edef; display: flex; flex-direction: column; height: 100vh; }
+#welcome { position: fixed; inset: 0; background: #0b141a; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; z-index: 100; }
+.wlogo { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #c9a84c, #8b6914); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 20px; box-shadow: 0 4px 24px rgba(201,168,76,0.35); }
+.wtitle { font-size: 22px; font-weight: 700; color: #e9edef; text-align: center; margin-bottom: 6px; }
+.wsub { font-size: 14px; color: #8696a0; text-align: center; margin-bottom: 32px; line-height: 1.5; }
+.wcard { background: #202c33; border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 380px; }
+.wlabel { font-size: 13px; color: #8696a0; margin-bottom: 8px; }
+.winput-wrap { display: flex; gap: 8px; align-items: center; background: #2a3942; border-radius: 12px; padding: 4px 4px 4px 14px; }
+.wflag { font-size: 20px; flex-shrink: 0; }
+.wddi { font-size: 14px; color: #8696a0; flex-shrink: 0; padding-right: 6px; border-right: 1px solid #3b4a54; }
+#wtel { flex: 1; background: transparent; border: none; outline: none; color: #e9edef; font-size: 16px; padding: 8px 4px; min-width: 0; }
+#wtel::placeholder { color: #8696a0; }
+.wname-wrap { display: flex; align-items: center; background: #2a3942; border-radius: 12px; padding: 4px 4px 4px 14px; margin-top: 12px; }
+#wname { flex: 1; background: transparent; border: none; outline: none; color: #e9edef; font-size: 16px; padding: 8px 4px; min-width: 0; }
+#wname::placeholder { color: #8696a0; }
+.wbtn { width: 100%; margin-top: 18px; padding: 14px; background: #00a884; border: none; border-radius: 12px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.wbtn:hover { background: #00c99e; }
+.wprivacy { font-size: 12px; color: #8696a0; text-align: center; margin-top: 14px; line-height: 1.5; }
+.wprivacy span { color: #00a884; }
+#app { display: none; flex-direction: column; height: 100%; }
+header { background: #202c33; padding: 10px 16px; display: flex; align-items: center; gap: 12px; min-height: 60px; flex-shrink: 0; }
+.avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #c9a84c, #8b6914); display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.hname { font-size: 16px; font-weight: 600; color: #e9edef; }
+.hstatus { font-size: 12px; color: #00a884; margin-top: 2px; }
+#chat { flex: 1; overflow-y: auto; padding: 14px 5%; display: flex; flex-direction: column; gap: 4px; background: #0b141a; }
+#chat::-webkit-scrollbar { width: 4px; }
+#chat::-webkit-scrollbar-thumb { background: #2a3942; border-radius: 2px; }
+.date-div { text-align: center; margin: 8px 0 12px; }
+.date-div span { background: #182229; color: #8696a0; font-size: 12px; padding: 4px 14px; border-radius: 8px; }
+.row { display: flex; margin: 1px 0; }
+.row.bot { justify-content: flex-start; padding-right: 15%; }
+.row.user { justify-content: flex-end; padding-left: 15%; }
+.bub { padding: 7px 12px 4px; border-radius: 8px; font-size: 14.5px; line-height: 1.55; position: relative; word-wrap: break-word; max-width: 100%; }
+.row.bot .bub { background: #202c33; border-top-left-radius: 0; }
+.row.user .bub { background: #005c4b; border-top-right-radius: 0; }
+.row.bot .bub::before { content: ''; position: absolute; top: 0; left: -7px; border: 7px solid transparent; border-top-color: #202c33; border-right-color: #202c33; }
+.row.user .bub::before { content: ''; position: absolute; top: 0; right: -7px; border: 7px solid transparent; border-top-color: #005c4b; border-left-color: #005c4b; }
+.bub .t { font-size: 11px; color: #8696a0; float: right; margin-left: 10px; margin-top: 2px; }
+.bub a { color: #53bdeb; word-break: break-all; }
+.trow { display: flex; margin: 2px 0; }
+.tbub { background: #202c33; border-radius: 8px; border-top-left-radius: 0; padding: 11px 15px; display: flex; gap: 4px; align-items: center; }
+.tbub span { width: 7px; height: 7px; background: #8696a0; border-radius: 50%; display: block; animation: bn 1.3s infinite; }
+.tbub span:nth-child(2) { animation-delay: 0.2s; }
+.tbub span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bn { 0%,60%,100%{transform:translateY(0);opacity:.5} 30%{transform:translateY(-5px);opacity:1} }
+#qa { background: #202c33; padding: 8px 10px; display: flex; gap: 7px; overflow-x: auto; flex-shrink: 0; border-top: 1px solid #2a3942; scrollbar-width: none; }
+#qa::-webkit-scrollbar { display: none; }
+.qb { background: #2a3942; border: 1px solid #3b4a54; color: #00a884; border-radius: 20px; padding: 6px 13px; font-size: 13px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.qb:hover { background: #3b4a54; }
+footer { background: #202c33; padding: 8px 10px; display: flex; align-items: flex-end; gap: 8px; flex-shrink: 0; border-top: 1px solid #2a3942; }
+#inp { flex: 1; background: #2a3942; border: none; border-radius: 22px; padding: 10px 16px; color: #e9edef; font-size: 15px; outline: none; resize: none; max-height: 100px; min-height: 44px; line-height: 1.4; font-family: inherit; scrollbar-width: none; }
+#inp::placeholder { color: #8696a0; }
+#sb { width: 44px; height: 44px; min-width: 44px; background: #00a884; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#sb:hover { background: #00c99e; }
+#sb:disabled { background: #2a3942; cursor: not-allowed; }
+#sb svg { width: 20px; height: 20px; fill: white; }
+</style>
+</head>
+<body>
+<div id="welcome">
+  <div class="wlogo">L</div>
+  <div class="wtitle">Los Hombres Estúdio Spa</div>
+  <div class="wsub">Atendimento masculino de alto padrão<br>Savassi &amp; Betim — Belo Horizonte</div>
+  <div class="wcard">
+    <div class="wlabel">Seu WhatsApp (para personalizarmos seu atendimento)</div>
+    <div class="winput-wrap">
+      <span class="wflag">&#127463;&#127479;</span>
+      <span class="wddi">+55</span>
+      <input id="wtel" type="tel" placeholder="(31) 99999-0000" maxlength="16" inputmode="numeric">
+    </div>
+    <div class="wname-wrap">
+      <input id="wname" type="text" placeholder="Seu nome (opcional)" maxlength="40">
+    </div>
+    <button class="wbtn" onclick="startChat()">Iniciar conversa &#8594;</button>
+    <div class="wprivacy">&#128274; Seus dados são usados apenas para <span>personalizar seu atendimento</span> e nunca compartilhados.</div>
+  </div>
+</div>
+<div id="app">
+  <header>
+    <div class="avatar">L</div>
+    <div>
+      <div class="hname">Los Hombres Estúdio Spa</div>
+      <div class="hstatus">&#9679; online agora</div>
+    </div>
+  </header>
+  <div id="chat"><div class="date-div"><span>hoje</span></div></div>
+  <div id="qa">
+    <button class="qb" onclick="qk('Quais massagens vocês oferecem?')">&#128134; Massagens</button>
+    <button class="qb" onclick="qk('Quero agendar uma sessão')">&#128197; Agendar</button>
+    <button class="qb" onclick="qk('Quanto custa?')">&#128176; Preços</button>
+    <button class="qb" onclick="qk('Tem para casais?')">&#128145; Casais</button>
+    <button class="qb" onclick="qk('Onde fica?')">&#128205; Localização</button>
+  </div>
+  <footer>
+    <textarea id="inp" placeholder="Mensagem" rows="1"></textarea>
+    <button id="sb" disabled><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </footer>
+</div>
+<script>
+var C,I,B,H=[],META={};
+var EP='https://massagem-a87e3c43.base44.app/functions/chatCliente';
+var params=new URLSearchParams(window.location.search);
+var TEL=params.get('tel')||'';
+var NOME=params.get('nome')||'';
+var UTM=params.get('utm')||'';
+var SID='';
+document.getElementById('wtel').addEventListener('input',function(){
+  var v=this.value.replace(/\\D/g,'');
+  if(v.length<=2)this.value=v;
+  else if(v.length<=7)this.value='('+v.slice(0,2)+') '+v.slice(2);
+  else this.value='('+v.slice(0,2)+') '+v.slice(2,7)+'-'+v.slice(7,11);
+});
+function startChat(){
+  var tel=document.getElementById('wtel').value.replace(/\\D/g,'');
+  var nome=document.getElementById('wname').value.trim();
+  if(tel.length<10){document.getElementById('wtel').style.outline='2px solid #e53935';setTimeout(function(){document.getElementById('wtel').style.outline='';},1500);return;}
+  TEL=tel;NOME=nome;META.whatsapp=tel;if(nome)META.nome=nome;launchChat();
+}
+function launchChat(){
+  SID=TEL?('sess_'+TEL):('sess_'+Date.now()+'_'+Math.random().toString(36).substr(2,6));
+  localStorage.setItem('lh_sid',SID);
+  if(UTM)META.utm=UTM;
+  document.getElementById('welcome').style.display='none';
+  var app=document.getElementById('app');app.style.display='flex';
+  C=document.getElementById('chat');I=document.getElementById('inp');B=document.getElementById('sb');
+  B.onclick=function(){doSend(I.value);};
+  I.addEventListener('input',function(){B.disabled=!I.value.trim();I.style.height='auto';I.style.height=Math.min(I.scrollHeight,100)+'px';});
+  I.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend(I.value);}});
+  setTimeout(function(){
+    var s=NOME?'Olá, '+NOME+'! Seja bem-vindo ao Estúdio Los Hombres &#128420;\\n\\nSou o assistente virtual, estou aqui pra te ajudar a escolher a experiência ideal e tirar qualquer dúvida.\\n\\nComo posso te ajudar hoje?':'Olá! Seja bem-vindo ao Estúdio Los Hombres &#128420;\\n\\nSou o assistente virtual, estou aqui pra te ajudar a escolher a experiência ideal e tirar qualquer dúvida.\\n\\nComo posso te ajudar hoje?';
+    addMsg(s,'bot');
+  },500);
+}
+function ts(){return new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+function addMsg(txt,role){
+  var row=document.createElement('div');row.className='row '+role;
+  var b=document.createElement('div');b.className='bub';
+  var s=txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>').replace(/(https?:\\/\\/[^\\s<&]+)/g,'<a href="$1" target="_blank">$1</a>');
+  b.innerHTML=s+'<span class="t">'+ts()+'</span>';
+  row.appendChild(b);C.appendChild(row);C.scrollTop=C.scrollHeight;
+}
+function showT(){var r=document.createElement('div');r.className='trow';r.id='ty';r.innerHTML='<div class="tbub"><span></span><span></span><span></span></div>';C.appendChild(r);C.scrollTop=C.scrollHeight;}
+function hideT(){var t=document.getElementById('ty');if(t)t.remove();}
+function doSend(txt){
+  txt=txt.trim();if(!txt)return;
+  document.getElementById('qa').style.display='none';
+  addMsg(txt,'user');H.push({role:'user',content:txt});
+  I.value='';I.style.height='auto';B.disabled=true;showT();
+  fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:txt,history:H.slice(-14),sessao_id:SID,meta:META})})
+  .then(function(r){return r.json();})
+  .then(function(d){hideT();if(d.meta)META=Object.assign(META,d.meta);var rep=d.reply||'Desculpe, tente novamente.';addMsg(rep,'bot');H.push({role:'assistant',content:rep});B.disabled=false;I.focus();})
+  .catch(function(){hideT();addMsg('Erro de conexão. Tente novamente.','bot');B.disabled=false;});
+}
+function qk(t){doSend(t);}
+window.onload=function(){if(TEL){META.whatsapp=TEL;if(NOME)META.nome=NOME;launchChat();}};
+</script>
+</body>
+</html>`;
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
+  });
+}
