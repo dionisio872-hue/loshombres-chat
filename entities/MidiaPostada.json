@@ -1,0 +1,52 @@
+{
+  "type": "object",
+  "properties": {
+    "midia_id": {
+      "type": "string",
+      "description": "Identificador \u00fanico da m\u00eddia (nome do arquivo, URL ou hash)"
+    },
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o da m\u00eddia (ex: v\u00eddeo nuru summa, \u00e1udio relaxante)"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "video",
+        "audio",
+        "imagem",
+        "link"
+      ],
+      "description": "Tipo de m\u00eddia"
+    },
+    "canais_postados": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista de canais onde j\u00e1 foi postada: instagram, twitter, telegram_canal"
+    },
+    "todos_canais_usados": {
+      "type": "boolean",
+      "description": "true quando j\u00e1 foi postada nos 3 canais \u2014 nunca mais usar"
+    },
+    "data_instagram": {
+      "type": "string",
+      "description": "Data de postagem no Instagram"
+    },
+    "data_twitter": {
+      "type": "string",
+      "description": "Data de postagem no Twitter/X"
+    },
+    "data_telegram": {
+      "type": "string",
+      "description": "Data de postagem no Telegram Canal"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Notas adicionais sobre a m\u00eddia"
+    }
+  },
+  "required": [],
+  "name": "MidiaPostada"
+}
