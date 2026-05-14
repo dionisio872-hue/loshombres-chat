@@ -98,25 +98,44 @@ https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7
 
 ---
 
-### 9. Vergonha do corpo
+### 9. Resgate — cliente que sumiu sem agendar
+Enviar PRIMEIRO o áudio, depois o texto:
+
+🎙️ ÁUDIO DE RESGATE:
+https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/009f51b4c_resgate.ogg
+
+📝 TEXTO (enviar logo após o áudio):
+> E aí, tudo certo?
+>
+> Passei pra saber como você está e se a rotina deu uma trégua. Lembrei da nossa conversa sobre a massagem e imaginei que você ainda deve estar precisando daquele momento pra desligar de tudo.
+>
+> Às vezes a gente vai só 'atropelando' os dias e esquece de dar um pause, né? Estou com horários novos essa semana, e o ambiente continua aquele esquema: sigilo total e foco no seu relaxamento, pra você vir sem medo de ser feliz.
+>
+> Conseguiu organizar seu tempo por aí? Se quiser garantir um horário pra se dar esse presente, é só me dar um alô — ou se preferir, podemos marcar um bate-papo pra gente se conhecer, quebrar o gelo e tirar suas dúvidas.
+>
+> Tô por aqui! 😊
+
+---
+
+### 10. Vergonha do corpo
 > Massagem não é sobre ter "corpo padrão". Eu atendo corpos reais, de todos os tipos — gordo, magro, sarado, tímido, inseguro. O ambiente é de acolhimento, sem julgamento nenhum.
 
 ---
 
-### 10. Micose / alteração de pele
+### 11. Micose / alteração de pele
 > Por questão de segurança, não é indicado realizar massagem em regiões com micose ativa. Aguardar a completa cicatrização. Quando estiver tudo certo, será um prazer te atender! 😊
 
 ---
 
-### 11. Pergunta sobre tatuagem
+### 12. Pergunta sobre tatuagem
 Direcionar para WhatsApp: 31991266270
 
-### 12. Pergunta sobre conteúdo adulto
+### 13. Pergunta sobre conteúdo adulto
 Direcionar para WhatsApp: 31987862117
 
 ---
 
-### 13. Interesse em vagas / entrar na equipe
+### 14. Interesse em vagas / entrar na equipe
 > 🚀 Que bom seu interesse em fazer parte do time! O Estúdio Los Hombres é especializado em atendimento masculino de alto padrão.
 > Comissão: 30% (espaço próprio) ou 40% (usando nossa estrutura).
 > Preencha o formulário: https://docs.google.com/forms/d/e/1FAIpQLSf2a8ePAZy44mArO-zijJPt23RQHyB4a1G5FILIffz8XJQqjQ/viewform
@@ -124,7 +143,7 @@ Direcionar para WhatsApp: 31987862117
 
 ---
 
-### 14. Interesse em cursos
+### 15. Interesse em cursos
 > Trabalho com 3 formações:
 > 🔹 Automassagem — R$ 500
 > 🔹 Massagem Relaxamento e Conexão — R$ 500
@@ -135,7 +154,7 @@ Direcionar para WhatsApp: 31987862117
 
 ---
 
-### 15. Massagem específica — descrições + mídia
+### 16. Massagem específica — descrições + mídia
 Quando cliente perguntar sobre uma massagem específica, enviar:
 1. Descrição da massagem
 2. Link do vídeo
