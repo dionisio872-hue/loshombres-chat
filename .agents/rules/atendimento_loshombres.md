@@ -73,14 +73,20 @@ Perguntar qual unidade (Savassi ou Betim) e mandar o link correspondente:
 
 ---
 
-### 7. Pedir feedback pós-sessão
-> Oi meu querido, tudo bem? Gostaria de te pedir um favor! Sei que o seu tempo é valioso, mas a sua opinião é muito importante para que eu possa aprimorar ainda mais o meu trabalho.
-> Você poderia me dizer:
-> • O que você esperava da massagem?
-> • Sua expectativa foi atendida?
-> • Como se sentiu antes, durante e depois da sessão?
-> • O que achou da técnica e do ambiente?
-> Muito obrigado pela confiança!
+### 7. Feedback pós-sessão (enviar 1 dia após o atendimento)
+Enviar PRIMEIRO o áudio, depois o texto:
+
+🎙️ ÁUDIO PÓS-SESSÃO:
+https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/16d87eb2e_feedback_pos_sessao.ogg
+
+📝 TEXTO (enviar logo após o áudio):
+> E aí, tudo bem por aí? Passei para saber como você acordou e como o seu corpo reagiu à nossa sessão.
+>
+> Geralmente, depois que a gente consegue 'desligar do mundo' e relaxar de verdade, o corpo leva um tempo para processar esse descanso. Espero que você ainda esteja sentindo aquele bem-estar e a leveza.
+>
+> Quero saber como você se sentiu e se o atendimento atendeu às suas expectativas. Sua opinião é fundamental para eu manter esse padrão que você busca.
+>
+> Qualquer coisa, estou à disposição. Um abraço e uma ótima semana!
 
 ---
 
