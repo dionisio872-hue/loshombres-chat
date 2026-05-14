@@ -4,6 +4,7 @@
  * Registra cada interação em LeadConversa para relatórios ricos
  *
  * ANTI-DUPLICATE: cache de update_id para evitar processamento duplo
+ * v11 - 2026-05-14: reuniao_online detection, tipos de agendamento mapeados
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
@@ -100,8 +101,10 @@ function detectarIntencao(texto: string): string {
   if (/vaga|trabalhar|emprego|recrutamento|contratar|equipe/.test(n)) return 'vaga';
   if (/curso|formacao|formação|aprender|treinar/.test(n)) return 'curso';
   if (/micose|fungo|pele|ferida/.test(n)) return 'micose';
-  if (/vergonha|timido|inseguro|corpo/.test(n)) return 'vergonha';
+  if (/vergonha|timido|corpo/.test(n)) return 'vergonha';
+  if (/inseguro/.test(n)) return 'reuniao_online';
   if (/tatuagem|tattoo/.test(n)) return 'tatuagem';
+  if (/nao sei|nao tenho certeza|medo|receio|nervoso|ansioso|constrangido|envergonhado|muita duvida|muitas duvidas|videochamada|video chamada|reuniao|conhecer antes|bater um papo|falar antes|conversar antes/.test(n)) return 'reuniao_online';
   if (/massagem|servico|serviço|opcoes|opções|tipos/.test(n)) return 'listar';
   return 'outro';
 }
@@ -303,6 +306,12 @@ async function responderVergonha(chatId: number) {
   );
 }
 
+async function responderReuniaoOnline(chatId: number) {
+  await sendText(chatId,
+    `Entendo completamente. É totalmente normal ter dúvidas antes de uma experiência nova, ainda mais quando se trata de algo tão pessoal.\n\nQue tal a gente marcar uma conversa rápida de 15 minutos por vídeo? Sem compromisso nenhum. Só pra você me conhecer, tirar suas dúvidas e ver se tem sintonia. Muita gente que veio pela primeira vez começou exatamente assim.\n\nSe quiser, é só clicar aqui para escolher um horário: 👇\nhttps://calendar.app.google/QxYxunGta5ieqTtr9\n\nDepois da conversa, se quiser agendar a sessão, fico à disposição 😊`
+  );
+}
+
 async function responderTatuagem(chatId: number) {
   await sendText(chatId,
     `Para tatuagem, entre em contato pelo WhatsApp: (31) 99126-6270 📲`
@@ -364,6 +373,7 @@ async function processarMensagem(req: Request, chatId: number, texto: string, no
     case 'curso': await responderCurso(chatId); break;
     case 'micose': await responderMicose(chatId); break;
     case 'vergonha': await responderVergonha(chatId); break;
+    case 'reuniao_online': await responderReuniaoOnline(chatId); break;
     case 'tatuagem': await responderTatuagem(chatId); break;
     default: await responderComIA(chatId, texto);
   }
