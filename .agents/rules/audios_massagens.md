@@ -19,6 +19,6 @@ Quando enviar áudio de uma massagem no WhatsApp, usar estes links diretos (arqu
 | Summa Experientia | https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/13d3b5d71_summa_experientia.mp3 |
 | Massagem 4 Mãos | https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/d6b331670_4maos.mp3 |
 | Podoloterapia | https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/44675462b_podoloterapia.mp3 |
-| Tântrica Casal | (áudio não disponível) |
-| Relaxante Sensual Casal | (áudio não disponível) |
-| Nuru Casal | (áudio não disponível) |
+| Tântrica Casal | https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/3dc790b06_tantra_casal.mp3 |
+| Relaxante Sensual Casal | https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/6c22f5ac1_relaxante_sensual_casal.mp3 |
+| Nuru Casal | https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/787e65832_nuru_casal.mp3 |
