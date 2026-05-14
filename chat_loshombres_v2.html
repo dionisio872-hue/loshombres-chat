@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Los Hombres — Atendimento</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --gold:#c9a84c;--gold2:#7a5418;
+      --bg:#0a0a0a;--surface:#141414;--surface2:#1c1c1c;
+      --border:#282828;--text:#f0f0f0;--muted:#555;
+      --bot:#0f0f22;--tg:#229ED9;
+    }
+    html,body{
+      height:100%;min-height:100%;
+      background:var(--bg);color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      overflow:hidden;
+    }
+    .wrap{display:flex;flex-direction:column;height:100vh;max-width:640px;margin:0 auto}
+
+    /* ══ HEADER ══ */
+    .hdr{
+      background:linear-gradient(180deg,#1f1f1f,#111);
+      border-bottom:1px solid var(--border);
+      padding:12px 16px;
+      display:flex;align-items:center;gap:14px;
+      flex-shrink:0;
+    }
+    .av-wrap{position:relative;flex-shrink:0}
+    .av{
+      width:64px;height:64px;border-radius:50%;
+      object-fit:cover;object-position:top center;
+      border:3px solid var(--gold);
+      box-shadow:0 0 0 5px rgba(201,168,76,.18),0 4px 16px rgba(0,0,0,.6);
+      display:block;
+    }
+    .dot-on{
+      position:absolute;bottom:3px;right:3px;
+      width:14px;height:14px;background:#22c55e;
+      border-radius:50%;border:3px solid #141414;
+    }
+    .hdr-info{flex:1}
+    .hdr-info h2{font-size:17px;font-weight:700;letter-spacing:-.3px;color:#fff}
+    .hdr-info .status{font-size:12px;color:#22c55e;font-weight:600;margin-top:1px}
+    .hdr-info .sub{font-size:11px;color:var(--muted);margin-top:2px}
+    .logo{font-size:9px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;font-weight:800;line-height:1.7;text-align:right;flex-shrink:0}
+
+    .notice{
+      text-align:center;font-size:11px;color:var(--muted);
+      padding:5px 16px;background:#0d0d0d;
+      border-bottom:1px solid var(--border);flex-shrink:0;
+    }
+
+    /* ══ MENSAGENS ══ */
+    .msgs{
+      flex:1;overflow-y:auto;
+      padding:16px 13px 6px;
+      display:flex;flex-direction:column;gap:11px;
+    }
+    .msgs::-webkit-scrollbar{width:3px}
+    .msgs::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
+
+    .row{display:flex;align-items:flex-end;gap:8px}
+    .row.bot{justify-content:flex-start}
+    .row.me{justify-content:flex-end}
+
+    .row-av{
+      width:34px;height:34px;border-radius:50%;
+      object-fit:cover;object-position:top center;
+      flex-shrink:0;border:2px solid var(--gold);
+    }
+
+    .col{display:flex;flex-direction:column;max-width:76%}
+    .row.me .col{align-items:flex-end}
+
+    .bub{
+      padding:11px 15px;border-radius:20px;
+      font-size:14px;line-height:1.6;
+      white-space:pre-wrap;word-break:break-word;
+    }
+    .bub.bot{
+      background:var(--bot);
+      border-bottom-left-radius:4px;
+      border:1px solid #1e1e3a;
+    }
+    .bub.me{
+      background:linear-gradient(135deg,var(--gold),var(--gold2));
+      border-bottom-right-radius:4px;
+      color:#fff;font-weight:600;
+    }
+    .ts{font-size:10px;color:var(--muted);margin-top:4px;padding:0 4px}
+
+    /* TYPING */
+    .typing-bub{
+      display:inline-flex;align-items:center;gap:5px;
+      padding:14px 18px;background:var(--bot);
+      border-radius:20px;border-bottom-left-radius:4px;
+      border:1px solid #1e1e3a;
+    }
+    .td{width:8px;height:8px;background:#333;border-radius:50%;animation:bounce 1.3s infinite}
+    .td:nth-child(2){animation-delay:.22s}.td:nth-child(3){animation-delay:.44s}
+    @keyframes bounce{
+      0%,55%,100%{transform:translateY(0);background:#333}
+      27%{transform:translateY(-8px);background:var(--gold)}
+    }
+
+    /* ══ INPUT ══ */
+    .inp-area{
+      background:var(--surface);border-top:1px solid var(--border);
+      padding:12px 14px;
+      display:flex;align-items:flex-end;gap:10px;
+      flex-shrink:0;
+    }
+    #inp{
+      flex:1;background:var(--surface2);
+      border:1.5px solid var(--border);border-radius:24px;
+      padding:12px 16px;font-size:15px;color:var(--text);
+      outline:none;resize:none;
+      max-height:120px;min-height:46px;
+      font-family:inherit;line-height:1.45;
+      transition:border-color .2s;
+    }
+    #inp:focus{border-color:var(--gold)}
+    #inp::placeholder{color:var(--muted)}
+
+    #sbtn{
+      width:46px;height:46px;border-radius:50%;
+      background:linear-gradient(135deg,var(--gold),var(--gold2));
+      border:none;outline:none;
+      cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+      box-shadow:0 2px 12px rgba(201,168,76,.35);
+      transition:transform .12s,box-shadow .12s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    #sbtn:active{transform:scale(.9);box-shadow:none}
+    #sbtn svg{display:block;pointer-events:none}
+
+    /* FAB TELEGRAM */
+    #fab{
+      position:fixed;bottom:86px;right:15px;
+      background:var(--tg);color:#fff;
+      border-radius:50px;padding:12px 17px;
+      font-size:13px;font-weight:600;
+      display:flex;align-items:center;gap:8px;
+      box-shadow:0 4px 20px rgba(34,158,217,.4);
+      text-decoration:none;z-index:200;
+      -webkit-tap-highlight-color:transparent;
+    }
+    #fab:active{opacity:.85}
+    @media(max-width:420px){
+      #fab .fab-txt{display:none}
+      #fab{border-radius:50%;padding:13px;bottom:78px;right:12px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="av-wrap">
+      <img class="av" id="avHdr"
+        src="https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/180c845fb_foto_jonathan_hd.jpg"
+        alt="Jonathan">
+      <div class="dot-on"></div>
+    </div>
+    <div class="hdr-info">
+      <h2>Jonathan</h2>
+      <div class="status">● online agora</div>
+      <div class="sub">Massagista · Savassi &amp; Betim · BH</div>
+    </div>
+    <div class="logo">LOS<br>HOMBRES</div>
+  </div>
+
+  <div class="notice">🔒 Atendimento sigiloso · Suas informações não são compartilhadas</div>
+
+  <!-- MENSAGENS -->
+  <div class="msgs" id="msgs"></div>
+
+  <!-- INPUT -->
+  <div class="inp-area">
+    <textarea id="inp" rows="1" placeholder="Digite sua mensagem..." maxlength="600"></textarea>
+    <button id="sbtn" type="button">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- FAB TELEGRAM -->
+<a id="fab" href="https://t.me/Atendimentoloshombresbot" target="_blank" rel="noopener">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff">
+    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.01 9.47c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.48 14.4l-2.95-.924c-.64-.204-.654-.64.136-.95l11.527-4.444c.537-.194 1.006.131.37.166z"/>
+  </svg>
+  <span class="fab-txt">Continuar no Telegram</span>
+</a>
+
+<script>
+var FOTO = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/180c845fb_foto_jonathan_hd.jpg';
+var API  = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatApi';
+
+var msgsEl = document.getElementById('msgs');
+var inpEl  = document.getElementById('inp');
+var sbtnEl = document.getElementById('sbtn');
+var busy   = false;
+
+function hora() {
+  var d = new Date();
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+
+function scroll() { msgsEl.scrollTop = msgsEl.scrollHeight; }
+
+function mkAv() {
+  var img = document.createElement('img');
+  img.className = 'row-av';
+  img.src = FOTO;
+  img.alt = 'J';
+  return img;
+}
+
+function addMsg(txt, tipo) {
+  var row = document.createElement('div');
+  row.className = 'row ' + tipo;
+  if (tipo === 'bot') row.appendChild(mkAv());
+  var col = document.createElement('div');
+  col.className = 'col';
+  var bub = document.createElement('div');
+  bub.className = 'bub ' + tipo;
+  bub.textContent = txt;
+  var ts = document.createElement('div');
+  ts.className = 'ts';
+  ts.textContent = hora();
+  col.appendChild(bub);
+  col.appendChild(ts);
+  row.appendChild(col);
+  msgsEl.appendChild(row);
+  scroll();
+}
+
+function showTyping() {
+  var row = document.createElement('div');
+  row.className = 'row bot';
+  row.id = 'typing';
+  row.appendChild(mkAv());
+  var tb = document.createElement('div');
+  tb.className = 'typing-bub';
+  for (var i = 0; i < 3; i++) {
+    var d = document.createElement('div');
+    d.className = 'td';
+    tb.appendChild(d);
+  }
+  row.appendChild(tb);
+  msgsEl.appendChild(row);
+  scroll();
+}
+
+function hideTyping() {
+  var el = document.getElementById('typing');
+  if (el) el.parentNode.removeChild(el);
+}
+
+function enviar() {
+  if (busy) return;
+  var txt = inpEl.value.trim();
+  if (!txt) return;
+
+  inpEl.value = '';
+  inpEl.style.height = 'auto';
+  busy = true;
+
+  addMsg(txt, 'me');
+  showTyping();
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.timeout = 15000;
+
+  function done() {
+    hideTyping();
+    busy = false;
+    inpEl.focus();
+  }
+
+  xhr.onload = function() {
+    done();
+    try {
+      var r = JSON.parse(xhr.responseText);
+      addMsg(r.resposta || 'Pode me chamar no WhatsApp: (31) 98324-4713 😊', 'bot');
+    } catch(e) {
+      addMsg('Tive um probleminha. Chama no WhatsApp: (31) 98324-4713 😊', 'bot');
+    }
+  };
+  xhr.onerror = xhr.ontimeout = function() {
+    done();
+    addMsg('Tive um probleminha. Chama no WhatsApp: (31) 98324-4713 😊', 'bot');
+  };
+  xhr.send(JSON.stringify({ mensagem: txt }));
+}
+
+/* Eventos */
+inpEl.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+inpEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    enviar();
+  }
+});
+
+sbtnEl.addEventListener('click', enviar);
+sbtnEl.addEventListener('touchend', function(e) {
+  e.preventDefault();
+  enviar();
+});
+
+/* Boas-vindas */
+addMsg('Olá! Bem-vindo ao Estúdio Los Hombres 😊\n\nSou o Jonathan. Pode me perguntar sobre massagens, valores ou agendamento. Como posso te ajudar hoje?', 'bot');
+</script>
+</body>
+</html>
