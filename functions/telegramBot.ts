@@ -2,11 +2,31 @@
  * TELEGRAM WEBHOOK — Los Hombres Estúdio
  * Responde automaticamente com regras fixas (0 crédito de mensagem IA)
  * Só escala pra IA em casos que não consegue resolver
+ *
+ * ANTI-DUPLICATE: cache de update_id para evitar processamento duplo
  */
 
 const BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') || '';
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || '';
+
+// ─── DEDUPLICAÇÃO ─────────────────────────────────────────────────────────────
+// Cache em memória dos últimos 500 update_ids processados
+// Evita resposta dupla quando o Telegram reenvia o webhook por timeout
+
+const processedIds = new Set<number>();
+const MAX_CACHE = 500;
+
+function jaProcessado(updateId: number): boolean {
+  if (processedIds.has(updateId)) return true;
+  processedIds.add(updateId);
+  // Limpar cache quando ficar grande demais
+  if (processedIds.size > MAX_CACHE) {
+    const iter = processedIds.values();
+    processedIds.delete(iter.next().value);
+  }
+  return false;
+}
 
 // ─── DADOS FIXOS ──────────────────────────────────────────────────────────────
 
@@ -57,7 +77,7 @@ const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: st
     texto: 'Sessão de 25 minutos com técnica oriental e deslizamento corporal. Prática, direta e eficiente para quem tem pouco tempo mas quer qualidade.'
   },
   {
-    chaves: ['miofascial', 'miofascial', 'esportiva', 'fascia'],
+    chaves: ['miofascial', 'esportiva', 'fascia'],
     nome: 'Miofascial',
     audio: AUDIOS.miofascial,
     preco: 'R$ 300',
@@ -65,12 +85,12 @@ const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: st
     texto: 'Liberação miofascial combinada com massagem esportiva. Realizada em roupas íntimas, com foco na soltura profunda dos tecidos e alívio de tensões acumuladas.'
   },
   {
-    chaves: ['nuru summa', 'nuru', 'corpo a corpo', 'gel'],
+    chaves: ['nuru summa', 'nuru', 'corpo a corpo'],
     nome: 'Nuru Summa',
     audio: AUDIOS.nuru,
     preco: 'R$ 450',
     preco_desc: 'R$ 360 (com 20% de desconto para 30 dias de antecedência)',
-    texto: 'Deslizamento corpo a corpo com gel especial, ambos sem roupa. Uma das experiências mais imersivas e sensoriais do estúdio.'
+    texto: 'Deslizamento corpo a corpo com óleo especial, ambos sem roupa. Uma das experiências mais imersivas e sensoriais do estúdio.'
   },
   {
     chaves: ['mútua', 'mutua', 'tantrica mutua', 'tântrica mútua'],
@@ -97,7 +117,7 @@ const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: st
     texto: 'Imersão sensorial completa com vinho e petiscos. Interação permitida. Uma experiência que vai além da massagem.'
   },
   {
-    chaves: ['hot', 'hot massage'],
+    chaves: ['hot massage', 'hot'],
     nome: 'HOT',
     audio: AUDIOS.hot,
     preco: 'R$ 320',
@@ -105,7 +125,7 @@ const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: st
     texto: 'Estímulos sensoriais localizados e concentrados. Intensidade com controle, para quem busca algo mais focalizado.'
   },
   {
-    chaves: ['bdsm', 'tie', 'teaser', 'tie and teaser', 'dominação', 'dominacao'],
+    chaves: ['bdsm', 'tie and teaser', 'tie', 'teaser', 'dominação', 'dominacao'],
     nome: 'Tie and Teaser BDSM',
     audio: AUDIOS.bdsm,
     preco: 'R$ 450',
@@ -113,7 +133,7 @@ const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: st
     texto: 'Experiência sensorial guiada por controle e provocação consciente. Exploração segura e respeitosa dos limites do prazer.'
   },
   {
-    chaves: ['hidrotantra', 'hidro', 'banheira', 'aquática', 'aquatica'],
+    chaves: ['hidrotantra', 'hidro tantra', 'banheira', 'aquática', 'aquatica'],
     nome: 'Hidrotantra',
     audio: AUDIOS.hidro,
     preco: 'R$ 500',
@@ -129,7 +149,7 @@ const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: st
     texto: 'Estímulos térmicos e sensoriais que criam contrastes únicos de sensação ao longo de toda a experiência.'
   },
   {
-    chaves: ['summa experientia', 'summa', 'íntima', 'intima', 'completa', 'interação', 'interacao'],
+    chaves: ['summa experientia', 'summa', 'íntima', 'intima'],
     nome: 'Summa Experientia',
     audio: AUDIOS.summa,
     preco: 'R$ 1.350',
@@ -145,7 +165,7 @@ const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: st
     texto: 'Dois terapeutas trabalhando em sincronia perfeita. Uma experiência de cobertura total e sensações simultâneas.'
   },
   {
-    chaves: ['podoloterapia', 'pés', 'pes', 'podo', 'pé'],
+    chaves: ['podoloterapia', 'podologia'],
     nome: 'Podoloterapia',
     audio: AUDIOS.podo,
     preco: 'R$ 200',
@@ -153,7 +173,7 @@ const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: st
     texto: 'Tratamento especializado nos pés com técnicas de reflexologia e relaxamento. Muito mais do que uma massagem comum nos pés.'
   },
   {
-    chaves: ['casal', 'namorado', 'parceiro', 'dois'],
+    chaves: ['casal', 'namorado', 'parceiro'],
     nome: 'Massagens para Casais',
     audio: AUDIOS.tantra_casal,
     preco: 'a partir de R$ 500',
@@ -183,49 +203,54 @@ function detectarMassagem(texto: string) {
 
 function detectarIntencao(texto: string): string {
   const n = normalizar(texto);
-  if (/oi|ola|bom dia|boa tarde|boa noite|boa noite|hello|hey|tudo bem|tudo bom/.test(n)) return 'saudacao';
+  if (/^(oi|ola|ola|hello|hey|hi|bom dia|boa tarde|boa noite|tudo bem|tudo bom|boa|e ai|e a|salve|opa)\b/.test(n)) return 'saudacao';
+  if (/quero (te |te )?conhecer|me conhecer|se conhecer|conhecer voce|conhecer vc|sobre voce|sobre o jonathan/.test(n)) return 'saudacao';
   if (/preco|valor|quanto|custa|tabela|valores/.test(n)) return 'preco';
   if (/agendar|marcar|reservar|disponib|horario|agenda|quando/.test(n)) return 'agendar';
   if (/onde|endereco|endereço|localiz|savassi|betim|unidade/.test(n)) return 'localizacao';
-  if (/sexo|transar|fazer sexo|programa|completo|tudo|final feliz/.test(n)) return 'sexo';
-  if (/tatuagem|tattoo/.test(n)) return 'tatuagem';
-  if (/vergonha|verg|corpo|gordo|feio|acanhad/.test(n)) return 'vergonha';
-  if (/micose|fungo|pele|cicatriz/.test(n)) return 'micose';
-  if (/vaga|trabalh|emprego|terapeuta|massagist|equipe/.test(n)) return 'vaga';
-  if (/curso|aprender|formacao|formação/.test(n)) return 'curso';
-  if (/obrigad|valeu|muito obrigad|thanks/.test(n)) return 'agradecimento';
+  if (/sexo|transar|fazer sexo|programa|final feliz/.test(n)) return 'sexo';
+  if (/tatuagem|tatuar|tattoo/.test(n)) return 'tatuagem';
   if (/pix|sinal|pagamento|pagar|comprovante/.test(n)) return 'pagamento';
-  if (/listar|massagens|modalidades|opcoes|opções|o que tem|quais|cardapio|cardápio/.test(n)) return 'listar';
+  if (/obrigad|valeu|muito obrigado|agradeço|agradeco/.test(n)) return 'agradecimento';
+  if (/vaga|trabalhar|emprego|comissao|comissão|massagista/.test(n)) return 'vaga';
+  if (/curso|aprender|formacao|formação|workshop/.test(n)) return 'curso';
+  if (/micose|fungo|pele|alergia/.test(n)) return 'micose';
+  if (/vergonha|insegur|gordo|magro|corpo/.test(n)) return 'vergonha';
+  if (/listar|lista|opcoes|opções|tipos|modalidades|o que tem|o que voce faz/.test(n)) return 'listar';
   return 'desconhecido';
 }
 
-// ─── TELEGRAM API ─────────────────────────────────────────────────────────────
-
 async function sendText(chatId: number, text: string, replyMarkup?: object) {
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+  };
+  if (replyMarkup) body.reply_markup = replyMarkup;
   await fetch(`${TELEGRAM_API}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', reply_markup: replyMarkup }),
+    body: JSON.stringify(body),
   });
 }
 
-async function sendAudio(chatId: number, audioUrl: string, caption?: string) {
+async function sendAudio(chatId: number, audioUrl: string) {
   await fetch(`${TELEGRAM_API}/sendAudio`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, audio: audioUrl, caption, parse_mode: 'HTML' }),
+    body: JSON.stringify({ chat_id: chatId, audio: audioUrl }),
   });
 }
 
-// ─── RESPOSTAS PRONTAS ────────────────────────────────────────────────────────
+// ─── RESPOSTAS ────────────────────────────────────────────────────────────────
 
 async function responderSaudacao(chatId: number) {
   await sendText(chatId,
-    `Olá! Seja bem-vindo ao <b>Estúdio Los Hombres</b> 🌿\n\nSomos um espaço exclusivo de massagens masculinas de alto padrão em Belo Horizonte, com unidades na <b>Savassi</b> e em <b>Betim</b>.\n\nO que você está buscando hoje?`,
+    `Olá! Que bom que você chegou até aqui. Sou Jonathan, massagista especializado em atendimento masculino de alto padrão em Belo Horizonte.\n\nAtendo nas unidades da Savassi e Betim, com total sigilo e sem julgamentos.\n\nMe conta: o que te trouxe até aqui hoje? Está buscando relaxamento, uma experiência mais intensa ou tem alguma massagem em mente?`,
     { inline_keyboard: [
-      [{ text: '💆 Ver massagens', callback_data: 'listar' }],
-      [{ text: '📅 Quero agendar', callback_data: 'agendar' }],
-      [{ text: '💰 Tabela de preços', callback_data: 'preco' }],
+      [{ text: '💆 Ver todas as massagens', callback_data: 'listar' }],
+      [{ text: '💰 Ver preços', callback_data: 'preco' }],
+      [{ text: '📅 Agendar uma sessão', callback_data: 'agendar' }],
       [{ text: '📍 Onde ficamos', callback_data: 'localizacao' }],
     ]}
   );
@@ -325,7 +350,7 @@ async function responderTatuagem(chatId: number) {
 
 async function responderComIA(chatId: number, mensagem: string) {
   if (!OPENAI_KEY) {
-    await sendText(chatId, 'Olá! Para essa dúvida específica, entre em contato pelo WhatsApp: <a href="https://wa.me/5531983244713">(31) 98324-4713</a>');
+    await sendText(chatId, 'Para essa dúvida específica, entre em contato pelo WhatsApp: <a href="https://wa.me/5531983244713">(31) 98324-4713</a>');
     return;
   }
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -372,7 +397,6 @@ async function processarMensagem(chatId: number, texto: string) {
     case 'vergonha': await responderVergonha(chatId); break;
     case 'tatuagem': await responderTatuagem(chatId); break;
     default:
-      // Fallback IA apenas para desconhecidos
       await responderComIA(chatId, texto);
   }
 }
@@ -396,33 +420,54 @@ Deno.serve(async (req) => {
     });
   }
 
+  let update: any;
   try {
-    const update = await req.json();
-    console.log('Update:', JSON.stringify(update).slice(0, 300));
-
-    // Mensagem de texto
-    if (update.message?.text) {
-      const chatId = update.message.chat.id;
-      const texto = update.message.text;
-      await processarMensagem(chatId, texto);
-    }
-
-    // Callback de botão inline
-    if (update.callback_query) {
-      const chatId = update.callback_query.message.chat.id;
-      const data = update.callback_query.data;
-      // Responder ao callback para remover o "loading"
-      await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ callback_query_id: update.callback_query.id }),
-      });
-      await processarCallback(chatId, data);
-    }
-
-  } catch (e: any) {
-    console.error('Erro webhook:', e.message);
+    update = await req.json();
+  } catch {
+    return new Response('ok', { status: 200 });
   }
 
-  return new Response('ok', { status: 200 });
+  // ── RESPONDER 200 IMEDIATAMENTE ────────────────────────────────────────────
+  // Isso impede o Telegram de reenviar o webhook por timeout (causa das duplicatas)
+  const responsePromise = new Response('ok', { status: 200 });
+
+  // Processar de forma assíncrona APÓS retornar o 200
+  (async () => {
+    try {
+      const updateId: number = update.update_id;
+
+      // ── DEDUPLICAÇÃO ────────────────────────────────────────────────────────
+      // Se esse update_id já foi processado, ignorar silenciosamente
+      if (jaProcessado(updateId)) {
+        console.log(`[SKIP] update_id ${updateId} já processado — ignorando duplicata`);
+        return;
+      }
+
+      console.log(`[OK] Processando update_id ${updateId}:`, JSON.stringify(update).slice(0, 200));
+
+      // Mensagem de texto
+      if (update.message?.text) {
+        const chatId = update.message.chat.id;
+        const texto = update.message.text;
+        await processarMensagem(chatId, texto);
+      }
+
+      // Callback de botão inline
+      if (update.callback_query) {
+        const chatId = update.callback_query.message.chat.id;
+        const data = update.callback_query.data;
+        await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ callback_query_id: update.callback_query.id }),
+        });
+        await processarCallback(chatId, data);
+      }
+
+    } catch (e: any) {
+      console.error('Erro webhook:', e.message);
+    }
+  })();
+
+  return responsePromise;
 });

@@ -2,6 +2,9 @@
 
 Quando Jonathan pedir para responder um cliente, siga este fluxo:
 
+## REGRA ABSOLUTA: Nunca duplicar respostas
+O bot do Telegram NUNCA deve enviar a mesma resposta duas vezes para a mesma mensagem. O sistema usa cache de update_id para deduplicação automática. Qualquer nova versão do telegramBot.ts deve manter essa proteção.
+
 ## Identificar o tipo de mensagem
 
 ### 1. Boas-vindas / primeiro contato
