@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Los Hombres — Painel de Métricas</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --gold: #c9a84c;
+    --gold2: #e6c76e;
+    --green: #00c49a;
+    --red: #f85149;
+    --blue: #58a6ff;
+    --text: #e6edf3;
+    --sub: #8b949e;
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .logo { font-size: 22px; font-weight: 700; color: var(--gold); letter-spacing: 1px; }
+  .logo span { color: var(--sub); font-size: 13px; font-weight: 400; margin-left: 8px; }
+  .refresh-btn {
+    margin-left: auto;
+    background: var(--gold);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .refresh-btn:hover { background: var(--gold2); }
+
+  main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+  /* CARDS */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-label { font-size: 12px; color: var(--sub); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .card-value { font-size: 32px; font-weight: 700; }
+  .card-value.gold { color: var(--gold); }
+  .card-value.green { color: var(--green); }
+  .card-value.blue { color: var(--blue); }
+  .card-value.red { color: var(--red); }
+  .card-sub { font-size: 12px; color: var(--sub); margin-top: 4px; }
+
+  /* GRID GRÁFICOS */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .chart-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* FUNIL */
+  .funil-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .funil-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .funil-step {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 10px;
+  }
+  .funil-label { width: 160px; font-size: 13px; color: var(--sub); flex-shrink: 0; }
+  .funil-bar-wrap { flex: 1; background: #21262d; border-radius: 4px; height: 24px; overflow: hidden; position: relative; }
+  .funil-bar { height: 100%; border-radius: 4px; transition: width 0.8s ease; display: flex; align-items: center; padding-left: 8px; font-size: 12px; font-weight: 600; color: #000; }
+  .funil-count { width: 40px; text-align: right; font-size: 13px; font-weight: 600; color: var(--text); }
+
+  /* TABELA */
+  .table-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-x: auto;
+  }
+  .table-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; color: var(--sub); font-weight: 500; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid #21262d; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #21262d; }
+
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge.confirmado { background: #1a3a2a; color: var(--green); }
+  .badge.pagou_sinal { background: #1a2a3a; color: var(--blue); }
+  .badge.clicou_agenda { background: #2a2a1a; color: var(--gold); }
+  .badge.abandonou { background: #3a1a1a; color: var(--red); }
+  .badge.iniciou { background: #21262d; color: var(--sub); }
+  .badge.perguntou_massagem { background: #1f1a3a; color: #a78bfa; }
+  .badge.pediu_preco { background: #1a2a2a; color: #34d399; }
+
+  .canal-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--sub); }
+
+  .loading { text-align: center; padding: 60px; color: var(--sub); font-size: 18px; }
+  .error { text-align: center; padding: 40px; color: var(--red); }
+
+  /* REENGAJAMENTO ALERT */
+  .alert-reeng {
+    background: #1a2a1a;
+    border: 1px solid #2d5a2d;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 12px;
+    display: none;
+  }
+  .alert-reeng.show { display: flex; }
+  .alert-reeng .icon { font-size: 24px; }
+  .alert-reeng .txt { flex: 1; }
+  .alert-reeng .txt b { color: var(--green); }
+  .alert-reeng .txt p { font-size: 13px; color: var(--sub); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LOS HOMBRES <span>Painel de Métricas</span></div>
+  <button class="refresh-btn" onclick="carregar()">↻ Atualizar</button>
+</header>
+
+<main>
+  <div id="loading" class="loading">Carregando dados...</div>
+  <div id="content" style="display:none">
+
+    <!-- ALERT REENGAJAMENTO -->
+    <div class="alert-reeng" id="alertReeng">
+      <div class="icon">🔔</div>
+      <div class="txt">
+        <b id="qtdReeng">0</b> leads aguardando reengajamento
+        <p>Clientes que não converteram e podem ser recuperados com uma mensagem personalizada.</p>
+      </div>
+    </div>
+
+    <!-- CARDS -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Total de Leads</div>
+        <div class="card-value gold" id="totalLeads">0</div>
+        <div class="card-sub">conversas iniciadas</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Convertidos</div>
+        <div class="card-value green" id="convertidos">0</div>
+        <div class="card-sub">pagaram o sinal</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Taxa de Conversão</div>
+        <div class="card-value blue" id="taxa">0%</div>
+        <div class="card-sub">leads → agendamento</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Reengajamento</div>
+        <div class="card-value red" id="reeng">0</div>
+        <div class="card-sub">aguardando contato</div>
+      </div>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">📈 Leads por dia (últimos 14 dias)</div>
+        <div class="chart-wrap"><canvas id="chartEvolucao"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📡 Canal de origem</div>
+        <div class="chart-wrap"><canvas id="chartCanal"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💆 Massagens mais consultadas</div>
+        <div class="chart-wrap"><canvas id="chartMassagem"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🎯 Distribuição por etapa</div>
+        <div class="chart-wrap"><canvas id="chartEtapa"></canvas></div>
+      </div>
+    </div>
+
+    <!-- FUNIL -->
+    <div class="funil-card">
+      <div class="funil-title">🔽 Funil de Conversão</div>
+      <div id="funilSteps"></div>
+    </div>
+
+    <!-- TABELA -->
+    <div class="table-card">
+      <div class="table-title">
+        <span>📋 Últimos leads</span>
+        <span style="font-size:12px; color:var(--sub); font-weight:400;">10 mais recentes</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>WhatsApp</th>
+            <th>Canal</th>
+            <th>Massagem</th>
+            <th>Etapa</th>
+            <th>Último contato</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaLeads"></tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const API = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/painelMetricas';
+
+const ETAPAS = {
+  iniciou: { label: 'Iniciou conversa', cor: '#8b949e' },
+  perguntou_massagem: { label: 'Perguntou massagem', cor: '#a78bfa' },
+  pediu_preco: { label: 'Pediu preço', cor: '#34d399' },
+  clicou_agenda: { label: 'Clicou na agenda', cor: '#c9a84c' },
+  pagou_sinal: { label: 'Pagou o sinal', cor: '#58a6ff' },
+  confirmado: { label: 'Confirmado', cor: '#00c49a' },
+  abandonou: { label: 'Abandonou', cor: '#f85149' }
+};
+
+const CANAIS = {
+  telegram: '🤖 Telegram',
+  whatsapp: '💬 WhatsApp',
+  link_web: '🔗 Link Web',
+  instagram: '📸 Instagram',
+  outro: '❓ Outro'
+};
+
+let charts = {};
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+}
+
+async function carregar() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+  destroyCharts();
+
+  try {
+    const res = await fetch(API, { method: 'GET' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    const m = data.metricas;
+
+    // Cards
+    document.getElementById('totalLeads').textContent = m.total_leads;
+    document.getElementById('convertidos').textContent = m.convertidos;
+    document.getElementById('taxa').textContent = m.taxa_conversao + '%';
+    document.getElementById('reeng').textContent = m.pendente_reengajamento;
+
+    // Alert reengajamento
+    if (m.pendente_reengajamento > 0) {
+      document.getElementById('alertReeng').classList.add('show');
+      document.getElementById('qtdReeng').textContent = m.pendente_reengajamento;
+    }
+
+    // Gráfico evolução diária
+    const diasLabels = Object.keys(m.evolucao_diaria).map(d => {
+      const [y, mo, di] = d.split('-');
+      return `${di}/${mo}`;
+    });
+    const diasValores = Object.values(m.evolucao_diaria);
+    charts.evolucao = new Chart(document.getElementById('chartEvolucao'), {
+      type: 'line',
+      data: {
+        labels: diasLabels,
+        datasets: [{
+          label: 'Leads',
+          data: diasValores,
+          borderColor: '#c9a84c',
+          backgroundColor: 'rgba(201,168,76,0.1)',
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#c9a84c',
+          pointRadius: 4
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } }, y: { ticks: { color: '#8b949e', stepSize: 1 }, grid: { color: '#21262d' } } } }
+    });
+
+    // Gráfico canal
+    const canalLabels = Object.keys(m.por_canal).map(c => CANAIS[c] || c);
+    const canalValores = Object.values(m.por_canal);
+    charts.canal = new Chart(document.getElementById('chartCanal'), {
+      type: 'doughnut',
+      data: {
+        labels: canalLabels,
+        datasets: [{ data: canalValores, backgroundColor: ['#c9a84c','#00c49a','#58a6ff','#f85149','#a78bfa'], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#8b949e', font: { size: 12 } } } } }
+    });
+
+    // Gráfico massagens
+    if (m.top_massagens.length > 0) {
+      charts.massagem = new Chart(document.getElementById('chartMassagem'), {
+        type: 'bar',
+        data: {
+          labels: m.top_massagens.map(t => t[0]),
+          datasets: [{ data: m.top_massagens.map(t => t[1]), backgroundColor: '#c9a84c', borderRadius: 6 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b949e', stepSize: 1 }, grid: { color: '#21262d' } }, y: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { display: false } } } }
+      });
+    }
+
+    // Gráfico etapas
+    const etapaLabels = Object.keys(m.por_etapa).map(e => ETAPAS[e]?.label || e);
+    const etapaValores = Object.values(m.por_etapa);
+    const etapaCores = Object.keys(m.por_etapa).map(e => ETAPAS[e]?.cor || '#8b949e');
+    charts.etapa = new Chart(document.getElementById('chartEtapa'), {
+      type: 'pie',
+      data: {
+        labels: etapaLabels,
+        datasets: [{ data: etapaValores, backgroundColor: etapaCores, borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#8b949e', font: { size: 11 }, boxWidth: 12 } } } }
+    });
+
+    // Funil
+    const totalFunil = m.total_leads || 1;
+    const funilEl = document.getElementById('funilSteps');
+    funilEl.innerHTML = '';
+    const etapasOrdem = ['iniciou','perguntou_massagem','pediu_preco','clicou_agenda','pagou_sinal','confirmado'];
+    for (const etapa of etapasOrdem) {
+      const count = m.por_etapa[etapa] || 0;
+      const pct = Math.round((count / totalFunil) * 100);
+      const info = ETAPAS[etapa];
+      funilEl.innerHTML += `
+        <div class="funil-step">
+          <div class="funil-label">${info.label}</div>
+          <div class="funil-bar-wrap">
+            <div class="funil-bar" style="width:${pct}%; background:${info.cor};">${pct > 10 ? pct + '%' : ''}</div>
+          </div>
+          <div class="funil-count">${count}</div>
+        </div>`;
+    }
+
+    // Tabela
+    const tbody = document.getElementById('tabelaLeads');
+    tbody.innerHTML = '';
+    if (m.ultimos_leads.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:24px;">Nenhum lead registrado ainda</td></tr>';
+    } else {
+      for (const l of m.ultimos_leads) {
+        const data = l.data ? new Date(l.data).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '-';
+        const waLink = l.whatsapp && l.whatsapp !== '-'
+          ? `<a href="https://wa.me/55${l.whatsapp.replace(/\D/g,'')}" target="_blank" style="color:var(--green);text-decoration:none;">📲 ${l.whatsapp}</a>`
+          : '-';
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${l.nome}</strong></td>
+            <td>${waLink}</td>
+            <td><span class="canal-badge">${CANAIS[l.canal] || l.canal}</span></td>
+            <td style="color:var(--gold)">${l.massagem}</td>
+            <td><span class="badge ${l.etapa}">${ETAPAS[l.etapa]?.label || l.etapa}</span></td>
+            <td style="color:var(--sub);font-size:12px">${data}</td>
+          </tr>`;
+      }
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+  } catch (err) {
+    document.getElementById('loading').innerHTML = `<div class="error">Erro ao carregar: ${err.message}</div>`;
+  }
+}
+
+carregar();
+setInterval(carregar, 5 * 60 * 1000); // atualiza a cada 5 min
+</script>
+</body>
+</html>

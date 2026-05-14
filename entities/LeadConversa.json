@@ -1,0 +1,59 @@
+{
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string"
+    },
+    "whatsapp": {
+      "type": "string"
+    },
+    "canal_origem": {
+      "type": "string",
+      "enum": [
+        "telegram",
+        "whatsapp",
+        "link_web",
+        "instagram",
+        "outro"
+      ]
+    },
+    "link_utm": {
+      "type": "string"
+    },
+    "massagem_interesse": {
+      "type": "string"
+    },
+    "etapa_funil": {
+      "type": "string",
+      "enum": [
+        "iniciou",
+        "perguntou_massagem",
+        "pediu_preco",
+        "clicou_agenda",
+        "pagou_sinal",
+        "confirmado",
+        "abandonou"
+      ]
+    },
+    "ultima_mensagem": {
+      "type": "string"
+    },
+    "data_ultimo_contato": {
+      "type": "string"
+    },
+    "reengajamento_enviado": {
+      "type": "boolean"
+    },
+    "converteu": {
+      "type": "boolean"
+    },
+    "telegram_chat_id": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "LeadConversa"
+}
