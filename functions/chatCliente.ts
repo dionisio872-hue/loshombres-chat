@@ -384,16 +384,47 @@ setTimeout(() => {
     });
   }
 
-  // ===== POST — processar mensagem =====
+  // ===== POST — processar mensagem (web chat ou Telegram webhook) =====
   try {
     const body = await req.json().catch(() => ({}));
-    const { message, history = [] } = body;
-    if (!message) return Response.json({ error: 'message obrigatório' }, { status: 400 });
+
+    // Detectar se é webhook do Telegram
+    const isTelegram = body?.message?.chat?.id !== undefined;
+
+    let userText: string;
+    let chatId: number | null = null;
+    let firstName = '';
+    let history: any[] = [];
+
+    if (isTelegram) {
+      const tgMsg = body.message;
+      if (!tgMsg?.text) return new Response('OK', { status: 200 });
+      chatId = tgMsg.chat.id;
+      userText = tgMsg.text;
+      firstName = tgMsg.from?.first_name || '';
+
+      // Boas-vindas no /start
+      if (userText === '/start') {
+        const welcome = `Olá${firstName ? ', ' + firstName : ''}! 👋 Seja bem-vindo ao *Estúdio Los Hombres* ✨\n\nSomos especializados em massagens masculinas de alto padrão em BH, com unidades na Savassi e Betim.\n\nComo posso te ajudar hoje?`;
+        const BOT_TOKEN = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || '';
+        await fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendMessage\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: welcome, parse_mode: 'Markdown' })
+        });
+        return new Response('OK', { status: 200 });
+      }
+    } else {
+      const { message, history: hist = [] } = body;
+      if (!message) return Response.json({ error: 'message obrigatório' }, { status: 400 });
+      userText = message;
+      history = hist;
+    }
 
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...history.slice(-12),
-      { role: 'user', content: message }
+      { role: 'user', content: userText }
     ];
 
     const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -409,6 +440,23 @@ setTimeout(() => {
     if (!aiRes.ok) return Response.json({ error: aiData.error?.message || 'Erro OpenAI' }, { status: 500 });
 
     const reply = aiData.choices?.[0]?.message?.content || 'Desculpe, não consegui processar.';
+
+    if (isTelegram && chatId) {
+      // Mostrar "digitando..." e responder no Telegram
+      const BOT_TOKEN = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || '';
+      await fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendChatAction\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, action: 'typing' })
+      });
+      await fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendMessage\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: reply, parse_mode: 'Markdown' })
+      });
+      return new Response('OK', { status: 200 });
+    }
+
     return Response.json({ reply }, { headers: { 'Access-Control-Allow-Origin': '*' } });
 
   } catch (error) {
