@@ -50,6 +50,28 @@ const AUDIOS: Record<string, string> = {
   'nuru_casal': 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/787e65832_nuru_casal.mp3',
 };
 
+// ─── VÍDEOS POR MASSAGEM ──────────────────────────────────────────────────────
+const VIDEOS: Record<string, string> = {
+  'relaxante sensual': 'https://drive.google.com/file/d/11-2dPRI-12wXk-YG0kEoaQzHDMCDKXLn/view',
+  'tantrica experience': 'https://drive.google.com/file/d/1iX0TQyZtnH5Te1oKJDQRkM2ah1Id9gsT/view',
+  'quick massage': 'https://drive.google.com/file/d/19UFSp-pYb-_GeZfBoGVnmhVjxdm_ifqi/view',
+  'miofascial': 'https://drive.google.com/file/d/1WsXJH2FHG9qW2Cvh9DXBxAkQicwnOJhj/view',
+  'nuru summa': 'https://drive.google.com/file/d/12drdn_6WstMhAuDfkxgdz7mryfNnapBB/view',
+  'tantrica mutua': 'https://drive.google.com/file/d/1kPCvgZpc6HZUZjlZLlsB_1cydVzfEPzl/view',
+  'blind experience': 'https://drive.google.com/file/d/1e2zigQk2sKRZJzz-gpGfVzeVYO1-ha-H/view',
+  'massagem dos deuses': 'https://drive.google.com/file/d/1ZmA8cPeoWq2r6EXxCiWGYSsj96S_cqlA/view',
+  'hot': 'https://drive.google.com/file/d/1CXkvTG3UeANayJp2-taDU7dbnT1JEnmB/view',
+  'tie and teaser': 'https://drive.google.com/file/d/1LsOQ__1GVRIkHhB0JaLX8moX34qHMzEa/view',
+  'hidrotantra': 'https://drive.google.com/file/d/1rHJNPd4mVVieHvhFT9c8Zs58YbgdYGOo/view',
+  'burn': 'https://drive.google.com/file/d/1yVnDrJNcJMUMX3cghb904Ph6AlD5axNp/view',
+  'summa experientia': 'https://drive.google.com/file/d/1P6WR-AyHFsXOk9gcQvo6DDYGbNkDlMX0/view',
+  'podoloterapia': 'https://drive.google.com/file/d/1tMZpDTEW0aTuQHTICdPJiJx3ZPhmQ14n/view',
+  'tantrica casal': 'https://drive.google.com/file/d/1FnOivOdKreK4hZ-wFTLRgUxNBNarDKZV/view',
+  'relaxante sensual casal': 'https://drive.google.com/file/d/1B1f-GeDCRQD8lEUiQccO59fhRb_71RiM/view',
+  'nuru casal': 'https://drive.google.com/file/d/1rJ70vOebyKpQ_RhzGXzjQ-Dw1-xt4eLM/view',
+};
+
+
 const MASSAGENS: Array<{chaves: string[], nome: string, audio: string, texto: string, preco?: string, preco_desc?: string}> = [
   { chaves: ['relaxante sensual', 'relaxante', 'sensual'], nome: 'Relaxante Sensual', audio: AUDIOS.relaxante, preco: 'R$ 280', preco_desc: 'R$ 224 (com 20% de desconto para 30 dias de antecedência)', texto: 'Uma massagem que combina relaxamento profundo com toque sensorial envolvente. Indicada para quem busca descanso do corpo com presença e calor humano.' },
   { chaves: ['tantrica experience', 'tântrica experience', 'tantra experience', 'tantrica', 'tântrica', 'lingam'], nome: 'Tântrica Experience', audio: AUDIOS.tantrica, preco: 'R$ 350', preco_desc: 'R$ 280 (com 20% de desconto para 30 dias de antecedência)', texto: 'Uma vivência bioenergética e sensorial completa, com a prática do Lingam Massagem. Para quem quer ir além do físico e reconectar energia vital.' },
@@ -104,6 +126,7 @@ function detectarIntencao(texto: string): string {
   if (/vergonha|timido|corpo/.test(n)) return 'vergonha';
   if (/inseguro/.test(n)) return 'reuniao_online';
   if (/tatuagem|tattoo/.test(n)) return 'tatuagem';
+  if (/^video\??$|^video\?\?$|quero ver|me manda o video|manda video|ver o video|tem video|mostra o video/.test(n.trim())) return 'pedir_video';
   if (/nao sei|nao tenho certeza|medo|receio|nervoso|ansioso|constrangido|envergonhado|muita duvida|muitas duvidas|videochamada|video chamada|reuniao|conhecer antes|bater um papo|falar antes|conversar antes/.test(n)) return 'reuniao_online';
   if (/massagem|servico|serviço|opcoes|opções|tipos/.test(n)) return 'listar';
   return 'outro';
@@ -229,8 +252,13 @@ async function responderListar(chatId: number) {
 
 async function responderMassagem(chatId: number, m: typeof MASSAGENS[0]) {
   await sendAudio(chatId, m.audio);
+  // Buscar vídeo correspondente
+  const nomeNorm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const massagemKey = Object.keys(VIDEOS).find(k => nomeNorm(m.nome).includes(nomeNorm(k)) || nomeNorm(k).includes(nomeNorm(m.nome)));
+  const videoUrl = massagemKey ? VIDEOS[massagemKey] : null;
   let msg = `<b>${m.nome}</b>\n\n${m.texto}`;
   if (m.preco) msg += `\n\n💰 Valor: <b>${m.preco}</b>\n🎁 ${m.preco_desc}`;
+  if (videoUrl) msg += `\n\n🎬 Vídeo: ${videoUrl}`;
   msg += `\n\n📅 Para agendar, o sinal é R$ 30,00 via PIX (CNPJ 17342740000109 — JG Espaço Multserviços).\n\nQual unidade prefere? Savassi ou Betim?`;
   await sendText(chatId, msg, {
     inline_keyboard: [
@@ -312,6 +340,32 @@ async function responderReuniaoOnline(chatId: number) {
   );
 }
 
+async function responderPedirVideo(chatId: number) {
+  await sendText(chatId,
+    `Claro! Tenho vídeos explicativos de todas as massagens. 🎬\n\nQual massagem você quer ver?`,
+    {
+      inline_keyboard: [
+        [{ text: 'Relaxante Sensual', callback_data: 'video_relaxante' }, { text: 'Tântrica Experience', callback_data: 'video_tantrica' }],
+        [{ text: 'Nuru Summa', callback_data: 'video_nuru' }, { text: 'Tântrica Mútua', callback_data: 'video_mutua' }],
+        [{ text: 'Blind Experience', callback_data: 'video_blind' }, { text: 'HOT', callback_data: 'video_hot' }],
+        [{ text: 'Burn', callback_data: 'video_burn' }, { text: 'Summa Experientia', callback_data: 'video_summa' }],
+        [{ text: 'Ver todas as massagens', callback_data: 'listar' }],
+      ]
+    }
+  );
+}
+
+async function responderVideo(chatId: number, massagemKey: string) {
+  const videoUrl = VIDEOS[massagemKey];
+  if (videoUrl) {
+    await sendText(chatId, `🎬 Aqui está o vídeo da <b>${massagemKey.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</b>:\n\n${videoUrl}\n\nQuer agendar essa sessão? 😊`, {
+      inline_keyboard: [
+        [{ text: '📅 Agendar', callback_data: 'agendar' }],
+      ]
+    });
+  }
+}
+
 async function responderTatuagem(chatId: number) {
   await sendText(chatId,
     `Para tatuagem, entre em contato pelo WhatsApp: (31) 99126-6270 📲`
@@ -373,6 +427,7 @@ async function processarMensagem(req: Request, chatId: number, texto: string, no
     case 'curso': await responderCurso(chatId); break;
     case 'micose': await responderMicose(chatId); break;
     case 'vergonha': await responderVergonha(chatId); break;
+    case 'pedir_video': await responderPedirVideo(chatId); break;
     case 'reuniao_online': await responderReuniaoOnline(chatId); break;
     case 'tatuagem': await responderTatuagem(chatId); break;
     default: await responderComIA(chatId, texto);
@@ -384,11 +439,25 @@ async function processarCallback(req: Request, chatId: number, data: string, nom
   switch (data) {
     case 'listar': await responderListar(chatId); break;
     case 'agendar':
-    case 'agendar_savassi':
-    case 'agendar_betim': await responderAgendar(chatId); break;
+    case 'agendar_savassi': await responderAgendarSavassi(chatId); break;
+    case 'agendar_betim': await responderAgendarBetim(chatId); break;
     case 'preco': await responderPreco(chatId); break;
     case 'localizacao': await responderLocalizacao(chatId); break;
-    default: await responderSaudacao(chatId);
+    case 'video_relaxante': await responderVideo(chatId, 'relaxante sensual'); break;
+    case 'video_tantrica': await responderVideo(chatId, 'tantrica experience'); break;
+    case 'video_nuru': await responderVideo(chatId, 'nuru summa'); break;
+    case 'video_mutua': await responderVideo(chatId, 'tantrica mutua'); break;
+    case 'video_blind': await responderVideo(chatId, 'blind experience'); break;
+    case 'video_hot': await responderVideo(chatId, 'hot'); break;
+    case 'video_burn': await responderVideo(chatId, 'burn'); break;
+    case 'video_summa': await responderVideo(chatId, 'summa experientia'); break;
+    case 'video_deuses': await responderVideo(chatId, 'massagem dos deuses'); break;
+    case 'video_hidro': await responderVideo(chatId, 'hidrotantra'); break;
+    case 'video_tie': await responderVideo(chatId, 'tie and teaser'); break;
+    case 'video_podo': await responderVideo(chatId, 'podoloterapia'); break;
+    case 'video_quick': await responderVideo(chatId, 'quick massage'); break;
+    case 'video_miofascial': await responderVideo(chatId, 'miofascial'); break;
+    default: await responderListar(chatId);
   }
 }
 
