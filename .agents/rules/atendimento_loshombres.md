@@ -43,6 +43,13 @@ Perguntar qual unidade (Savassi ou Betim) e mandar o link correspondente:
 - Betim: https://calendar.app.google/dandDDiGYKtD36Q19
 - Lembrar: sinal de R$ 30,00 via PIX CNPJ 17342740000109 (JG Espaço Multserviços)
 
+Quando o cliente informar a data e horário:
+⚠️ VALIDAÇÃO DE DATA: Verificar se a data informada é futura (hoje é sempre a data atual do sistema). Se a data já passou, alertar gentilmente:
+> "Ops! Parece que essa data já passou 😅 Pode confirmar novamente? Escolha um dia a partir de [data de amanhã] no link da agenda."
+
+💰 VALOR: Buscar o valor da massagem no site oficial (https://www.loshombres.com.br/tabela.html). Informar o valor encontrado e perguntar:
+> "O valor da [massagem] é R$ [valor]. Está correto ou tem alguma condição especial?" — só confirmar o agendamento com o valor validado pelo cliente.
+
 ---
 
 ### 5. Confirmação de agendamento — SAVASSI
@@ -50,7 +57,7 @@ Perguntar qual unidade (Savassi ou Betim) e mandar o link correspondente:
 > 📅 Data: [data] | ⏰ Horário: [horário]
 > 📍 Ed. Modesto Starling - Sala 208, Rua Tomé de Souza 503, Savassi
 > 🗺️ https://maps.app.goo.gl/nuxgQUjwLL44f4Nt6
-> 💰 Total: R$ [valor] | Sinal pago: R$ [sinal] | Restante: R$ [restante]
+> 💰 Total: R$ [valor] | Sinal pago: R$ 30,00 | Restante: R$ [restante]
 > 📝 Formulário pré-sessão: https://docs.google.com/forms/d/e/1FAIpQLSdL6c1o3rXGHQjRyi0wzSxvAKOZ6XPIZhX6TJHn2cfEnNoiWA/viewform
 > ⚠️ Trazer RG ou CNH. Vir de banho tomado. Chegar na hora marcada.
 
@@ -59,7 +66,7 @@ Perguntar qual unidade (Savassi ou Betim) e mandar o link correspondente:
 > 📅 Data: [data] | ⏰ Horário: [horário]
 > 📍 Rua Pernambuco, 341 - Bairro Nossa Senhora das Graças
 > 🗺️ https://maps.app.goo.gl/xoQe7PXwRR2JCe6m9
-> 💰 Total: R$ [valor] | Sinal pago: R$ [sinal] | Restante: R$ [restante]
+> 💰 Total: R$ [valor] | Sinal pago: R$ 30,00 | Restante: R$ [restante]
 > 📝 Formulário pré-sessão: https://docs.google.com/forms/d/e/1FAIpQLSdL6c1o3rXGHQjRyi0wzSxvAKOZ6XPIZhX6TJHn2cfEnNoiWA/viewform
 > ⚠️ Trazer RG ou CNH. Vir de banho tomado. Chegar na hora marcada.
 
