@@ -8,6 +8,48 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b141a; color: #e9edef; display: flex; flex-direction: column; height: 100vh; }
+
+/* ── TELA DE BOAS-VINDAS ── */
+#welcome {
+  position: fixed; inset: 0; background: #0b141a;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 24px; z-index: 100; gap: 0;
+}
+.wlogo {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, #c9a84c, #8b6914);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 20px;
+  box-shadow: 0 4px 24px rgba(201,168,76,0.35);
+}
+.wtitle { font-size: 22px; font-weight: 700; color: #e9edef; text-align: center; margin-bottom: 6px; }
+.wsub { font-size: 14px; color: #8696a0; text-align: center; margin-bottom: 32px; line-height: 1.5; }
+.wcard {
+  background: #202c33; border-radius: 16px; padding: 24px 20px;
+  width: 100%; max-width: 380px;
+}
+.wlabel { font-size: 13px; color: #8696a0; margin-bottom: 8px; }
+.winput-wrap { display: flex; gap: 8px; align-items: center; background: #2a3942; border-radius: 12px; padding: 4px 4px 4px 14px; }
+.wflag { font-size: 20px; flex-shrink: 0; }
+.wddi { font-size: 14px; color: #8696a0; flex-shrink: 0; padding-right: 6px; border-right: 1px solid #3b4a54; }
+#wtel { flex: 1; background: transparent; border: none; outline: none; color: #e9edef; font-size: 16px; padding: 8px 4px; min-width: 0; }
+#wtel::placeholder { color: #8696a0; }
+.wname-wrap { display: flex; align-items: center; background: #2a3942; border-radius: 12px; padding: 4px 4px 4px 14px; margin-top: 12px; }
+#wname { flex: 1; background: transparent; border: none; outline: none; color: #e9edef; font-size: 16px; padding: 8px 4px; min-width: 0; }
+#wname::placeholder { color: #8696a0; }
+.wbtn {
+  width: 100%; margin-top: 18px; padding: 14px;
+  background: #00a884; border: none; border-radius: 12px;
+  color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+  transition: background 0.2s;
+}
+.wbtn:hover { background: #00c99e; }
+.wbtn:disabled { background: #2a3942; color: #8696a0; cursor: not-allowed; }
+.wprivacy { font-size: 12px; color: #8696a0; text-align: center; margin-top: 14px; line-height: 1.5; }
+.wprivacy span { color: #00a884; }
+
+/* ── CHAT ── */
+#app { display: none; flex-direction: column; height: 100%; }
 header { background: #202c33; padding: 10px 16px; display: flex; align-items: center; gap: 12px; min-height: 60px; flex-shrink: 0; }
 .avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #c9a84c, #8b6914); display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 700; color: #fff; flex-shrink: 0; }
 .hname { font-size: 16px; font-weight: 600; color: #e9edef; }
@@ -48,45 +90,105 @@ footer { background: #202c33; padding: 8px 10px; display: flex; align-items: fle
 </style>
 </head>
 <body>
-<header>
-  <div class="avatar">L</div>
-  <div>
-    <div class="hname">Los Hombres Estúdio Spa</div>
-    <div class="hstatus">&#9679; online agora</div>
+
+<!-- TELA DE BOAS-VINDAS -->
+<div id="welcome">
+  <div class="wlogo">L</div>
+  <div class="wtitle">Los Hombres Estúdio Spa</div>
+  <div class="wsub">Atendimento masculino de alto padrão<br>Savassi & Betim — Belo Horizonte</div>
+  <div class="wcard">
+    <div class="wlabel">Seu WhatsApp (para personalizarmos seu atendimento)</div>
+    <div class="winput-wrap">
+      <span class="wflag">🇧🇷</span>
+      <span class="wddi">+55</span>
+      <input id="wtel" type="tel" placeholder="(31) 99999-0000" maxlength="16" inputmode="numeric">
+    </div>
+    <div class="wname-wrap">
+      <input id="wname" type="text" placeholder="Seu nome (opcional)" maxlength="40">
+    </div>
+    <button class="wbtn" id="wbtn" onclick="startChat()">Iniciar conversa →</button>
+    <div class="wprivacy">🔒 Seus dados são usados apenas para <span>personalizar seu atendimento</span> e nunca compartilhados.</div>
   </div>
-</header>
-<div id="chat"><div class="date-div"><span>hoje</span></div></div>
-<div id="qa">
-  <button class="qb" onclick="qk('Quais massagens vocês oferecem?')">&#128134; Massagens</button>
-  <button class="qb" onclick="qk('Quero agendar uma sessão')">&#128197; Agendar</button>
-  <button class="qb" onclick="qk('Quanto custa?')">&#128176; Preços</button>
-  <button class="qb" onclick="qk('Tem para casais?')">&#128145; Casais</button>
-  <button class="qb" onclick="qk('Onde fica o estúdio?')">&#128205; Localização</button>
 </div>
-<footer>
-  <textarea id="inp" placeholder="Mensagem" rows="1"></textarea>
-  <button id="sb" disabled><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
-</footer>
+
+<!-- CHAT -->
+<div id="app">
+  <header>
+    <div class="avatar">L</div>
+    <div>
+      <div class="hname">Los Hombres Estúdio Spa</div>
+      <div class="hstatus" id="hstatus">&#9679; online agora</div>
+    </div>
+  </header>
+  <div id="chat"><div class="date-div"><span>hoje</span></div></div>
+  <div id="qa">
+    <button class="qb" onclick="qk('Quais massagens vocês oferecem?')">&#128134; Massagens</button>
+    <button class="qb" onclick="qk('Quero agendar uma sessão')">&#128197; Agendar</button>
+    <button class="qb" onclick="qk('Quanto custa?')">&#128176; Preços</button>
+    <button class="qb" onclick="qk('Tem para casais?')">&#128145; Casais</button>
+    <button class="qb" onclick="qk('Onde fica o estúdio?')">&#128205; Localização</button>
+  </div>
+  <footer>
+    <textarea id="inp" placeholder="Mensagem" rows="1"></textarea>
+    <button id="sb" disabled><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </footer>
+</div>
+
 <script>
-var C=document.getElementById('chat'),I=document.getElementById('inp'),B=document.getElementById('sb'),H=[],META={};
+var C,I,B,H=[],META={};
 var EP='https://massagem-a87e3c43.base44.app/functions/chatCliente';
+var params=new URLSearchParams(window.location.search);
+var TEL=params.get('tel')||'';
+var NOME=params.get('nome')||'';
+var UTM=params.get('utm')||'';
+var SID='';
 
-// ─── RASTREAMENTO: lê ?tel= e ?nome= da URL ───
-var params = new URLSearchParams(window.location.search);
-var TEL   = params.get('tel')  || '';
-var NOME  = params.get('nome') || '';
-var UTM   = params.get('utm')  || '';
+// Formatar telefone ao digitar
+document.getElementById('wtel').addEventListener('input',function(){
+  var v=this.value.replace(/\D/g,'');
+  if(v.length<=2) this.value=v;
+  else if(v.length<=7) this.value='('+v.slice(0,2)+') '+v.slice(2);
+  else this.value='('+v.slice(0,2)+') '+v.slice(2,7)+'-'+v.slice(7,11);
+});
 
-// Sessão única por visitante (persiste no localStorage por número se vier)
-var SID = TEL
-  ? ('sess_' + TEL.replace(/\D/g,''))
-  : (localStorage.getItem('lh_sid') || ('sess_' + Date.now() + '_' + Math.random().toString(36).substr(2,6)));
-localStorage.setItem('lh_sid', SID);
+function startChat(){
+  var tel=document.getElementById('wtel').value.replace(/\D/g,'');
+  var nome=document.getElementById('wname').value.trim();
+  if(tel.length<10){
+    document.getElementById('wtel').style.outline='2px solid #e53935';
+    setTimeout(function(){document.getElementById('wtel').style.outline='';},1500);
+    return;
+  }
+  TEL=tel; NOME=nome;
+  META.whatsapp=tel;
+  if(nome) META.nome=nome;
+  launchChat();
+}
 
-// Pré-preenche META com dados da URL
-if (TEL)  META.whatsapp = TEL;
-if (NOME) META.nome     = NOME;
-if (UTM)  META.utm      = UTM;
+function launchChat(){
+  // Sessão única por número
+  SID = TEL ? ('sess_'+TEL) : ('sess_'+Date.now()+'_'+Math.random().toString(36).substr(2,6));
+  localStorage.setItem('lh_sid',SID);
+  if(UTM) META.utm=UTM;
+
+  document.getElementById('welcome').style.display='none';
+  var app=document.getElementById('app');
+  app.style.display='flex';
+  C=document.getElementById('chat');
+  I=document.getElementById('inp');
+  B=document.getElementById('sb');
+
+  B.onclick=function(){doSend(I.value);};
+  I.addEventListener('input',function(){B.disabled=!I.value.trim();I.style.height='auto';I.style.height=Math.min(I.scrollHeight,100)+'px';});
+  I.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend(I.value);}});
+
+  setTimeout(function(){
+    var saudacao=NOME
+      ?'Olá, '+NOME+'! Seja bem-vindo ao Estúdio Los Hombres 🖤\n\nSou o assistente virtual, estou aqui pra te ajudar a escolher a experiência ideal e tirar qualquer dúvida.\n\nComo posso te ajudar hoje?'
+      :'Olá! Seja bem-vindo ao Estúdio Los Hombres 🖤\n\nSou o assistente virtual, estou aqui pra te ajudar a escolher a experiência ideal e tirar qualquer dúvida.\n\nComo posso te ajudar hoje?';
+    addMsg(saudacao,'bot');
+  },500);
+}
 
 function ts(){return new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
 
@@ -123,18 +225,14 @@ function doSend(txt){
 }
 
 function qk(t){doSend(t);}
-B.onclick=function(){doSend(I.value);};
-I.addEventListener('input',function(){B.disabled=!I.value.trim();I.style.height='auto';I.style.height=Math.min(I.scrollHeight,100)+'px';});
-I.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend(I.value);}});
 
+// Se já veio com ?tel= na URL, pula a tela de boas-vindas
 window.onload=function(){
-  setTimeout(function(){
-    // Se vier com nome na URL, personaliza a saudação
-    var saudacao = NOME
-      ? 'Olá, ' + NOME + '! Seja bem-vindo ao Estúdio Los Hombres 🖤\n\nSou o assistente virtual, estou aqui pra te ajudar a escolher a experiência ideal e tirar dúvidas.\n\nComo posso te ajudar hoje?'
-      : 'Olá! Seja bem-vindo ao Estúdio Los Hombres 🖤\n\nSou o assistente virtual, estou aqui pra te ajudar a escolher a experiência ideal e tirar dúvidas.\n\nComo posso te ajudar hoje?';
-    addMsg(saudacao,'bot');
-  },600);
+  if(TEL){
+    META.whatsapp=TEL;
+    if(NOME) META.nome=NOME;
+    launchChat();
+  }
 };
 </script>
 </body>
