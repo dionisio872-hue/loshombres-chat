@@ -1,465 +1,388 @@
-const SYSTEM_PROMPT = `Você é o assistente virtual do Estúdio Los Hombres, estúdio de massagens masculinas de alto padrão em Belo Horizonte. Atende com sofisticação, calor humano e sem julgamentos.
+// chatCliente — Los Hombres v6
+// GET  → serve o HTML do chat
+// POST → processa mensagem e retorna resposta
 
-IDENTIDADE: Tom acolhedor, discreto, profissional, levemente descontraído. Nunca seja robótico.
+const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || '';
+const APP_ID     = '6a04cc22bf7a0dcea87e3c43';
+const SVC_TOKEN  = Deno.env.get('BASE44_SERVICE_TOKEN') || '';
+const FOTO       = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/180c845fb_foto_jonathan_hd.jpg';
 
-UNIDADES:
-- Savassi: Rua Tomé de Souza, 503, Sala 208
-- Betim: Rua Pernambuco, 341 - Bairro Nossa Senhora das Graças
-- WhatsApp: (31) 98324-4713
+const SYSTEM = `Você é o assistente virtual do Estúdio Los Hombres, estúdio de massagens masculinas de alto padrão em BH. Tom acolhedor, discreto, sem julgamentos. NUNCA use travessões (—). Use linguagem natural e pausada.
 
-MASSAGENS:
-1. Relaxante Sensual, 2. Tântrica Experience (inclui Lingam), 3. Quick Massage (25min), 4. Miofascial, 5. Nuru Summa (corpo a corpo com gel, ambos nus), 6. Tântrica Mútua (ambos nus), 7. Blind Experience (privação visual), 8. Massagem dos Deuses (vinho + petiscos), 9. HOT, 10. Tie and Teaser BDSM, 11. Hidrotantra (banheira), 12. Burn (estímulos térmicos), 13. Summa Experientia R$1.350 (ÚNICA com interação íntima, PrEP+preservativo), 14. Massagem 4 Mãos, 15. Podoloterapia, 16. Tântrica Casal, 17. Relaxante Sensual Casal, 18. Nuru Casal.
+UNIDADES: Savassi (Rua Tomé de Souza, 503, Sala 208) | Betim (Rua Pernambuco, 341 - Bairro Nossa Sra das Graças)
+WhatsApp: (31) 98324-4713
+
+MASSAGENS: Relaxante Sensual, Tântrica Experience (inclui Lingam), Quick Massage (25min), Miofascial, Nuru Summa (corpo a corpo, ambos nus), Tântrica Mútua, Blind Experience, Massagem dos Deuses (vinho+petiscos), HOT, Tie and Teaser BDSM, Hidrotantra (banheira), Burn, Summa Experientia R$1.350 (ÚNICA com interação íntima, PrEP+preservativo), Massagem 4 Mãos, Podoloterapia, Tântrica Casal, Relaxante Sensual Casal, Nuru Casal.
 Valores: https://www.loshombres.com.br/tabela.html
 
-AGENDAMENTO:
-- Sinal R$30 via PIX CNPJ 17342740000109 (JG Espaço Multserviços)
-- Cancelamento <12h: sinal retido. Trazer RG ou CNH.
-- Agenda Savassi: https://calendar.app.google/jBk4U8zf5WGb73MH6
-- Agenda Betim: https://calendar.app.google/dandDDiGYKtD36Q19
+AGENDAMENTO: Sinal R$30 PIX CNPJ 17342740000109 (JG Espaço Multserviços). Cancelamento <12h: sinal retido. Trazer RG ou CNH.
+Agenda Savassi: https://calendar.app.google/jBk4U8zf5WGb73MH6
+Agenda Betim: https://calendar.app.google/dandDDiGYKtD36Q19
 
-REGRAS:
-- "Tem sexo?" → Não inclui sexo, exceto Summa Experientia (única com interação íntima, protocolo PrEP+preservativo)
-- Tatuagem → WhatsApp 31991266270
-- Conteúdo adulto → WhatsApp 31987862117
-- Vagas → formulário + WhatsApp (31) 98787-0330
-- Micose → aguardar cicatrização
-- Vergonha do corpo → atende todos os corpos, sem julgamento
+REGRAS: "Tem sexo?" = não, exceto Summa Experientia. Tatuagem = 31991266270. Conteúdo adulto = 31987862117. Vagas = formulário + (31) 98787-0330. Micose = aguardar cicatrização. Vergonha do corpo = atende todos, sem julgamento.
 
-FLUXO: boas-vindas → identificar o que busca → sugerir massagem → informar valor → se quiser agendar: perguntar unidade → link agenda → confirmar sinal R$30 PIX.
+FLUXO: boas-vindas -> identificar o que busca -> sugerir massagem -> valor -> se quiser agendar: perguntar unidade -> link -> confirmar sinal R$30 PIX.`;
 
-Site: https://www.loshombres.com.br/ | Quiz: https://www.loshombres.com.br/quiz.html`;
+async function salvarLead(contato: string, sessaoId: string) {
+  try {
+    await fetch(`https://base44.app/api/apps/${APP_ID}/entities/LeadConversa`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SVC_TOKEN}`,
+      },
+      body: JSON.stringify({
+        whatsapp: contato,
+        canal_origem: 'chat_web',
+        etapa_funil: 'consulta',
+        ultima_mensagem: `Contato informado via chat web - sessão ${sessaoId}`,
+        data_ultimo_contato: new Date().toISOString(),
+        observacoes: `Sessão chat: ${sessaoId}`,
+      }),
+    });
+  } catch (_) { /* silencioso */ }
+}
 
-Deno.serve(async (req) => {
-  const url = new URL(req.url);
+async function responderIA(msgs: {role:string; content:string}[]): Promise<string> {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      max_tokens: 350,
+      temperature: 0.7,
+      messages: [{ role: 'system', content: SYSTEM }, ...msgs],
+    }),
+  });
+  const d = await res.json();
+  return d.choices?.[0]?.message?.content?.trim() || 'Pode me chamar no WhatsApp: (31) 98324-4713 😊';
+}
 
-  // ===== GET — servir página HTML =====
-  if (req.method === 'GET') {
-    const html = `<!DOCTYPE html>
+const PAGE = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Los Hombres — Atendimento</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0b141a;
-    --chat-bg: #0b141a;
-    --header-bg: #202c33;
-    --input-bg: #2a3942;
-    --bot-bubble: #202c33;
-    --user-bubble: #005c4b;
-    --text: #e9edef;
-    --subtext: #8696a0;
-    --gold: #c9a84c;
-    --green: #00a884;
-    --border: #2a3942;
-  }
-  html, body { height: 100%; overflow: hidden; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#c9a84c;--gold2:#7a5418;
+  --bg:#0a0a0a;--surface:#141414;--surf2:#1c1c1c;
+  --border:#252525;--text:#f0f0f0;--muted:#555;
+  --bot:#0f0f22;--me-start:#b8903e;--me-end:#6b4710;
+  --green:#22c55e;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}
+.wrap{display:flex;flex-direction:column;height:100dvh;max-width:640px;margin:0 auto}
 
-  /* HEADER */
-  header {
-    background: var(--header-bg);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 60px;
-    flex-shrink: 0;
-  }
-  .avatar {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #c9a84c, #8b6914);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; font-weight: 700; color: #fff;
-    flex-shrink: 0;
-  }
-  .header-text { flex: 1; }
-  .header-name { font-size: 16px; font-weight: 600; color: var(--text); }
-  .header-status { font-size: 12px; color: var(--green); margin-top: 1px; }
+/* HEADER */
+.hdr{
+  background:linear-gradient(180deg,#1e1e1e,#121212);
+  border-bottom:1px solid var(--border);
+  padding:10px 16px;
+  display:flex;align-items:center;gap:13px;flex-shrink:0;
+}
+.av-wrap{position:relative;flex-shrink:0}
+.av{
+  width:58px;height:58px;border-radius:50%;
+  object-fit:cover;object-position:top center;
+  border:2.5px solid var(--gold);
+  box-shadow:0 0 0 4px rgba(201,168,76,.15);
+}
+.dot{
+  position:absolute;bottom:3px;right:3px;
+  width:13px;height:13px;background:var(--green);
+  border-radius:50%;border:2.5px solid #141414;
+}
+.hdr-info{flex:1}
+.hdr-info h2{font-size:16px;font-weight:700;color:#fff}
+.hdr-info .on{font-size:12px;color:var(--green);font-weight:500;margin-top:1px}
+.hdr-info .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.logo{font-size:8px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;font-weight:800;line-height:1.8;text-align:right;flex-shrink:0}
 
-  /* WALLPAPER / CHAT AREA */
-  #chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 6%;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    background-color: #0b141a;
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23182229' fill-opacity='0.8'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  }
-  #chat::-webkit-scrollbar { width: 5px; }
-  #chat::-webkit-scrollbar-thumb { background: #2a3942; border-radius: 3px; }
+.notice{text-align:center;font-size:11px;color:var(--muted);
+  padding:4px 12px;background:#0d0d0d;border-bottom:1px solid var(--border);flex-shrink:0}
 
-  /* MESSAGES */
-  .msg-row {
-    display: flex;
-    margin: 2px 0;
-  }
-  .msg-row.bot { justify-content: flex-start; }
-  .msg-row.user { justify-content: flex-end; }
+/* MSGS */
+.msgs{flex:1;overflow-y:auto;padding:14px 12px 6px;display:flex;flex-direction:column;gap:10px}
+.msgs::-webkit-scrollbar{width:3px}
+.msgs::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
 
-  .bubble {
-    max-width: 75%;
-    padding: 8px 12px 6px;
-    border-radius: 8px;
-    font-size: 14.5px;
-    line-height: 1.5;
-    position: relative;
-    word-wrap: break-word;
-  }
-  .msg-row.bot .bubble {
-    background: var(--bot-bubble);
-    border-top-left-radius: 0;
-    color: var(--text);
-  }
-  .msg-row.user .bubble {
-    background: var(--user-bubble);
-    border-top-right-radius: 0;
-    color: var(--text);
-  }
-  .bubble .time {
-    font-size: 11px;
-    color: var(--subtext);
-    float: right;
-    margin-left: 8px;
-    margin-top: 2px;
-  }
-  .bubble a { color: #53bdeb; word-break: break-all; }
+.row{display:flex;align-items:flex-end;gap:7px}
+.row.bot{justify-content:flex-start}
+.row.me{justify-content:flex-end}
+.rav{width:32px;height:32px;border-radius:50%;object-fit:cover;object-position:top center;flex-shrink:0;border:1.5px solid var(--gold)}
+.col{display:flex;flex-direction:column;max-width:78%}
+.row.me .col{align-items:flex-end}
+.bub{padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.bub.bot{background:var(--bot);border-bottom-left-radius:4px;border:1px solid #1e1e3a}
+.bub.me{background:linear-gradient(135deg,var(--me-start),var(--me-end));border-bottom-right-radius:4px;color:#fff;font-weight:600}
+.ts{font-size:10px;color:var(--muted);margin-top:3px;padding:0 3px}
 
-  /* TAIL */
-  .msg-row.bot .bubble::before {
-    content: '';
-    position: absolute;
-    top: 0; left: -8px;
-    border: 8px solid transparent;
-    border-top-color: var(--bot-bubble);
-    border-right-color: var(--bot-bubble);
-    border-top-left-radius: 2px;
-  }
-  .msg-row.user .bubble::before {
-    content: '';
-    position: absolute;
-    top: 0; right: -8px;
-    border: 8px solid transparent;
-    border-top-color: var(--user-bubble);
-    border-left-color: var(--user-bubble);
-    border-top-right-radius: 2px;
-  }
+/* TYPING */
+.tbub{display:inline-flex;align-items:center;gap:5px;padding:13px 17px;background:var(--bot);border-radius:18px;border-bottom-left-radius:4px;border:1px solid #1e1e3a}
+.td{width:7px;height:7px;background:#333;border-radius:50%;animation:b 1.3s infinite}
+.td:nth-child(2){animation-delay:.22s}.td:nth-child(3){animation-delay:.44s}
+@keyframes b{0%,55%,100%{transform:translateY(0);background:#333}27%{transform:translateY(-7px);background:var(--gold)}}
 
-  /* DATE DIVIDER */
-  .date-divider {
-    text-align: center;
-    margin: 10px 0;
-  }
-  .date-divider span {
-    background: #182229;
-    color: var(--subtext);
-    font-size: 12px;
-    padding: 4px 12px;
-    border-radius: 8px;
-  }
+/* QUICK REPLIES */
+.quick{display:flex;gap:8px;overflow-x:auto;padding:8px 12px;background:#0d0d0d;border-top:1px solid var(--border);flex-shrink:0;scrollbar-width:none}
+.quick::-webkit-scrollbar{display:none}
+.qb{background:var(--surf2);border:1px solid #303030;color:var(--gold);border-radius:20px;padding:7px 14px;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:inherit;transition:background .15s}
+.qb:hover{background:#252525}
 
-  /* TYPING */
-  .typing-row { display: flex; justify-content: flex-start; margin: 2px 0; }
-  .typing-bubble {
-    background: var(--bot-bubble);
-    border-radius: 8px; border-top-left-radius: 0;
-    padding: 12px 16px;
-    display: flex; gap: 4px; align-items: center;
-  }
-  .typing-bubble span {
-    width: 7px; height: 7px;
-    background: var(--subtext);
-    border-radius: 50%;
-    animation: bounce 1.3s infinite;
-    display: block;
-  }
-  .typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
-  .typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: 0.6; } 30% { transform: translateY(-5px); opacity: 1; } }
+/* INPUT */
+.inp-area{background:var(--surface);border-top:1px solid var(--border);padding:10px 13px;display:flex;align-items:flex-end;gap:9px;flex-shrink:0}
+#inp{flex:1;background:var(--surf2);border:1.5px solid var(--border);border-radius:22px;padding:11px 15px;font-size:14px;color:var(--text);outline:none;resize:none;max-height:110px;min-height:44px;font-family:inherit;line-height:1.45;transition:border-color .2s}
+#inp:focus{border-color:var(--gold)}
+#inp::placeholder{color:var(--muted)}
+#sbtn{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 10px rgba(201,168,76,.3);transition:transform .12s;-webkit-tap-highlight-color:transparent}
+#sbtn:active{transform:scale(.9)}
+#sbtn:disabled{opacity:.35;cursor:default}
+#sbtn svg{display:block;pointer-events:none}
 
-  /* QUICK REPLIES */
-  #quickArea {
-    background: var(--header-bg);
-    padding: 8px 12px;
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    flex-shrink: 0;
-    border-top: 1px solid var(--border);
-  }
-  #quickArea::-webkit-scrollbar { display: none; }
-  .qbtn {
-    background: #2a3942;
-    border: 1px solid #3b4a54;
-    color: var(--green);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.15s;
-    flex-shrink: 0;
-  }
-  .qbtn:hover { background: #3b4a54; }
-
-  /* INPUT AREA */
-  footer {
-    background: var(--header-bg);
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    border-top: 1px solid var(--border);
-  }
-  #input {
-    flex: 1;
-    background: var(--input-bg);
-    border: none;
-    border-radius: 24px;
-    padding: 10px 16px;
-    color: var(--text);
-    font-size: 15px;
-    outline: none;
-    resize: none;
-    max-height: 120px;
-    min-height: 44px;
-    line-height: 1.4;
-    font-family: inherit;
-  }
-  #input::placeholder { color: var(--subtext); }
-  #sendBtn {
-    width: 44px; height: 44px;
-    background: var(--green);
-    border: none; border-radius: 50%;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: transform 0.1s;
-    flex-shrink: 0;
-  }
-  #sendBtn:hover { transform: scale(1.05); background: #00c99e; }
-  #sendBtn:disabled { background: #3b4a54; cursor: not-allowed; transform: none; }
-  #sendBtn svg { width: 20px; height: 20px; fill: white; }
+/* FAB */
+.fab{position:fixed;bottom:82px;right:14px;background:#229ED9;color:#fff;border-radius:50px;padding:11px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;box-shadow:0 4px 18px rgba(34,158,217,.4);text-decoration:none;z-index:200;-webkit-tap-highlight-color:transparent}
+@media(max-width:400px){.fab .ft{display:none}.fab{border-radius:50%;padding:12px;bottom:76px}}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<header>
-  <div class="avatar">L</div>
-  <div class="header-text">
-    <div class="header-name">Los Hombres Estúdio Spa</div>
-    <div class="header-status">● online agora</div>
+<div class="hdr">
+  <div class="av-wrap">
+    <img class="av" src="${FOTO}" alt="Jonathan" onerror="this.style.background='#1e1e1e'">
+    <div class="dot"></div>
   </div>
-</header>
-
-<div id="chat">
-  <div class="date-divider"><span>hoje</span></div>
+  <div class="hdr-info">
+    <h2>Jonathan</h2>
+    <div class="on">● online agora</div>
+    <div class="sub">Massagista · Savassi &amp; Betim · BH</div>
+  </div>
+  <div class="logo">LOS<br>HOMBRES</div>
 </div>
 
-<div id="quickArea">
-  <button class="qbtn" onclick="quick('Quais massagens vocês oferecem?')">💆 Massagens</button>
-  <button class="qbtn" onclick="quick('Quero agendar uma sessão')">📅 Agendar</button>
-  <button class="qbtn" onclick="quick('Quanto custa?')">💰 Preços</button>
-  <button class="qbtn" onclick="quick('Tem atendimento para casais?')">👫 Casais</button>
-  <button class="qbtn" onclick="quick('Onde fica o estúdio?')">📍 Localização</button>
+<div class="notice">🔒 Atendimento sigiloso · Suas informações não são compartilhadas</div>
+
+<div class="msgs" id="msgs"></div>
+
+<div class="quick" id="quick">
+  <button class="qb" data-q="Quais massagens vocês têm?">💆 Massagens</button>
+  <button class="qb" data-q="Quero agendar uma sessão">📅 Agendar</button>
+  <button class="qb" data-q="Quanto custa?">💰 Preços</button>
+  <button class="qb" data-q="Atende casais?">👫 Casais</button>
+  <button class="qb" data-q="Onde fica o estúdio?">📍 Localização</button>
+  <button class="qb" data-q="Tem sexo nas massagens?">❓ Dúvidas</button>
 </div>
 
-<footer>
-  <textarea id="input" placeholder="Mensagem" rows="1"></textarea>
-  <button id="sendBtn" disabled>
-    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+<div class="inp-area">
+  <textarea id="inp" rows="1" placeholder="Digite sua mensagem..." maxlength="600"></textarea>
+  <button id="sbtn" type="button" disabled>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
   </button>
-</footer>
+</div>
+</div>
+
+<a class="fab" href="https://t.me/Atendimentoloshombresbot" target="_blank" rel="noopener">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.01 9.47c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.48 14.4l-2.95-.924c-.64-.204-.654-.64.136-.95l11.527-4.444c.537-.194 1.006.131.37.166z"/></svg>
+  <span class="ft">Continuar no Telegram</span>
+</a>
 
 <script>
-const chatEl = document.getElementById('chat');
-const inputEl = document.getElementById('input');
-const sendBtn = document.getElementById('sendBtn');
-const history = [];
-const ENDPOINT = '${url.origin}${url.pathname}';
+var ENDPOINT = location.origin + location.pathname;
+var FOTO     = '${FOTO}';
 
-function now() {
-  return new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+var msgsEl = document.getElementById('msgs');
+var inpEl  = document.getElementById('inp');
+var sbtnEl = document.getElementById('sbtn');
+var quickEl= document.getElementById('quick');
+var busy   = false;
+
+// histórico de msgs + estado de captura de contato
+var hist = [];
+var sessaoId = Math.random().toString(36).slice(2,10);
+var contatoCapturado = false;
+var aguardandoContato = false;
+
+function hora(){
+  var d=new Date();
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function scroll(){ msgsEl.scrollTop = msgsEl.scrollHeight; }
+
+function mkAv(){
+  var img=document.createElement('img');
+  img.className='rav'; img.src=FOTO; img.alt='J'; return img;
 }
 
-function addMsg(text, role) {
-  const row = document.createElement('div');
-  row.className = 'msg-row ' + role;
-  const b = document.createElement('div');
-  b.className = 'bubble';
-  const safe = text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\\n/g,'<br>')
-    .replace(/(https?:\\/\\/[^\\s<]+)/g,'<a href="$1" target="_blank">$1</a>')
-    .replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>');
-  b.innerHTML = safe + '<span class="time">' + now() + '</span>';
-  row.appendChild(b);
-  chatEl.appendChild(row);
-  chatEl.scrollTop = chatEl.scrollHeight;
+function addMsg(txt, tipo){
+  var row=document.createElement('div'); row.className='row '+tipo;
+  if(tipo==='bot') row.appendChild(mkAv());
+  var col=document.createElement('div'); col.className='col';
+  var bub=document.createElement('div'); bub.className='bub '+tipo; bub.textContent=txt;
+  var ts=document.createElement('div'); ts.className='ts'; ts.textContent=hora();
+  col.appendChild(bub); col.appendChild(ts); row.appendChild(col);
+  msgsEl.appendChild(row); scroll();
 }
 
-function showTyping() {
-  const row = document.createElement('div');
-  row.className = 'typing-row'; row.id = 'typing';
-  row.innerHTML = '<div class="typing-bubble"><span></span><span></span><span></span></div>';
-  chatEl.appendChild(row);
-  chatEl.scrollTop = chatEl.scrollHeight;
+function showTyping(){
+  var row=document.createElement('div'); row.className='row bot'; row.id='typing';
+  row.appendChild(mkAv());
+  var tb=document.createElement('div'); tb.className='tbub';
+  for(var i=0;i<3;i++){var d=document.createElement('div');d.className='td';tb.appendChild(d);}
+  row.appendChild(tb); msgsEl.appendChild(row); scroll();
 }
-function hideTyping() { const t = document.getElementById('typing'); if(t) t.remove(); }
 
-async function send(text) {
-  text = text.trim();
-  if (!text) return;
-  document.getElementById('quickArea').style.display = 'none';
-  addMsg(text, 'user');
-  history.push({role:'user', content:text});
-  inputEl.value = ''; inputEl.style.height = 'auto';
-  sendBtn.disabled = true;
-  showTyping();
-  try {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({message: text, history: history.slice(-12)})
-    });
-    const data = await res.json();
-    hideTyping();
-    const reply = data.reply || 'Desculpe, tente novamente.';
-    addMsg(reply, 'bot');
-    history.push({role:'assistant', content:reply});
-  } catch(e) {
-    hideTyping();
-    addMsg('Erro de conexão. Tente novamente.', 'bot');
+function hideTyping(){
+  var el=document.getElementById('typing');
+  if(el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+function isContato(txt){
+  // detecta se parece WhatsApp/telefone/email/instagram
+  return /(\d[\d\s\-\(\)]{7,})|(@[\w.]+)|([\w.+-]+@[\w.]+\.\w+)/.test(txt);
+}
+
+function salvarContato(contato){
+  // chama endpoint interno para salvar lead
+  fetch(ENDPOINT, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({_salvarContato: true, contato: contato, sessaoId: sessaoId})
+  }).catch(function(){});
+  contatoCapturado = true;
+}
+
+function enviarMsg(txt){
+  if(busy) return;
+  var trimmed = txt.trim();
+  if(!trimmed) return;
+
+  inpEl.value=''; inpEl.style.height='auto';
+  busy=true; sbtnEl.disabled=true;
+
+  addMsg(trimmed, 'me');
+  hist.push({role:'user', content: trimmed});
+
+  // detectar contato passado naturalmente
+  if(!contatoCapturado && isContato(trimmed)){
+    salvarContato(trimmed);
   }
-  sendBtn.disabled = false;
-  inputEl.focus();
+
+  showTyping();
+
+  fetch(ENDPOINT, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      mensagem: trimmed,
+      historico: hist.slice(-10),
+      sessaoId: sessaoId,
+      aguardandoContato: aguardandoContato
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    hideTyping();
+    var resposta = d.resposta || 'Pode me chamar no WhatsApp: (31) 98324-4713 😊';
+    addMsg(resposta, 'bot');
+    hist.push({role:'assistant', content: resposta});
+    aguardandoContato = !!d.aguardandoContato;
+    busy=false; sbtnEl.disabled=false; inpEl.focus();
+  })
+  .catch(function(){
+    hideTyping();
+    addMsg('Tive um probleminha. Chama no WhatsApp: (31) 98324-4713 😊','bot');
+    busy=false; sbtnEl.disabled=false;
+  });
 }
 
-function quick(t) { send(t); }
-
-sendBtn.onclick = () => send(inputEl.value);
-
-inputEl.addEventListener('input', () => {
-  sendBtn.disabled = !inputEl.value.trim();
-  inputEl.style.height = 'auto';
-  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+// Quick replies
+quickEl.addEventListener('click', function(e){
+  var btn = e.target.closest('.qb');
+  if(btn && !busy){ enviarMsg(btn.getAttribute('data-q')); }
 });
 
-inputEl.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(inputEl.value); }
+// Textarea auto-resize
+inpEl.addEventListener('input', function(){
+  sbtnEl.disabled = this.value.trim().length === 0;
+  this.style.height='auto';
+  this.style.height=Math.min(this.scrollHeight,110)+'px';
 });
 
-// Mensagem inicial
-setTimeout(() => {
-  addMsg('Olá! Seja bem-vindo ao Estúdio Los Hombres 🖤\\n\\nSou o assistente virtual, aqui pra te ajudar a escolher a experiência ideal, tirar dúvidas e facilitar seu agendamento.\\n\\nComo posso te ajudar hoje?', 'bot');
-}, 500);
+inpEl.addEventListener('keydown', function(e){
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); enviarMsg(this.value); }
+});
+
+sbtnEl.addEventListener('click', function(){ enviarMsg(inpEl.value); });
+
+// Boas-vindas iniciais (2 mensagens com delay)
+setTimeout(function(){
+  addMsg('Olá! Bem-vindo ao Estúdio Los Hombres 😊\n\nSou o Jonathan, massagista especializado em atendimento masculino aqui em BH. Tenho unidades na Savassi e em Betim.', 'bot');
+  hist.push({role:'assistant', content: 'Olá! Bem-vindo ao Estúdio Los Hombres. Sou o Jonathan.'});
+
+  setTimeout(function(){
+    var msg2 = 'Como posso te ajudar hoje? Pode me perguntar sobre as massagens, valores ou agendamento.\n\nSe quiser, me passa seu WhatsApp ou contato preferido para eu registrar seu atendimento. Mas pode ficar à vontade, não é obrigatório 😉';
+    addMsg(msg2, 'bot');
+    hist.push({role:'assistant', content: msg2});
+    aguardandoContato = true;
+  }, 1000);
+}, 300);
 </script>
 </body>
 </html>`;
-    return new Response(html, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Access-Control-Allow-Origin': '*' }
-    });
-  }
 
-  // ===== OPTIONS (CORS) =====
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
+Deno.serve(async (req: Request) => {
+  // ── GET → página HTML ──
+  if (req.method === 'GET') {
+    return new Response(PAGE, {
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
-  }
-
-  // ===== POST — processar mensagem (web chat ou Telegram webhook) =====
-  try {
-    const body = await req.json().catch(() => ({}));
-
-    // Detectar se é webhook do Telegram
-    const isTelegram = body?.message?.chat?.id !== undefined;
-
-    let userText: string;
-    let chatId: number | null = null;
-    let firstName = '';
-    let history: any[] = [];
-
-    if (isTelegram) {
-      const tgMsg = body.message;
-      if (!tgMsg?.text) return new Response('OK', { status: 200 });
-      chatId = tgMsg.chat.id;
-      userText = tgMsg.text;
-      firstName = tgMsg.from?.first_name || '';
-
-      // Boas-vindas no /start
-      if (userText === '/start') {
-        const welcome = `Olá${firstName ? ', ' + firstName : ''}! 👋 Seja bem-vindo ao *Estúdio Los Hombres* ✨\n\nSomos especializados em massagens masculinas de alto padrão em BH, com unidades na Savassi e Betim.\n\nComo posso te ajudar hoje?`;
-        const BOT_TOKEN = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || '';
-        await fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendMessage\`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, text: welcome, parse_mode: 'Markdown' })
-        });
-        return new Response('OK', { status: 200 });
-      }
-    } else {
-      const { message, history: hist = [] } = body;
-      if (!message) return Response.json({ error: 'message obrigatório' }, { status: 400 });
-      userText = message;
-      history = hist;
-    }
-
-    const messages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...history.slice(-12),
-      { role: 'user', content: userText }
-    ];
-
-    const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+        // Permissivo — scripts inline precisam funcionar
+        'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; img-src * data:; connect-src *;",
       },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages, temperature: 0.7, max_tokens: 500 })
     });
-
-    const aiData = await aiRes.json();
-    if (!aiRes.ok) return Response.json({ error: aiData.error?.message || 'Erro OpenAI' }, { status: 500 });
-
-    const reply = aiData.choices?.[0]?.message?.content || 'Desculpe, não consegui processar.';
-
-    if (isTelegram && chatId) {
-      // Mostrar "digitando..." e responder no Telegram
-      const BOT_TOKEN = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || '';
-      await fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendChatAction\`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, action: 'typing' })
-      });
-      await fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendMessage\`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: reply, parse_mode: 'Markdown' })
-      });
-      return new Response('OK', { status: 200 });
-    }
-
-    return Response.json({ reply }, { headers: { 'Access-Control-Allow-Origin': '*' } });
-
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
+
+  // ── POST → processar mensagem ──
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  let body: Record<string, unknown> = {};
+  try { body = await req.json(); } catch (_) {}
+
+  // Salvar lead (chamada interna)
+  if (body._salvarContato) {
+    await salvarLead(String(body.contato || ''), String(body.sessaoId || ''));
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
+  }
+
+  const mensagem  = String(body.mensagem || '').slice(0, 600);
+  const historico = Array.isArray(body.historico) ? body.historico : [];
+
+  if (!mensagem) {
+    return new Response(JSON.stringify({ resposta: 'Pode me chamar no WhatsApp: (31) 98324-4713 😊' }), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
+  }
+
+  const msgs = [
+    ...historico.map((m: Record<string,string>) => ({ role: m.role, content: m.content })),
+    { role: 'user', content: mensagem },
+  ];
+
+  const resposta = await responderIA(msgs);
+
+  return new Response(JSON.stringify({ resposta }), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
 });
