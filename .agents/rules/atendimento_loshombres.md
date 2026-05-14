@@ -5,10 +5,19 @@ Quando Jonathan pedir para responder um cliente, siga este fluxo:
 ## Identificar o tipo de mensagem
 
 ### 1. Boas-vindas / primeiro contato
-Usar script "Boas vindas zap":
-> Seja bem-vindo ao meu espaço de cuidado masculino! Aqui, cada detalhe é pensado para o seu prazer e relaxamento.
-> Para que eu possa personalizar seu atendimento, me diga o que mais te atrai agora: uma sessão para zerar o estresse e relaxar o corpo, ou uma experiência intensa e erótica, explorando toda a sua sensibilidade sensorial?
-> Estou à disposição para tirar suas dúvidas!
+Enviar PRIMEIRO o áudio de apresentação (nativo), depois o texto abaixo:
+
+🎙️ ÁUDIO DE APRESENTAÇÃO:
+https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/0ed5eedbe_apresentacao.ogg
+
+📝 TEXTO (enviar logo após o áudio):
+> Sou massagista e meu foco é total no atendimento masculino, com espaços prontos pra te receber tanto em Betim quanto na Savassi.
+>
+> Olha, eu sei que a rotina é pesada e a gente quase não tem tempo de parar de verdade. Meu objetivo aqui é ser o seu momento de 'off'. Pode ficar tranquilo: trabalho com sigilo absoluto. O ambiente é pra você relaxar de verdade, sem medo e sem julgamentos. É pra entrar, desligar o celular e se entregar ao cuidado.
+>
+> Mas me conta, o que te trouxe aqui hoje? Já teve alguma experiência de massagem focada em relaxamento total ou é a primeira vez que busca esse respiro?
+>
+> Vou deixar um menu automático aqui embaixo só pra facilitar com horários e valores, mas já já eu volto pra gente bater um papo e eu tirar qualquer dúvida sua!
 
 ---
 
@@ -121,103 +130,89 @@ Direcionar para WhatsApp: 31987862117
 ---
 
 ### 15. Massagem específica — descrições + mídia
+Quando cliente perguntar sobre uma massagem específica, enviar:
+1. Descrição da massagem
+2. Link do vídeo
+3. Áudio nativo da massagem (ver regra audios_massagens.md)
 
 #### RELAXANTE SENSUAL
 Massagem relaxante com toque sensorial envolvente. Ideal para quem busca relaxamento profundo com experiência sensorial.
 🎬 Vídeo corte: https://drive.google.com/file/d/11-2dPRI-12wXk-YG0kEoaQzHDMCDKXLn/view
 🎬 Vídeo explicativo: https://drive.google.com/file/d/1VTiZrhZ2Ni4bRnyO5aD5HW7pkqv6kpMT/view
-🎧 Áudio: https://drive.google.com/file/d/1bGVW7y1taJVK7rvZWVcV0971yIR3aLBO/view
 🔗 Site: https://www.loshombres.com.br/index.html#massagem-relaxante-sensual
 
 #### TÂNTRICA EXPERIENCE
 Experiência bioenergética e sensorial, inclui Lingam Massagem. Desperta a energia vital e promove relaxamento profundo.
 🎬 Vídeo explicativo: https://drive.google.com/file/d/1iX0TQyZtnH5Te1oKJDQRkM2ah1Id9gsT/view
 🎬 Vídeo visualizer: https://drive.google.com/file/d/1L8Di_bq1COki2iXV84KxfH14iBB7D5nX/view
-🎧 Áudio: https://drive.google.com/file/d/10-YGk7uZxixjyrG4q6ZeQiZBJ_kiGkPK/view
 🔗 Site: https://www.loshombres.com.br/index.html#massagem-tantra-experience
 
 #### QUICK MASSAGE
 25 min, técnica oriental com deslizamento corporal. Ideal para uma pausa rápida e intensa no dia.
 🎬 Vídeo: https://drive.google.com/file/d/19UFSp-pYb-_GeZfBoGVnmhVjxdm_ifqi/view
-🎧 Áudio: https://drive.google.com/file/d/1IZtEW0n6l_KW4UCxqgUO0QGN5f5UHnRQ/view
 
 #### MIOFASCIAL
 Liberação miofascial + massagem esportiva em roupas íntimas. Para quem vive em movimento e quer alívio técnico com toque envolvente.
 🎬 Vídeo: https://drive.google.com/file/d/1WsXJH2FHG9qW2Cvh9DXBxAkQicwnOJhj/view
-🎧 Áudio: https://drive.google.com/file/d/1uXWkUow8SqkXNLZ1sKCx9hOZ9uy1Nh0-/view
 🔗 Site: https://www.loshombres.com.br/index.html#massagem-miofacial
 
 #### NURU SUMMA
 Corpo a corpo com gel, deslizamento completo, ambos nus. Imersão sensorial profunda.
 🎬 Vídeo: https://drive.google.com/file/d/12drdn_6WstMhAuDfkxgdz7mryfNnapBB/view
-🎧 Áudio: https://drive.google.com/file/d/1tihRuKBjJkpQegtEnrnqShtCvT2X3Ywj/view
 🔗 Site: https://www.loshombres.com.br/index.html#massagem-nuru-summa
 
 #### TÂNTRICA MÚTUA
 Toque consciente mútuo, ambos nus, experiência guiada. Conexão energética e autoconhecimento.
 🎬 Vídeo: https://drive.google.com/file/d/1kPCvgZpc6HZUZjlZLlsB_1cydVzfEPzl/view
-🎧 Áudio: https://drive.google.com/file/d/12FcUKTLNa401QrW9ryGK0P_wdZZcoA2v/view
 
 #### BLIND EXPERIENCE
 Privação visual, sensações amplificadas. O toque se torna mais intenso sem a visão.
 🎬 Vídeo: https://drive.google.com/file/d/1e2zigQk2sKRZJzz-gpGfVzeVYO1-ha-H/view
-🎧 Áudio: https://drive.google.com/file/d/1c-GB1k_wJXx4o8d4kXlUoPtLgP-CHo3V/view
 
 #### MASSAGEM DOS DEUSES
 Imersão sensorial com vinho e petiscos, interação permitida. Experiência premium e sofisticada.
 🎬 Vídeo: https://drive.google.com/file/d/1ZmA8cPeoWq2r6EXxCiWGYSsj96S_cqlA/view
-🎧 Áudio: https://drive.google.com/file/d/1VUrC7uRyPB1l4vtPVuNT2E4Cm4Jjh634/view
 
 #### HOT
 Estímulos sensoriais localizados e concentrados. Curta, objetiva e marcante.
 🎬 Vídeo: https://drive.google.com/file/d/1CXkvTG3UeANayJp2-taDU7dbnT1JEnmB/view
-🎧 Áudio: https://drive.google.com/file/d/1gEHTDkxPCm9bonr60Y6hw4HRq7odDdbY/view
 
 #### TIE AND TEASER (BDSM)
 Sensorial guiado por controle e provocação consciente.
 🎬 Vídeo: https://drive.google.com/file/d/1LsOQ__1GVRIkHhB0JaLX8moX34qHMzEa/view
-🎧 Áudio: https://drive.google.com/file/d/1wZhP6Fe8rBdZKc-ct56dnsiPMRYA30cE/view
 
 #### HIDROTANTRA
 Vivência aquática + banheira de hidromassagem. Relaxamento com água quente e toque fluido.
 🎬 Vídeo: https://drive.google.com/file/d/1rHJNPd4mVVieHvhFT9c8Zs58YbgdYGOo/view
-🎧 Áudio: https://drive.google.com/file/d/15zr6nKu_E64WpansXT_VmruSyFuokbR4/view
 🏨 Sugestão de local: https://www.booking.com/hotel/br/life-residence-belo-horizonte4.pt-br.html
 
 #### BURN
 Estímulos térmicos e sensoriais. Ativação corporal profunda.
 🎬 Vídeo: https://drive.google.com/file/d/1yVnDrJNcJMUMX3cghb904Ph6AlD5axNp/view
-🎧 Áudio: https://drive.google.com/file/d/1UFSuhwtenrqB82cC3VJRSRrPKa-i3BcB/view
 
 #### SUMMA EXPERIENTIA
 Experiência máxima completa. A única com interação íntima integrada. R$ 1.350,00. PrEP + preservativo.
 🎬 Vídeo: https://drive.google.com/file/d/1P6WR-AyHFsXOk9gcQvo6DDYGbNkDlMX0/view
-🎧 Áudio: https://drive.google.com/file/d/1jIr1qq3i3UUdKy5dKb5KsbF9RvTmCIEI/view
 
 #### MASSAGEM 4 MÃOS
 Dois terapeutas em sincronia. Imersão sensorial completa.
 🎬 Vídeo: https://www.loshombres.com.br/index.html#massagem-4-maos
-🎧 Áudio: https://drive.google.com/file/d/1176SqbrV4qbma_ypzaKBsBr62RVFrutr/view
 
 #### PODOLOTERAPIA
 Foco nos pés, alívio de tensões e relaxamento profundo.
 🎬 Vídeo: https://drive.google.com/file/d/1tMZpDTEW0aTuQHTICdPJiJx3ZPhmQ14n/view
-🎧 Áudio: https://drive.google.com/file/d/1EeyTvPU-K8d6Euix7GvLNbr94DUaIaeL/view
 
 #### TÂNTRICA CASAL
 Toque consciente para casais. Reconexão emocional e sensorial.
 🎬 Vídeo: https://drive.google.com/file/d/1FnOivOdKreK4hZ-wFTLRgUxNBNarDKZV/view
-🎧 Áudio: https://drive.google.com/file/d/1Di-hTgX3AX-2Fri7F4GfK8wlsouIqnM5/view
 
 #### RELAXANTE SENSUAL CASAL
 Relaxamento compartilhado com toque sensorial leve e envolvente.
 🎬 Vídeo: https://drive.google.com/file/d/1B1f-GeDCRQD8lEUiQccO59fhRb_71RiM/view
-🎧 Áudio: https://drive.google.com/file/d/1D_QoN-oonXG5OKcJKHRFxjzjOFdavdl6/view
 
 #### NURU CASAL
 Deslizamento corpo a corpo para casais. Conexão intensa e sensorial.
 🎬 Vídeo: https://drive.google.com/file/d/1rJ70vOebyKpQ_RhzGNOBbLKw26nt_hmK/view
-🎧 Áudio: https://drive.google.com/file/d/1E0QVFBVVSmoqo27bDkDJUfiiJNJ8joab/view
 
 #### MASSAGEM EM GRUPO ÀS CEGAS
 Privação visual em grupo. Máx. 3 vagas por edição. Sinal R$ 100,00.
