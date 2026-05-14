@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "properties": {
+    "nome_cliente": {
+      "type": "string"
+    },
+    "whatsapp": {
+      "type": "string"
+    },
+    "unidade": {
+      "type": "string",
+      "enum": [
+        "Savassi",
+        "Betim"
+      ]
+    },
+    "massagem": {
+      "type": "string"
+    },
+    "data_hora": {
+      "type": "string"
+    },
+    "valor_total": {
+      "type": "number"
+    },
+    "sinal_pago": {
+      "type": "number"
+    },
+    "valor_restante": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Aguardando sinal",
+        "Confirmado",
+        "Realizado",
+        "Cancelado"
+      ]
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "Agendamento"
+}
