@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "properties": {
+    "msg_usado": {
+      "type": "number"
+    },
+    "msg_total": {
+      "type": "number"
+    },
+    "intg_usado": {
+      "type": "number"
+    },
+    "intg_total": {
+      "type": "number"
+    },
+    "periodo": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "SnapshotCreditos"
+}
