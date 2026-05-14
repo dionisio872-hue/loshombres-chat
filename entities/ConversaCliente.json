@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string"
+    },
+    "whatsapp": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "mensagens": {
+      "type": "string",
+      "description": "Hist\u00f3rico completo da conversa em JSON"
+    },
+    "resumo": {
+      "type": "string",
+      "description": "Resumo autom\u00e1tico da conversa"
+    },
+    "massagem_interesse": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "em_conversa",
+        "agendou",
+        "nao_fechou",
+        "resgatado"
+      ]
+    },
+    "unidade_interesse": {
+      "type": "string",
+      "enum": [
+        "Savassi",
+        "Betim",
+        "N\u00e3o informado"
+      ]
+    },
+    "resgate_enviado": {
+      "type": "boolean"
+    },
+    "data_ultima_mensagem": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "ConversaCliente"
+}
