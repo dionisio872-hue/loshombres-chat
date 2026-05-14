@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const SPREADSHEET_ID = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
-const DEST_EMAIL = 'joseassis_jr@yahoo.com.br';
+const DEST_EMAIL = 'dionisio872@gmail.com';
 
 const MES_ABAS: Record<number, string> = {
   1: 'JAN', 2: 'FEV', 3: 'MAR', 4: 'ABRI', 5: 'MAI',
