@@ -63,12 +63,16 @@ const HORARIOS_BETIM: Record<number, string[]> = {
   4: ['16:00','17:30','19:00'],                // Quinta: a partir das 16h
 };
 const HORARIOS_SAVASSI: Record<number, string[]> = {
-  0: ['19:00','20:30'],                         // Domingo
+  // Domingo (0): NÃO ATENDE
   1: ['19:00','20:30'],                         // Segunda
   4: ['18:00','19:30','21:00'],                 // Quinta
   5: ['18:00','19:30','21:00'],                 // Sexta
   6: ['18:00','19:30','21:00'],                 // Sábado
 };
+
+// Dias que NÃO atendem por unidade (dow = 0=Dom,1=Seg,...,6=Sab)
+const DIAS_BLOQUEADOS_BETIM   = [0,1,3,5,6]; // só terça(2) e quinta(4)
+const DIAS_BLOQUEADOS_SAVASSI = [0,2,3];     // só seg,qui,sex,sab (sem dom,ter,qua)
 
 const PRECOS: Record<string,number> = {
   'relaxante sensual':320,'4 maos':650,'miofascial':320,'tantrica experience':400,
@@ -193,7 +197,7 @@ function getHorariosBase(unidade:string|null, dataISO:string|null):string[]{
 // ─── BUSCAR HORÁRIOS LIVRES ──────────────────────────────────────────────────
 async function buscarHorariosLivres(
   req:Request, dia:string, mes:number, _unidade:string|null
-):Promise<{livres:{hora:string;linha:number}[];ocupados:{hora:string;linha:number;quem:string}[];diaSemana:string}>{
+):Promise<{livres:{hora:string;linha:number}[];ocupados:{hora:string;linha:number;quem:string}[];diaSemana:string;diaBloqueado?:boolean;motivoBloqueio?:string}>{
   const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
   const dInt=parseInt(dia);
   const dStr=String(dInt).padStart(2,'0');
@@ -201,6 +205,19 @@ async function buscarHorariosLivres(
   const dataISO=`2026-${mesStr}-${dStr}`;
   const dow=new Date(dataISO+'T12:00:00-03:00').getDay();
   const diaSemana=DIAS[dow];
+
+  // ─── BLOQUEIO POR DIA/UNIDADE ────────────────────────────────────────────
+  const unidadeNorm=(_unidade||'').toLowerCase();
+  if(unidadeNorm.includes('betim')&&DIAS_BLOQUEADOS_BETIM.includes(dow)){
+    return{livres:[],ocupados:[],diaSemana,diaBloqueado:true,motivoBloqueio:`Betim atende apenas terças e quintas. ${diaSemana} não tem atendimento.`};
+  }
+  if(unidadeNorm.includes('savassi')&&DIAS_BLOQUEADOS_SAVASSI.includes(dow)){
+    return{livres:[],ocupados:[],diaSemana,diaBloqueado:true,motivoBloqueio:`Savassi atende segunda, quinta, sexta e sábado. ${diaSemana} não tem atendimento.`};
+  }
+  // Domingo bloqueado em qualquer unidade
+  if(dow===0){
+    return{livres:[],ocupados:[],diaSemana,diaBloqueado:true,motivoBloqueio:'Domingo não tem atendimento em nenhuma unidade.'};
+  }
 
   const{sheetsToken,calToken}=await getGoogleTokens(req);
   if(!sheetsToken) return{livres:[],ocupados:[],diaSemana};
@@ -539,6 +556,12 @@ EXEMPLOS DO SEU TOM (imite exatamente esse jeito):
 - "Sem problema nenhum. Aqui não tem julgamento, pode vir tranquilo."
 - "Qual data você tá pensando?"
 - "Tem duas unidades: Savassi e Betim. Qual fica melhor pra você?"
+
+DIAS DE ATENDIMENTO (REGRA FIXA — nunca ofereça fora desses dias):
+- Betim: APENAS terça e quinta
+- Savassi: APENAS segunda, quinta, sexta e sábado
+- DOMINGO: NÃO ATENDE em nenhuma unidade
+Se o cliente pedir um dia fora desses, diga diretamente qual é o próximo dia disponível.
 
 MASSAGENS E PREÇOS:
 Relaxante Sensual R$320 | Tântrica Experience R$400 | Quick Massage R$250 | Miofascial R$320
