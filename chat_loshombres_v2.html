@@ -115,7 +115,7 @@
 <div class="wrap">
   <div class="hdr">
     <div class="av-wrap">
-      <img class="av" id="avHdr" src="https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/180c845fb_foto_jonathan_hd.jpg" alt="Jonathan">
+      <img class="av" id="avHdr" src="https://www.loshombres.com.br/imagens/poster-video.jpg" alt="Jonathan">
       <div class="dot-on"></div>
     </div>
     <div class="hdr-info">
@@ -216,7 +216,7 @@
 
 <script>
 // ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
-var FOTO = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/180c845fb_foto_jonathan_hd.jpg';
+var FOTO = 'https://www.loshombres.com.br/imagens/poster-video.jpg';
 var API_CHAT  = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente';
 var API_PIX   = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/analisarPix';
 var API_IMGBB = 'https://api.imgbb.com/1/upload?key=6ca78a7f1fb8b0a7f8a5b5c5d5e5f5a1'; // fallback
@@ -293,6 +293,7 @@ function clearState() {
       nomeCliente: state.nomeCliente || '',
       whatsappCliente: state.whatsappCliente || '',
       historico: state.historico || [],
+      histIA: [], // limpar histIA ao resetar sessão
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(keepAlive));
   } catch(e) {}
@@ -308,12 +309,17 @@ var dadosPendentes = null;
 var pixImageUrl    = null;
 var clienteId      = getClienteId();
 var fingerprint    = gerarFingerprint();
+var histIA         = []; // histórico de IA: [{role, content}] — enviado ao backend
 
 // Restaurar sessão ou criar nova
 var savedState = loadState();
 if (savedState && savedState.sessao) {
   sessao = savedState.sessao;
   if (savedState.clienteId) clienteId = savedState.clienteId;
+  // Restaurar histórico de IA para manter contexto da conversa
+  if (savedState.histIA && Array.isArray(savedState.histIA)) {
+    histIA = savedState.histIA;
+  }
 } else {
   sessao = gerarSessao();
   saveState({ sessao: sessao });
@@ -445,11 +451,16 @@ function enviar() {
     hideTyping(); busy = false;
     addMsg('Tive um probleminha. Chama no WhatsApp: (31) 98324-4713 😊', 'bot');
   };
-  // Enriquecer payload com identidade do cliente
+  // Enriquecer payload com identidade e histórico de IA
   var state = loadState() || {};
+  // Adicionar mensagem do usuário ao histIA
+  histIA.push({ role: 'user', content: txt });
+  if (histIA.length > 30) histIA = histIA.slice(-30);
+  saveState({ histIA: histIA });
   xhr.send(JSON.stringify({
     sessao: sessao,
     mensagem: txt,
+    historico: histIA.slice(0, -1), // enviar histórico SEM a última msg (backend adiciona)
     clienteId: clienteId,
     fingerprint: fingerprint,
     nomeCliente: state.nomeCliente || null,
@@ -460,6 +471,10 @@ function enviar() {
 // ── PROCESSAR RESPOSTA DO BACKEND ─────────────────────────────────────────────
 function processarResposta(r) {
   if (!r || !r.resposta) return;
+  // Salvar resposta do bot no histIA para manter contexto
+  histIA.push({ role: 'assistant', content: r.resposta });
+  if (histIA.length > 30) histIA = histIA.slice(-30);
+  saveState({ histIA: histIA });
 
   // AGENDAMENTO CONFIRMADO — mostrar botões de ação
   if (r.acao === 'agendado' && r.dados) {
@@ -503,7 +518,8 @@ function processarResposta(r) {
       if (hist.length > 10) hist = hist.slice(0, 10); // manter últimos 10
       saveState({ historico: hist });
     } catch(ee) {}
-    // Renovar sessão mas manter memória do cliente
+    // Renovar sessão mas manter memória do cliente — limpar histIA
+    histIA = [];
     clearState();
     sessao = gerarSessao();
     saveState({ sessao: sessao });
