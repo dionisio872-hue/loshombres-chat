@@ -21,12 +21,24 @@ const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sá
 
 function normHora(h: string): string {
   if (!h) return '';
-  const c = h.replace(/[hH]/,':').replace(/\s/g,'');
-  const p = c.split(':');
-  const hh = p[0].replace(/\D/g,'');
-  const mm = (p[1]||'00').replace(/\D/g,'').slice(0,2)||'00';
-  if (!hh || isNaN(Number(hh))) return '';
-  return hh.padStart(2,'0')+':'+mm.padStart(2,'0');
+  // Extrair hora de textos simples (18:00, 18h, 18h30) ou longos ("20H-01H BUFFET...")
+  const m1 = h.match(/^\s*(\d{1,2})[hH:](\d{0,2})/);
+  if (m1) {
+    const hh = m1[1].padStart(2,'0');
+    const mm = (m1[2]||'00').padStart(2,'0');
+    if (!isNaN(Number(hh)) && Number(hh) <= 23) return hh + ':' + mm;
+  }
+  // Buscar primeiro padrão de hora dentro de texto longo
+  const m2 = h.match(/(\d{1,2})[hH:](\d{0,2})/);
+  if (m2) {
+    const hh = m2[1].padStart(2,'0');
+    const mm = (m2[2]||'00').padStart(2,'0');
+    if (!isNaN(Number(hh)) && Number(hh) <= 23) return hh + ':' + mm;
+  }
+  // Apenas número + h/H (ex: "20H")
+  const m3 = h.match(/\b(\d{1,2})[hH]\b/);
+  if (m3 && !isNaN(Number(m3[1])) && Number(m3[1]) <= 23) return m3[1].padStart(2,'0') + ':00';
+  return '';
 }
 function horaMin(h:string):number{
   const n=normHora(h); if(!n)return 9999;

@@ -469,13 +469,15 @@ const ADMIN_STR = '7200577395';
 const SHEET_ID_BOT = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
 const ABAS_BOT: Record<number,string> = {1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
 
-function normHoraBot(h:string):string{
+function normHora(h:string):string{
   if(!h)return '';
-  const c=h.replace(/[hH]/,':').replace(/\s/g,'');
-  const p=c.split(':'); const hh=p[0].replace(/\D/g,'');
-  const mm=(p[1]||'00').replace(/\D/g,'').slice(0,2)||'00';
-  if(!hh||isNaN(Number(hh)))return '';
-  return hh.padStart(2,'0')+':'+mm.padStart(2,'0');
+  const m1=h.match(/^\s*(\d{1,2})[hH:](\d{0,2})/);
+  if(m1){const hh=m1[1].padStart(2,'0');const mm=(m1[2]||'00').padStart(2,'0');if(!isNaN(Number(hh))&&Number(hh)<=23)return hh+':'+mm;}
+  const m2=h.match(/(\d{1,2})[hH:](\d{0,2})/);
+  if(m2){const hh=m2[1].padStart(2,'0');const mm=(m2[2]||'00').padStart(2,'0');if(!isNaN(Number(hh))&&Number(hh)<=23)return hh+':'+mm;}
+  const m3=h.match(/\b(\d{1,2})[hH]\b/);
+  if(m3&&!isNaN(Number(m3[1]))&&Number(m3[1])<=23)return m3[1].padStart(2,'0')+':00';
+  return '';
 }
 
 // ─── DIVERGÊNCIAS — helpers ──────────────────────────────────────────────────
