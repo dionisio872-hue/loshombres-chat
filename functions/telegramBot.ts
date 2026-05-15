@@ -466,6 +466,10 @@ async function processarCallback(req: Request, chatId: number, data: string, nom
 
 const ADMIN_ID = 7200577395;
 const ADMIN_STR = '7200577395';
+const GRUPO_JG_ID = '-1003866193031';  // Grupo Gestão JG
+function isAdminContext(fromId:number, chatId:number|string):boolean {
+  return fromId === ADMIN_ID || String(chatId) === GRUPO_JG_ID;
+}
 const SHEET_ID_BOT = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
 const ABAS_BOT: Record<number,string> = {1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
 
@@ -574,24 +578,44 @@ async function executarCorrecao(
       const [rh,rm]=hNorm.split(':').map(Number);
       if(Math.abs((rh*60+rm)-horaMins)<=60){alvo=j+1;break;}
     }
-    if(alvo<0)return `⚠️ Linha vazia não encontrada para ${hora}h dia ${diaN}`;
-
     // Parsear título do Calendar → extrair nome do cliente e tipo de serviço
     const parsed=parsearTitulo(nome||'');
     const nomeGravar   = parsed.nome    || nome    || '(sem nome)';
     const servicoGravar= servico        || parsed.servico || '';
     const telGravar    = tel||'';
-    const obsGravar    = obs||'Incluído via botão de divergência';
+    const obsGravar    = obs||'Incluído via botão';
 
-    const range=`${aba}!B${alvo}:E${alvo}`;
-    const putRes=await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_DIV}/values/${range}?valueInputOption=USER_ENTERED`,
-      {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-       body:JSON.stringify({range,values:[[nomeGravar,telGravar,servicoGravar,obsGravar]]})}
-    );
-    return putRes.ok
-      ?`✅ Planilha L${alvo}: "${nomeGravar}" | ${servicoGravar||'-'} | ${telGravar||'sem tel'}`
-      :`❌ Erro planilha: ${(await putRes.text()).slice(0,80)}`;
+    if(alvo>0){
+      // Linha vazia encontrada — preencher colunas B:E
+      const range=`${aba}!B${alvo}:E${alvo}`;
+      const putRes=await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_DIV}/values/${range}?valueInputOption=USER_ENTERED`,
+        {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+         body:JSON.stringify({range,values:[[nomeGravar,telGravar,servicoGravar,obsGravar]]})}
+      );
+      return putRes.ok
+        ?`✅ Planilha L${alvo}: "${nomeGravar}" | ${servicoGravar||'-'}`
+        :`❌ Erro planilha: ${(await putRes.text()).slice(0,80)}`;
+    } else {
+      // Linha vazia não encontrada — INSERIR nova linha com dia e hora
+      // Encontrar última linha do dia para inserir após ela
+      let ultimaLinhaDia=1;
+      for(let j=0;j<rows.length;j++){
+        const r=[...rows[j]];while(r.length<1)r.push('');
+        const colA=r[0].trim();
+        if(colA===String(diaN)||colA===String(diaN).padStart(2,'0')) ultimaLinhaDia=j+2;
+      }
+      // Append via batchUpdate para inserir linha
+      const appendRange=`${aba}!A${ultimaLinhaDia}:H${ultimaLinhaDia}`;
+      const appendRes=await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_DIV}/values/${appendRange}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+        {method:'POST',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+         body:JSON.stringify({range:appendRange,values:[[String(diaN),nomeGravar,telGravar,servicoGravar,obsGravar,'','',hora,'']]})}
+      );
+      return appendRes.ok
+        ?`✅ Nova linha inserida: dia ${diaN} ${hora}h — "${nomeGravar}" | ${servicoGravar||'-'}`
+        :`❌ Erro inserir linha: ${(await appendRes.text()).slice(0,100)}`;
+    }
 
   }else if(acaoFinal==='criar'){
     // ── CRIAR NO CALENDAR (vinha só da Planilha) ─────────────────────────
@@ -644,7 +668,7 @@ const divsCache=new Map<string,any[]>(); // key=chatId, value=array de divs
 
 async function processarDivAdmin(
   sheetsToken:string,calToken:string,
-  callbackId:string,data:string,msgId:number
+  callbackId:string,data:string,msgId:number,chatIdDiv:number|string=ADMIN_ID
 ){
   const api=`https://api.telegram.org/bot${BOT_TOKEN}`;
   const parts=data.split(':');
@@ -666,7 +690,7 @@ async function processarDivAdmin(
   try{
     if(acao==='tudo'){
       // ── CORRIGIR TODAS AS DIVERGÊNCIAS ───────────────────────────────
-      const cache=divsCache.get(String(ADMIN_ID))||[];
+      const cache=divsCache.get(GRUPO_JG_ID)||divsCache.get(String(ADMIN_ID))||[];
       if(cache.length===0){
         resultado='⚠️ Nenhuma divergência em cache. Gere o relatório novamente.';
       }else{
@@ -681,7 +705,7 @@ async function processarDivAdmin(
           linhas.push(res);
           await new Promise(r=>setTimeout(r,500));
         }
-        divsCache.delete(String(ADMIN_ID));
+        divsCache.delete(GRUPO_JG_ID);divsCache.delete(String(ADMIN_ID));
         resultado=linhas.join('\n');
       }
     }else{
@@ -699,7 +723,7 @@ async function processarDivAdmin(
   // Editar mensagem — resultado final + remover botões
   await fetch(`${api}/editMessageText`,{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({chat_id:ADMIN_ID,message_id:msgId,text:resultado,reply_markup:{inline_keyboard:[]}})
+    body:JSON.stringify({chat_id:chatIdDiv,message_id:msgId,text:resultado,reply_markup:{inline_keyboard:[]}})
   }).catch(()=>{});
 }
 
@@ -772,10 +796,10 @@ Deno.serve(async (req) => {
         const nome       = [update.callback_query.from?.first_name, update.callback_query.from?.last_name].filter(Boolean).join(' ') || `User${chatId}`;
         if (update.callback_query.from?.is_bot) { console.log('[SKIP] bot callback'); return; }
 
-        // Admin clicou num botão de divergência
-        if (fromId === ADMIN_ID && data.startsWith('div:')) {
+        // Admin (ou membro do grupo JG) clicou num botão de divergência
+        if (isAdminContext(fromId, chatId) && data.startsWith('div:')) {
           // tokens já foram buscados acima — passados por valor, sem depender do req
-          await processarDivAdmin(sheetsToken, calToken, callbackId, data, msgId);
+          await processarDivAdmin(sheetsToken, calToken, callbackId, data, msgId, chatId);
           return;
         }
 
