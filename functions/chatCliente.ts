@@ -1,6 +1,6 @@
 /**
- * chatCliente v13 — Los Hombres
- * v13b: linguagem refinada + gpt-4o + temperature 0.85
+ * chatCliente v14 — Los Hombres
+ * v14: fix planilha UPDATE + sem RG/banho + gpt-4o + temperature 0.85
  * 1. Desconto 20% correto: só se data >= 30 dias a partir de HOJE
  * 2. Horários por unidade/dia da semana:
  *    - Betim: terça a partir das 14h, quinta a partir das 16h (sem outros dias)
@@ -247,7 +247,7 @@ async function buscarHorariosLivres(req:Request,dia:string,mes:number,unidade:st
   return{livres:horariosBase.filter(h=>!ocupados[h]),ocupados,diaSemana,temAtendimento:true};
 }
 
-// ─── GRAVAR AGENDAMENTO ──────────────────────────────────────────────────────
+// ─── GRAVAR AGENDAMENTO (UPDATE na linha correta da planilha) ─────────────────
 async function gravarAgendamento(req:Request,p:{
   nome:string;whatsapp:string;servico:string;unidade:string;
   dia:string;mes:number;horario:string;valor:number;
@@ -263,76 +263,110 @@ async function gravarAgendamento(req:Request,p:{
   const aba=ABAS[p.mes]||'MAI';
   const dStr=String(parseInt(p.dia)).padStart(2,'0');
   const mStr=String(p.mes).padStart(2,'0');
-  const sinal=30,restante=p.valor-sinal;
+  const sinal=30, restante=p.valor-sinal;
   const[hh,mm]=(p.horario+':0').split(':').map(Number);
 
+  const normHora=(h:string)=>{
+    const clean=h.replace(/[hH]/,':').trim();
+    const parts=clean.split(':');
+    if(parts.length<2)return clean+':00';
+    return parts[0].padStart(2,'0')+':'+parts[1].padStart(2,'0');
+  };
+
   try{
-    // 1. PLANILHA
+    // 1. PLANILHA — fazer UPDATE na linha existente com aquele dia e horário
     if(sheetsToken){
-      const linha=[
-        String(parseInt(p.dia)),
-        p.nome.toUpperCase(),
-        p.whatsapp,
-        `${p.servico} - ${p.unidade}`.toUpperCase(),
-        '',
-        FORM_URL,
-        p.horario,
-        `Sinal R$${sinal} pago - falta R$${restante}`,
-        `R$ ${p.valor}`
-      ];
-      const r=await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A:I:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-        {method:'POST',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-         body:JSON.stringify({values:[linha]})}
-      );
-      const rd=await r.json();
-      console.log('Planilha gravar status:',r.status, JSON.stringify(rd).slice(0,200));
+      let linhaAtualizada=false;
+      try{
+        const lRes=await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:H300`,
+          {headers:{Authorization:`Bearer ${sheetsToken}`}}
+        );
+        const rows:string[][]=(await lRes.json()).values||[];
+        const diaInt=parseInt(p.dia);
+        const horaAlvo=normHora(p.horario);
+
+        for(let i=0;i<rows.length;i++){
+          const r=[...rows[i]];while(r.length<8)r.push('');
+          const rDia=(r[0]||'').trim();
+          const rHora=normHora((r[6]||'').trim());
+          const rNome=(r[1]||'').trim();
+          if((rDia===String(diaInt)||rDia===dStr)&&rHora===horaAlvo&&!rNome){
+            const linhaNum=i+1;
+            // Colunas: A=dia(já existe), B=nome, C=telefone, D=serviço, E=formulário, F=observações, G=hora(já existe), H=valor
+            const range=`${aba}!B${linhaNum}:F${linhaNum}`;
+            const valores=[[
+              p.nome.toUpperCase(),
+              p.whatsapp,
+              p.servico.toUpperCase(),
+              FORM_URL,
+              `Sinal R$${sinal} pago - falta R$${restante} | Total: R$ ${p.valor}`
+            ]];
+            const upRes=await fetch(
+              `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`,
+              {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+               body:JSON.stringify({range,values:valores})}
+            );
+            // Também atualizar coluna H com o valor
+            await fetch(
+              `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!H${linhaNum}?valueInputOption=USER_ENTERED`,
+              {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+               body:JSON.stringify({range:`${aba}!H${linhaNum}`,values:[[`R$ ${p.valor}`]]})}
+            );
+            console.log('Planilha UPDATE OK — linha',linhaNum,'status',upRes.status);
+            linhaAtualizada=true;
+            break;
+          }
+        }
+        if(!linhaAtualizada){
+          console.log('Linha pré-existente não encontrada — usando append como fallback');
+          const linha=[String(parseInt(p.dia)),p.nome.toUpperCase(),p.whatsapp,p.servico.toUpperCase(),FORM_URL,`Sinal R$${sinal} - Total R$${p.valor}`,p.horario,`R$ ${p.valor}`];
+          await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A:H:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+            {method:'POST',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},body:JSON.stringify({values:[linha]})}
+          );
+        }
+      }catch(se:any){console.error('Sheets erro:',se.message);}
     }else{
-      console.error('ERRO: sem sheetsToken para gravar planilha');
+      console.error('ERRO: sem sheetsToken');
     }
 
-    // 2. CALENDAR
+    // 2. CALENDAR — criar evento
     if(calToken){
       const enderecoUnidade=p.unidade.toLowerCase().includes('betim')
         ?'Rua Pernambuco, 341 - Betim, MG'
         :'Rua Tomé de Souza, 503, Sala 208 - Savassi, BH';
       const ini=new Date(`2026-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00-03:00`);
       const fim=new Date(ini.getTime()+DUR*60000);
-      const r=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+      const calRes=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
         method:'POST',
         headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
         body:JSON.stringify({
           summary:`${p.nome} - ${p.servico}`,
           location:enderecoUnidade,
-          description:`WhatsApp: ${p.whatsapp}\nValor: R$ ${p.valor} (sinal R$${sinal} pago, falta R$${restante})\nFormulário: ${FORM_URL}`,
+          description:`WhatsApp: ${p.whatsapp}\nValor: R$ ${p.valor} (sinal R$${sinal} pago, falta R$${restante})`,
           start:{dateTime:ini.toISOString(),timeZone:'America/Sao_Paulo'},
           end:{dateTime:fim.toISOString(),timeZone:'America/Sao_Paulo'},
         })
       });
-      console.log('Calendar gravar status:',r.status);
+      console.log('Calendar status:',calRes.status);
     }else{
-      console.error('ERRO: sem calToken para gravar Calendar');
+      console.error('ERRO: sem calToken');
     }
 
-    // 3. TELEGRAM alerta para Jonathan
+    // 3. TELEGRAM alerta
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         chat_id:ADMIN_ID,parse_mode:'Markdown',
-        text:`🔔 *NOVO AGENDAMENTO — Chat Web*\n\n*${p.nome}*\n📱 ${p.whatsapp}\n💆 ${p.servico}\n📍 ${p.unidade}\n📅 ${dStr}/${mStr} às ${p.horario}\n💰 R$ ${p.valor} (sinal R$${sinal} pago)\n\n✅ Gravado na planilha e Calendar.`
+        text:`🔔 *NOVO AGENDAMENTO — Chat Web*\n\n*${p.nome}*\n📱 ${p.whatsapp}\n💆 ${p.servico}\n📍 ${p.unidade}\n📅 ${dStr}/${mStr} às ${p.horario}\n💰 R$ ${p.valor} (sinal R$${sinal} pago)\n✅ Planilha e Calendar atualizados.`
       })
     }).catch(()=>{});
 
     // 4. EMAIL
     if(gmailToken){
-      const subj=`Novo agendamento: ${p.nome} - ${dStr}/${mStr} às ${p.horario}`;
-      const html=`<h2 style="color:#1a1a2e">Novo Agendamento — Chat Web</h2>
-        <p><b>Cliente:</b> ${p.nome}</p><p><b>WhatsApp:</b> ${p.whatsapp}</p>
-        <p><b>Serviço:</b> ${p.servico}</p><p><b>Unidade:</b> ${p.unidade}</p>
-        <p><b>Data/Hora:</b> ${dStr}/${mStr}/2026 às ${p.horario}</p>
-        <p><b>Valor total:</b> R$ ${p.valor}</p>
-        <p><b>Sinal pago:</b> R$ ${sinal} | <b>Restante:</b> R$ ${restante}</p>
-        <p><a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit">Ver Planilha</a></p>`;
+      const subj=`Agendamento: ${p.nome} - ${dStr}/${mStr} às ${p.horario}`;
+      const html=`<h2>Novo Agendamento</h2><p><b>Cliente:</b> ${p.nome}</p><p><b>WhatsApp:</b> ${p.whatsapp}</p><p><b>Serviço:</b> ${p.servico}</p><p><b>Unidade:</b> ${p.unidade}</p><p><b>Data:</b> ${dStr}/${mStr} às ${p.horario}</p><p><b>Valor:</b> R$ ${p.valor} (sinal R$${sinal}, falta R$${restante})</p>`;
       const raw=`To: ${DEST_EMAIL}\r\nSubject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subj)))}?=\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n${html}`;
       const enc=btoa(unescape(encodeURIComponent(raw))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
       await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
@@ -341,15 +375,14 @@ async function gravarAgendamento(req:Request,p:{
       }).catch(()=>{});
     }
 
-    // 5. Registrar lead convertido
+    // 5. Registrar lead
     try{
       const b=createClientFromRequest(req);
       await b.asServiceRole.entities.LeadConversa.create({
-        nome:p.nome,whatsapp:p.whatsapp,canal_origem:'chat_web',
-        etapa_funil:'confirmado',massagem_interesse:p.servico,
-        unidade_interesse:p.unidade,converteu:true,
+        nome:p.nome,whatsapp:p.whatsapp,canal_origem:'chat_web',etapa_funil:'confirmado',
+        massagem_interesse:p.servico,unidade_interesse:p.unidade,converteu:true,
         data_ultima_mensagem:new Date().toISOString(),
-        observacoes:`Agendado ${dStr}/${mStr} às ${p.horario} — R$ ${p.valor} (sinal R$${sinal} pago)`
+        observacoes:`${dStr}/${mStr} às ${p.horario} — R$ ${p.valor}`
       });
     }catch(_){}
 
@@ -400,7 +433,7 @@ FLUXO DE AGENDAMENTO (siga sem pular etapas, mas com linguagem humana):
 4. Usar SOMENTE os HORÁRIOS LIVRES do CONTEXTO. Nunca invente horários.
 5. Cliente escolhe horário: informar o valor correto (com ou sem desconto, conforme CONTEXTO) e pedir o sinal de R$30 via PIX, CNPJ 17342740000109 (JG Espaço Multserviços).
 6. Cliente confirma pagamento: pedir nome completo e número de WhatsApp para finalizar o registro.
-7. Quando CONTEXTO indicar AGENDAMENTO GRAVADO: confirme com calma que está tudo registrado. Peça para trazer um documento com foto (RG ou CNH) e vir de banho tomado.`;
+7. Quando CONTEXTO indicar AGENDAMENTO GRAVADO: confirme com calma que está tudo registrado, o horário está garantido. Diga que em breve enviará mais informações pelo WhatsApp informado.`;
 
 async function chamarIA(msgs:{role:string;content:string}[],ctx?:string):Promise<string>{
   const sys=ctx?SYSTEM+'\n\nCONTEXTO DO SISTEMA:\n'+ctx:SYSTEM;
@@ -664,7 +697,7 @@ Deno.serve(async(req:Request)=>{
       confirmacao={nome:nomeF,whatsapp:wppMsg,
         servico:estado.massagem.split(' ').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' '),
         unidade:estado.unidade,data:`${ds}/${ms}`,horario:estado.horario,valor:String(estado.valor)};
-      ctx=(ctx?ctx+'\n\n':'')+`AGENDAMENTO GRAVADO COM SUCESSO na planilha e no Calendar. Confirme ao cliente: está tudo registrado, o link do formulário aparece abaixo. Instrua: trazer RG ou CNH, vir de banho tomado.`;
+      ctx=(ctx?ctx+'\n\n':'')+`AGENDAMENTO GRAVADO COM SUCESSO na planilha e no Calendar. Confirme ao cliente: está tudo registrado, o link do formulário aparece abaixo. Diga que o horário está garantido e que entrará em contato pelo WhatsApp informado.`;
     }else{
       ctx=(ctx?ctx+'\n\n':'')+`ERRO ao gravar agendamento: ${res.erro}. Peça ao cliente para entrar em contato pelo WhatsApp (31) 98324-4713 para finalizar.`;
     }
