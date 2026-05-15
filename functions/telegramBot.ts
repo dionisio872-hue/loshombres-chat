@@ -478,68 +478,134 @@ function normHoraBot(h:string):string{
   return hh.padStart(2,'0')+':'+mm.padStart(2,'0');
 }
 
-// Processar callback de divergência do admin (botões inline do relatório)
+// Processar botao de divergencia clicado pelo admin
+// callback_data: div:acao:tipo:dia:mes:hora4d:nome
+// hora4d = "0930" (sem dois pontos para caber em 64 bytes)
 async function processarDivAdmin(req:Request, callbackId:string, data:string, msgId:number){
   const api=`https://api.telegram.org/bot${BOT_TOKEN}`;
-  // Formato do data: "div:ACAO:TIPO:DIA:MES:HORA:NOME"
-  // ACAO: incluir|excluir|criar|ignorar
   const parts=data.split(':');
-  if(parts[0]!=='div'||parts.length<7){return;}
-  const [,acao,tipo,dia,mes,hora,...nomeArr]=parts;
-  const nome=nomeArr.join(':');
+  if(parts[0]!=='div'||parts.length<7) return;
 
-  // Confirmar callback imediatamente
+  const acao  = parts[1]; // incluir | criar | excluir | ignorar
+  const tipo  = parts[2]; // so_calendar | so_planilha
+  const diaN  = parseInt(parts[3]);
+  const mesN  = parseInt(parts[4]);
+  const hRaw  = parts[5]; // ex: "0930" ou "0900"
+  // Reconstruir "HH:MM" a partir do código compacto
+  const hora  = hRaw.length===4 ? `${hRaw.slice(0,2)}:${hRaw.slice(2)}` : normHoraBot(hRaw);
+  const nome  = parts.slice(6).join(':').trim();
+
+  // Confirmar o clique imediatamente (evita "loading" no Telegram)
   await fetch(`${api}/answerCallbackQuery`,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({callback_query_id:callbackId,text:`Processando: ${acao}...`})});
+    body:JSON.stringify({callback_query_id:callbackId, text:'Processando...'})});
 
   let resultado='';
   try{
-    const b=createClientFromRequest(req);
-    const rs=await b.asServiceRole.connectors.getConnection('googlesheets').catch(()=>({accessToken:''}));
-    const rc=await b.asServiceRole.connectors.getConnection('googlecalendar').catch(()=>({accessToken:''}));
-    const sheetsToken=rs.accessToken||''; const calToken=rc.accessToken||'';
+    // Obter tokens via SDK — createClientFromRequest funciona no contexto do webhook
+    const b = createClientFromRequest(req);
+    const [rs, rc] = await Promise.all([
+      b.asServiceRole.connectors.getConnection('googlesheets').catch(()=>null),
+      b.asServiceRole.connectors.getConnection('googlecalendar').catch(()=>null),
+    ]);
+    const sheetsToken = rs?.accessToken || '';
+    const calToken    = rc?.accessToken || '';
 
-    if(acao==='incluir'&&tipo==='so_calendar'&&sheetsToken){
-      const dInt=parseInt(dia); const mInt=parseInt(mes);
-      const aba=ABAS_BOT[mInt]||'MAI';
-      const lRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_BOT}/values/${aba}!A1:H500`,
-        {headers:{Authorization:`Bearer ${sheetsToken}`}});
-      const rows:string[][]=(await lRes.json()).values||[];
-      let alvo=-1;
-      for(let j=0;j<rows.length;j++){
-        const r=[...rows[j]];while(r.length<8)r.push('');
-        if((r[0].trim()===String(dInt)||r[0].trim()===String(dInt).padStart(2,'0'))&&normHoraBot(r[6])===hora&&!r[1].trim()){alvo=j+1;break;}
+    // ── INCLUIR NA PLANILHA (evento estava só no Calendar) ────────────────
+    if(acao==='incluir' && tipo==='so_calendar'){
+      if(!sheetsToken){ resultado='❌ Token Sheets indisponivel. Tente em 1 min.'; }
+      else{
+        const aba = ABAS_BOT[mesN]||'MAI';
+        const lRes = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_BOT}/values/${aba}!A1:H500`,
+          {headers:{Authorization:`Bearer ${sheetsToken}`}}
+        );
+        const rows:string[][] = (await lRes.json()).values||[];
+
+        // Converter hora do callback para minutos
+        const [hh2,mm2] = hora.split(':').map(Number);
+        const horaMins = hh2*60+mm2;
+
+        let alvo=-1;
+        for(let j=0;j<rows.length;j++){
+          const r=[...rows[j]]; while(r.length<8) r.push('');
+          const colA = r[0].trim();
+          if(colA!==String(diaN) && colA!==String(diaN).padStart(2,'0')) continue;
+          if(r[1].trim()) continue; // linha ja preenchida — pular
+          const hNorm = normHoraBot(r[6].trim());
+          if(!hNorm) continue;
+          const [rh,rm] = hNorm.split(':').map(Number);
+          const diff = Math.abs((rh*60+rm) - horaMins);
+          // Aceitar linha com hora exata ou ate 60min de diferenca (Calendar pode ter horario ligeiramente diferente)
+          if(diff<=60){ alvo=j+1; break; }
+        }
+
+        if(alvo>0){
+          const range = `${aba}!B${alvo}:D${alvo}`;
+          const putRes = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_BOT}/values/${range}?valueInputOption=USER_ENTERED`,
+            {method:'PUT', headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+             body:JSON.stringify({range, values:[[nome,'','']]})
+            }
+          );
+          if(putRes.ok) resultado=`✅ Incluido na planilha (linha ${alvo}) — ${nome}`;
+          else { const e=await putRes.text(); resultado=`❌ Erro ao gravar: ${e.slice(0,80)}`; }
+        } else {
+          resultado=`⚠️ Nenhuma linha vazia encontrada para ${hora} no dia ${diaN}. Adicione manualmente.`;
+        }
       }
-      if(alvo>0){
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_BOT}/values/${aba}!B${alvo}:D${alvo}?valueInputOption=USER_ENTERED`,
-          {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-           body:JSON.stringify({range:`${aba}!B${alvo}:D${alvo}`,values:[[nome,'','','']]})});
-        resultado=`✅ Incluido na planilha — linha ${alvo}`;
-      } else resultado=`⚠️ Linha nao encontrada para ${hora} no dia ${dia}. Verifique manualmente.`;
 
-    } else if(acao==='criar'&&tipo==='so_planilha'&&calToken){
-      const dInt=parseInt(dia); const mInt=parseInt(mes);
-      const dStr=`2026-${String(mInt).padStart(2,'0')}-${String(dInt).padStart(2,'0')}`;
-      const hArr=hora.split(':');
-      const ini=new Date(`${dStr}T${hArr[0].padStart(2,'0')}:${(hArr[1]||'00').padStart(2,'0')}:00-03:00`);
-      const fim=new Date(ini.getTime()+90*60000);
-      const calR=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',
-        {method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
-         body:JSON.stringify({summary:nome,start:{dateTime:ini.toISOString(),timeZone:'America/Sao_Paulo'},end:{dateTime:fim.toISOString(),timeZone:'America/Sao_Paulo'}})});
-      resultado=calR.ok?`✅ Evento criado no Calendar para ${hora}`:`❌ Erro ao criar evento. Tente manualmente.`;
+    // ── CRIAR NO CALENDAR (estava só na planilha) ─────────────────────────
+    } else if(acao==='criar' && tipo==='so_planilha'){
+      if(!calToken){ resultado='❌ Token Calendar indisponivel. Tente em 1 min.'; }
+      else{
+        const dStr  = `2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
+        const [hh2,mm2] = hora.split(':');
+        const iniStr = `${dStr}T${hh2.padStart(2,'0')}:${(mm2||'00').padStart(2,'0')}:00-03:00`;
+        const iniMs  = new Date(iniStr).getTime();
+        const fimStr = new Date(iniMs+90*60000).toISOString();
 
+        if(isNaN(iniMs)){ resultado=`❌ Hora invalida: "${hora}" — verifique e crie manualmente.`; }
+        else{
+          const calR = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+            method:'POST', headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
+            body:JSON.stringify({
+              summary: nome,
+              description: `Criado via botao de divergencia`,
+              start:{dateTime:iniStr, timeZone:'America/Sao_Paulo'},
+              end:  {dateTime:fimStr, timeZone:'America/Sao_Paulo'},
+            })
+          });
+          const calData = await calR.json();
+          if(calData.id) resultado=`✅ Evento criado no Calendar — ${nome} as ${hora}`;
+          else resultado=`❌ Erro Calendar: ${JSON.stringify(calData).slice(0,100)}`;
+        }
+      }
+
+    // ── EXCLUIR DO CALENDAR ───────────────────────────────────────────────
     } else if(acao==='excluir'){
-      resultado=`↩️ Excluido do Calendar — ainda nao implementado automaticamente. Remova manualmente.`;
-    } else if(acao==='ignorar'){
-      resultado=`↩️ Divergencia ignorada.`;
-    } else {
-      resultado=`Acao nao reconhecida: ${acao}`;
-    }
-  }catch(e:any){resultado=`Erro: ${e.message}`;}
+      resultado=`↩ Para excluir: acesse o Calendar e remova o evento das ${hora}h do dia ${diaN}.`;
 
-  // Editar mensagem original com resultado
-  await fetch(`${api}/editMessageText`,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({chat_id:ADMIN_ID,message_id:msgId,text:`${resultado}\n\n(divergencia processada)`,reply_markup:{inline_keyboard:[]}})});
+    // ── IGNORAR ───────────────────────────────────────────────────────────
+    } else if(acao==='ignorar'){
+      resultado=`↩ Divergencia ignorada.`;
+
+    } else {
+      resultado=`Acao desconhecida: ${acao}`;
+    }
+  }catch(e:any){
+    console.error('processarDivAdmin ERRO:',e.message);
+    resultado=`❌ Erro inesperado: ${e.message}`;
+  }
+
+  // Editar a mensagem original — substituir pelo resultado e remover botoes
+  await fetch(`${api}/editMessageText`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      chat_id:ADMIN_ID, message_id:msgId,
+      text:resultado,
+      reply_markup:{inline_keyboard:[]}
+    })
+  }).catch(()=>{});
 }
 
 Deno.serve(async (req) => {
