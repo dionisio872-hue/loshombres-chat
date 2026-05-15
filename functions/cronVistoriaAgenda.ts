@@ -15,7 +15,7 @@ async function getCalendarEvents(accessToken: string, date: string) {
   // date = YYYY-MM-DD
   const timeMin = `${date}T00:00:00-03:00`;
   const timeMax = `${date}T23:59:59-03:00`;
-  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime&maxResults=50`;
+  const url = `https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime&maxResults=50`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!res.ok) throw new Error(`Calendar API: ${res.status} ${await res.text()}`);
   const data = await res.json();

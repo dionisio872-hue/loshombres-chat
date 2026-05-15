@@ -622,7 +622,7 @@ async function executarCorrecao(
     // Verificar se já existe evento no Calendar para evitar duplicata
     if(!calToken)return '❌ Token Calendar indisponível.';
     const dStr2=`2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
-    const checkRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${dStr2}T00:00:00-03:00&timeMax=${dStr2}T23:59:59-03:00&singleEvents=true`,
+    const checkRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events?timeMin=${dStr2}T00:00:00-03:00&timeMax=${dStr2}T23:59:59-03:00&singleEvents=true`,
       {headers:{Authorization:`Bearer ${calToken}`}});
     const existentes=(await checkRes.json()).items||[];
     const [hc,mc]=hora.split(':').map(Number);
@@ -682,7 +682,7 @@ async function executarCorrecao(
       obsCalendar?`📝 Obs: ${obsCalendar}`:'',
       'Criado via divergência',
     ].filter(Boolean).join('\n');
-    const calR=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+    const calR=await fetch('https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events',{
       method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
       body:JSON.stringify({
         summary:`${nomeCalendar}${servicoCalendar?' — '+servicoCalendar.slice(0,20):''}`,
@@ -721,14 +721,14 @@ async function cancelarEvento(
   if(calToken){
     try{
       const dStr2=`2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
-      const calRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${dStr2}T00:00:00-03:00&timeMax=${dStr2}T23:59:59-03:00&singleEvents=true`,{headers:{Authorization:`Bearer ${calToken}`}});
+      const calRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events?timeMin=${dStr2}T00:00:00-03:00&timeMax=${dStr2}T23:59:59-03:00&singleEvents=true`,{headers:{Authorization:`Bearer ${calToken}`}});
       const eventos=(await calRes.json()).items||[];
       for(const ev of eventos){
         const dt=ev.start?.dateTime||'';
         if(!dt.includes('T'))continue;
         const eh=parseInt(dt.slice(11,13)),em=parseInt(dt.slice(14,16)||'0');
         if(Math.abs((eh*60+em)-hAlvo)<=15){
-          const delRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${ev.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${calToken}`}});
+          const delRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events/${ev.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${calToken}`}});
           if(delRes.ok||delRes.status===204) resultados.push(`✅ Calendar: evento "${ev.summary}" removido`);
           else resultados.push(`⚠️ Calendar: erro ao remover "${ev.summary}" (${delRes.status})`);
         }

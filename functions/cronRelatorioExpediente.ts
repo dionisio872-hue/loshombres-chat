@@ -57,7 +57,7 @@ async function lerPlanilha(tok:string,dia:number,mes:number){
 
 async function lerCalendar(tok:string,dia:number,mes:number){
   const d=`2026-${pad(mes)}-${pad(dia)}`;
-  const res=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${d}T00:00:00-03:00&timeMax=${d}T23:59:59-03:00&singleEvents=true&orderBy=startTime`,{headers:{Authorization:`Bearer ${tok}`}});
+  const res=await fetch(`https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events?timeMin=${d}T00:00:00-03:00&timeMax=${d}T23:59:59-03:00&singleEvents=true&orderBy=startTime`,{headers:{Authorization:`Bearer ${tok}`}});
   const items=(await res.json()).items||[];
   return items.map((ev:any)=>{
     const dt=ev.start?.dateTime||ev.start?.date||'';

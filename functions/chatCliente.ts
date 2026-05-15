@@ -239,7 +239,7 @@ async function buscarHorariosLivres(
   if(calToken){
     try{
       const calRes=await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${dataISO}T00:00:00-03:00&timeMax=${dataISO}T23:59:59-03:00&singleEvents=true&orderBy=startTime`,
+        `https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events?timeMin=${dataISO}T00:00:00-03:00&timeMax=${dataISO}T23:59:59-03:00&singleEvents=true&orderBy=startTime`,
         {headers:{Authorization:`Bearer ${calToken}`}}
       );
       const calData=await calRes.json();
@@ -409,8 +409,7 @@ async function gravarAgendamento(req:Request,p:{
       const ini=new Date(`2026-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00-03:00`);
       const fim=new Date(ini.getTime()+DUR*60000);
       // Criar evento apenas no calendário principal (evitar duplicatas em múltiplas agendas)
-      const calendarId = 'primary';
-      const calEvRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,{
+      const calEvRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events',{
         method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
         body:JSON.stringify({
           summary:`${p.nome} - ${p.servico}`,
