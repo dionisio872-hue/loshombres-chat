@@ -276,47 +276,63 @@ Deno.serve(async(req:Request)=>{
     ].join('\n');
     await sendAdmin(msgInsights,'plain');
 
-    // ── DIVERGÊNCIAS (item a item) ────────────────────────────────────────
+    // ── DIVERGÊNCIAS ─────────────────────────────────────────────────────
     await new Promise(r=>setTimeout(r,1000));
     const divs=montarDivergencias(hoje,amanha,pH,cH,pA,cA);
 
     if(divs.length===0){
       await sendAdmin('✅ Planilha e Calendar sincronizados. Sem divergencias.');
     } else {
-      await sendAdmin(`⚠️ ${divs.length} divergencia(s) detectada(s). Toque nos botoes para resolver cada uma:`);
-      await new Promise(r=>setTimeout(r,800));
+      // Salvar divs no cache do telegramBot via chamada interna
+      // (para o botão "Corrigir Tudo" funcionar sem precisar de callback_data grande)
+      const botUrl=`https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/telegramBot`;
+      await fetch(`${botUrl}?cacheDivs=1`, {
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({cacheDivs:divs,adminId:ADMIN_ID})
+      }).catch(()=>{});
+
+      await sendAdmin(`⚠️ ${divs.length} divergencia(s) detectada(s):`);
+      await new Promise(r=>setTimeout(r,600));
 
       for(let i=0;i<divs.length;i++){
         const d=divs[i];
         const dStr=String(d.dia).padStart(2,'0'); const mStr=String(d.mes).padStart(2,'0');
-        const nomeShort=(d.nome||'').slice(0,25).replace(/:/g,'-');
-        const base=`div:__:${d.tipo}:${d.dia}:${d.mes}:${d.hora||'0000'}:${nomeShort}`;
+        const nomeShort=(d.nome||'').slice(0,20).replace(/[:\n\r]/g,'-');
+        const horaKey=(d.hora||'0000').replace(':','');
+        const base=`div:__:${d.tipo}:${d.dia}:${d.mes}:${horaKey}:${nomeShort}`;
+
         let texto=''; let teclado:any[][];
         if(d.tipo==='so_calendar'){
           texto=[
-            `[${i+1}/${divs.length}] CALENDAR — nao esta na Planilha`,
-            `${dStr}/${mStr} as ${d.hora||'??:??'} — ${d.nome}`,
-            d.tel?`Tel: ${d.tel}`:'',d.servico?`Local: ${d.servico.slice(0,30)}`:'',
+            `[${i+1}/${divs.length}] 📆 Só no CALENDAR`,
+            `${dStr}/${mStr} às ${d.hora||'??:??'} — ${d.nome}`,
+            d.tel?`📱 ${d.tel}`:'',
+            d.servico?`🏠 ${d.servico.slice(0,35)}`:'',
           ].filter(Boolean).join('\n');
           teclado=[[
             {text:'✅ Incluir Planilha',callback_data:base.replace(':__:',':incluir:')},
-            {text:'🗑️ Excluir Calendar',callback_data:base.replace(':__:',':excluir:')},
-          ],[{text:'↩️ Ignorar',callback_data:base.replace(':__:',':ignorar:')}]];
+            {text:'🗑 Excluir Calendar',callback_data:base.replace(':__:',':excluir:')},
+          ],[{text:'↩ Ignorar',callback_data:base.replace(':__:',':ignorar:')}]];
         } else {
           texto=[
-            `[${i+1}/${divs.length}] PLANILHA — nao esta no Calendar`,
-            `${dStr}/${mStr} as ${d.hora||'??:??'} — ${d.nome}`,
-            d.tel?`Tel: ${d.tel}`:'',
+            `[${i+1}/${divs.length}] 📋 Só na PLANILHA`,
+            `${dStr}/${mStr} às ${d.hora||'??:??'} — ${d.nome}`,
+            d.tel?`📱 ${d.tel}`:'',
           ].filter(Boolean).join('\n');
           teclado=[[
-            {text:'📅 Criar Calendar',callback_data:base.replace(':__:',':criar:')},
-            {text:'↩️ Ignorar',callback_data:base.replace(':__:',':ignorar:')},
+            {text:'📅 Criar no Calendar',callback_data:base.replace(':__:',':criar:')},
+            {text:'↩ Ignorar',callback_data:base.replace(':__:',':ignorar:')},
           ]];
         }
         await sendAdmin(texto,{inline_keyboard:teclado});
-        await new Promise(r=>setTimeout(r,500));
+        await new Promise(r=>setTimeout(r,450));
       }
-      await sendAdmin('Toque nos botoes acima para resolver. Bom descanso! 🌿');
+
+      // Botão único para corrigir tudo de uma vez
+      await sendAdmin(
+        `🔧 Quer corrigir as ${divs.length} divergência(s) de uma vez?`,
+        {inline_keyboard:[[{text:`🔧 Corrigir Tudo (${divs.length})`,callback_data:'div:tudo:x:0:0:0000:x'}]]}
+      );
     }
 
 

@@ -478,203 +478,227 @@ function normHoraBot(h:string):string{
   return hh.padStart(2,'0')+':'+mm.padStart(2,'0');
 }
 
-// Processar botao de divergencia clicado pelo admin
-// callback_data: div:acao:tipo:dia:mes:hora4d:nome
-// hora4d = "0930" (sem dois pontos para caber em 64 bytes)
-async function processarDivAdmin(req:Request, callbackId:string, data:string, msgId:number){
+// ─── DIVERGÊNCIAS — helpers ──────────────────────────────────────────────────
+const SHEET_ID_DIV = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
+const ABAS_DIV:Record<number,string>={1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
+
+async function executarCorrecao(
+  acao:string,tipo:string,diaN:number,mesN:number,hora:string,
+  nome:string,tel:string,servico:string,obs:string,
+  sheetsToken:string,calToken:string
+):Promise<string>{
+
+  if(acao==='incluir'&&tipo==='so_calendar'){
+    if(!sheetsToken)return '❌ Token Sheets indisponível.';
+    const aba=ABAS_DIV[mesN]||'MAI';
+    const lRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_DIV}/values/${aba}!A1:I500`,
+      {headers:{Authorization:`Bearer ${sheetsToken}`}});
+    const rows:string[][]=(await lRes.json()).values||[];
+    const [hh2,mm2]=hora.split(':').map(Number);
+    const horaMins=hh2*60+mm2;
+    let alvo=-1;
+    for(let j=0;j<rows.length;j++){
+      const r=[...rows[j]];while(r.length<9)r.push('');
+      const colA=r[0].trim();
+      if(colA!==String(diaN)&&colA!==String(diaN).padStart(2,'0'))continue;
+      if(r[1].trim())continue;
+      const hNorm=normHoraBot(r[6].trim());
+      if(!hNorm)continue;
+      const [rh,rm]=hNorm.split(':').map(Number);
+      if(Math.abs((rh*60+rm)-horaMins)<=60){alvo=j+1;break;}
+    }
+    if(alvo<0)return `⚠️ Linha vazia não encontrada para ${hora}h dia ${diaN}`;
+    // Gravar B=nome, C=telefone, D=serviço, E=observações
+    const range=`${aba}!B${alvo}:E${alvo}`;
+    const putRes=await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_DIV}/values/${range}?valueInputOption=USER_ENTERED`,
+      {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+       body:JSON.stringify({range,values:[[nome||'(sem nome)',tel||'',servico||'',obs||'Incluído via botão']]})}
+    );
+    return putRes.ok
+      ?`✅ Planilha L${alvo}: ${nome||'(sem nome)'} | ${tel||'-'} | ${servico||'-'}`
+      :`❌ Erro planilha: ${(await putRes.text()).slice(0,80)}`;
+
+  }else if(acao==='criar'&&tipo==='so_planilha'){
+    if(!calToken)return '❌ Token Calendar indisponível.';
+    const dStr=`2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
+    const [hh2,mm2]=hora.split(':');
+    const iniStr=`${dStr}T${hh2.padStart(2,'0')}:${(mm2||'00').padStart(2,'0')}:00-03:00`;
+    const iniMs=new Date(iniStr).getTime();
+    if(isNaN(iniMs))return `❌ Hora inválida: "${hora}"`;
+    const fimStr=new Date(iniMs+90*60000).toISOString();
+    const calR=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+      method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        summary:nome,
+        description:`Tel: ${tel||'-'} | ${servico||'-'} | ${obs||'Criado via botão'}`,
+        start:{dateTime:iniStr,timeZone:'America/Sao_Paulo'},
+        end:{dateTime:fimStr,timeZone:'America/Sao_Paulo'},
+      })
+    });
+    const d=await calR.json();
+    return d.id
+      ?`✅ Calendar: ${nome} ${hora}h dia ${diaN}`
+      :`❌ Erro Calendar: ${JSON.stringify(d).slice(0,100)}`;
+
+  }else if(acao==='ignorar'){
+    return `↩ Ignorado: ${hora}h dia ${diaN}`;
+  }else if(acao==='excluir'){
+    return `↩ Excluir manualmente do Calendar: ${hora}h dia ${diaN}`;
+  }
+  return `❓ Ação desconhecida: ${acao}`;
+}
+
+// Cache de divergências para o botão "Corrigir Tudo"
+const divsCache=new Map<string,any[]>(); // key=chatId, value=array de divs
+
+async function processarDivAdmin(
+  sheetsToken:string,calToken:string,
+  callbackId:string,data:string,msgId:number
+){
   const api=`https://api.telegram.org/bot${BOT_TOKEN}`;
   const parts=data.split(':');
-  if(parts[0]!=='div'||parts.length<7) return;
+  if(parts[0]!=='div'||parts.length<5)return;
 
-  const acao  = parts[1]; // incluir | criar | excluir | ignorar
-  const tipo  = parts[2]; // so_calendar | so_planilha
+  const acao  = parts[1];
+  const tipo  = parts[2];
   const diaN  = parseInt(parts[3]);
   const mesN  = parseInt(parts[4]);
-  const hRaw  = parts[5]; // ex: "0930" ou "0900"
-  // Reconstruir "HH:MM" a partir do código compacto
-  const hora  = hRaw.length===4 ? `${hRaw.slice(0,2)}:${hRaw.slice(2)}` : normHoraBot(hRaw);
+  const hRaw  = parts[5]||'0000';
+  const hora  = hRaw.length===4?`${hRaw.slice(0,2)}:${hRaw.slice(2)}`:normHoraBot(hRaw);
   const nome  = parts.slice(6).join(':').trim();
 
-  // Confirmar o clique imediatamente (evita "loading" no Telegram)
+  // Responder callback imediatamente — evita spinner
   await fetch(`${api}/answerCallbackQuery`,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({callback_query_id:callbackId, text:'Processando...'})});
+    body:JSON.stringify({callback_query_id:callbackId,text:'Processando...'})}).catch(()=>{});
 
   let resultado='';
   try{
-    // Obter tokens via SDK — createClientFromRequest funciona no contexto do webhook
-    const b = createClientFromRequest(req);
-    const [rs, rc] = await Promise.all([
-      b.asServiceRole.connectors.getConnection('googlesheets').catch(()=>null),
-      b.asServiceRole.connectors.getConnection('googlecalendar').catch(()=>null),
-    ]);
-    const sheetsToken = rs?.accessToken || '';
-    const calToken    = rc?.accessToken || '';
-
-    // ── INCLUIR NA PLANILHA (evento estava só no Calendar) ────────────────
-    if(acao==='incluir' && tipo==='so_calendar'){
-      if(!sheetsToken){ resultado='❌ Token Sheets indisponivel. Tente em 1 min.'; }
-      else{
-        const aba = ABAS_BOT[mesN]||'MAI';
-        const lRes = await fetch(
-          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_BOT}/values/${aba}!A1:H500`,
-          {headers:{Authorization:`Bearer ${sheetsToken}`}}
-        );
-        const rows:string[][] = (await lRes.json()).values||[];
-
-        // Converter hora do callback para minutos
-        const [hh2,mm2] = hora.split(':').map(Number);
-        const horaMins = hh2*60+mm2;
-
-        let alvo=-1;
-        for(let j=0;j<rows.length;j++){
-          const r=[...rows[j]]; while(r.length<8) r.push('');
-          const colA = r[0].trim();
-          if(colA!==String(diaN) && colA!==String(diaN).padStart(2,'0')) continue;
-          if(r[1].trim()) continue; // linha ja preenchida — pular
-          const hNorm = normHoraBot(r[6].trim());
-          if(!hNorm) continue;
-          const [rh,rm] = hNorm.split(':').map(Number);
-          const diff = Math.abs((rh*60+rm) - horaMins);
-          // Aceitar linha com hora exata ou ate 60min de diferenca (Calendar pode ter horario ligeiramente diferente)
-          if(diff<=60){ alvo=j+1; break; }
-        }
-
-        if(alvo>0){
-          const range = `${aba}!B${alvo}:D${alvo}`;
-          const putRes = await fetch(
-            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_BOT}/values/${range}?valueInputOption=USER_ENTERED`,
-            {method:'PUT', headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-             body:JSON.stringify({range, values:[[nome,'','']]})
-            }
+    if(acao==='tudo'){
+      // ── CORRIGIR TODAS AS DIVERGÊNCIAS ───────────────────────────────
+      const cache=divsCache.get(String(ADMIN_ID))||[];
+      if(cache.length===0){
+        resultado='⚠️ Nenhuma divergência em cache. Gere o relatório novamente.';
+      }else{
+        const linhas=[`🔧 Corrigindo ${cache.length} divergência(s)...`];
+        for(const d of cache){
+          const acaoD=d.tipo==='so_calendar'?'incluir':'criar';
+          const res=await executarCorrecao(
+            acaoD,d.tipo,d.dia,d.mes,d.hora,
+            d.nome||'',d.tel||'',d.servico||'',d.desc||'',
+            sheetsToken,calToken
           );
-          if(putRes.ok) resultado=`✅ Incluido na planilha (linha ${alvo}) — ${nome}`;
-          else { const e=await putRes.text(); resultado=`❌ Erro ao gravar: ${e.slice(0,80)}`; }
-        } else {
-          resultado=`⚠️ Nenhuma linha vazia encontrada para ${hora} no dia ${diaN}. Adicione manualmente.`;
+          linhas.push(res);
+          await new Promise(r=>setTimeout(r,500));
         }
+        divsCache.delete(String(ADMIN_ID));
+        resultado=linhas.join('\n');
       }
-
-    // ── CRIAR NO CALENDAR (estava só na planilha) ─────────────────────────
-    } else if(acao==='criar' && tipo==='so_planilha'){
-      if(!calToken){ resultado='❌ Token Calendar indisponivel. Tente em 1 min.'; }
-      else{
-        const dStr  = `2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
-        const [hh2,mm2] = hora.split(':');
-        const iniStr = `${dStr}T${hh2.padStart(2,'0')}:${(mm2||'00').padStart(2,'0')}:00-03:00`;
-        const iniMs  = new Date(iniStr).getTime();
-        const fimStr = new Date(iniMs+90*60000).toISOString();
-
-        if(isNaN(iniMs)){ resultado=`❌ Hora invalida: "${hora}" — verifique e crie manualmente.`; }
-        else{
-          const calR = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
-            method:'POST', headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
-            body:JSON.stringify({
-              summary: nome,
-              description: `Criado via botao de divergencia`,
-              start:{dateTime:iniStr, timeZone:'America/Sao_Paulo'},
-              end:  {dateTime:fimStr, timeZone:'America/Sao_Paulo'},
-            })
-          });
-          const calData = await calR.json();
-          if(calData.id) resultado=`✅ Evento criado no Calendar — ${nome} as ${hora}`;
-          else resultado=`❌ Erro Calendar: ${JSON.stringify(calData).slice(0,100)}`;
-        }
-      }
-
-    // ── EXCLUIR DO CALENDAR ───────────────────────────────────────────────
-    } else if(acao==='excluir'){
-      resultado=`↩ Para excluir: acesse o Calendar e remova o evento das ${hora}h do dia ${diaN}.`;
-
-    // ── IGNORAR ───────────────────────────────────────────────────────────
-    } else if(acao==='ignorar'){
-      resultado=`↩ Divergencia ignorada.`;
-
-    } else {
-      resultado=`Acao desconhecida: ${acao}`;
+    }else{
+      // ── AÇÃO INDIVIDUAL ───────────────────────────────────────────────
+      resultado=await executarCorrecao(
+        acao,tipo,diaN,mesN,hora,nome,'','','',
+        sheetsToken,calToken
+      );
     }
   }catch(e:any){
     console.error('processarDivAdmin ERRO:',e.message);
-    resultado=`❌ Erro inesperado: ${e.message}`;
+    resultado=`❌ Erro: ${e.message}`;
   }
 
-  // Editar a mensagem original — substituir pelo resultado e remover botoes
+  // Editar mensagem — resultado final + remover botões
   await fetch(`${api}/editMessageText`,{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      chat_id:ADMIN_ID, message_id:msgId,
-      text:resultado,
-      reply_markup:{inline_keyboard:[]}
-    })
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({chat_id:ADMIN_ID,message_id:msgId,text:resultado,reply_markup:{inline_keyboard:[]}})
   }).catch(()=>{});
 }
 
 Deno.serve(async (req) => {
+  const _url=new URL(req.url);
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ ok: true, status: 'Bot Los Hombres ativo', canal: 'telegram' }), {
+    return new Response(JSON.stringify({ ok: true, status: 'Bot Los Hombres v13 ativo' }), {
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  let update: any;
-  try {
-    update = await req.json();
-  } catch {
-    return new Response('ok', { status: 200 });
+  // ── Cache de divergências enviado pelo cronRelatorio ─────────────────────
+  if(_url.searchParams.get('cacheDivs')==='1'){
+    try{
+      const body=await req.json();
+      if(body.cacheDivs&&Array.isArray(body.cacheDivs)){
+        divsCache.set(String(body.adminId||ADMIN_ID),body.cacheDivs);
+        console.log(`[CACHE] ${body.cacheDivs.length} divs salvas para Corrigir Tudo`);
+      }
+    }catch(_){}
+    return new Response('ok',{status:200});
   }
 
-  // Retornar 200 imediatamente para evitar retentativas do Telegram
-  const responsePromise = new Response('ok', { status: 200 });
+  let update: any;
+  try { update = await req.json(); }
+  catch { return new Response('ok', { status: 200 }); }
 
+  // ── Buscar tokens AGORA enquanto req está vivo ────────────────────────────
+  let sheetsToken='', calToken='';
+  try{
+    const b=createClientFromRequest(req);
+    const [rs,rc]=await Promise.all([
+      b.asServiceRole.connectors.getConnection('googlesheets').catch(()=>null),
+      b.asServiceRole.connectors.getConnection('googlecalendar').catch(()=>null),
+    ]);
+    sheetsToken=rs?.accessToken||'';
+    calToken=rc?.accessToken||'';
+  }catch(e:any){ console.error('Erro tokens:',e.message); }
+
+  // Retornar 200 imediatamente — Telegram não pode esperar
   (async () => {
     try {
       const updateId: number = update.update_id;
+      if (jaProcessado(updateId)) { console.log(`[SKIP] dup ${updateId}`); return; }
+      console.log(`[OK] ${updateId}:`, JSON.stringify(update).slice(0, 180));
 
-      if (jaProcessado(updateId)) {
-        console.log(`[SKIP] update_id ${updateId} duplicado — ignorado`);
-        return;
-      }
-
-      console.log(`[OK] update_id ${updateId}:`, JSON.stringify(update).slice(0, 200));
-
+      // ── MENSAGEM DE TEXTO ───────────────────────────────────────────────
       if (update.message?.text) {
         const chatId = update.message.chat.id;
         const fromId = update.message.from?.id;
-        const texto = update.message.text;
-        const nome = [update.message.from?.first_name, update.message.from?.last_name].filter(Boolean).join(' ') || `User${chatId}`;
-        // Ignorar mensagens de bots e canais
-        if (update.message.from?.is_bot) { console.log('[SKIP] mensagem de bot ignorada'); return; }
-        if (update.message.chat?.type === 'channel') { console.log('[SKIP] post de canal ignorado'); return; }
-        // Admin (Jonathan) — não processar como cliente
-        if (fromId === ADMIN_ID) { console.log('[ADMIN] mensagem do admin — ignorada no atendimento'); return; }
+        const texto  = update.message.text;
+        const nome   = [update.message.from?.first_name, update.message.from?.last_name].filter(Boolean).join(' ') || `User${chatId}`;
+        if (update.message.from?.is_bot)               { console.log('[SKIP] bot'); return; }
+        if (update.message.chat?.type === 'channel')   { console.log('[SKIP] canal'); return; }
+        if (fromId === ADMIN_ID)                       { console.log('[SKIP] admin'); return; }
         await processarMensagem(req, chatId, texto, nome);
       }
 
+      // ── CHANNEL POST — ignorar ──────────────────────────────────────────
+      if (update.channel_post) { console.log('[SKIP] channel_post'); return; }
+
+      // ── CALLBACK QUERY ──────────────────────────────────────────────────
       if (update.callback_query) {
-        const fromId = update.callback_query.from?.id;
-        const chatId = update.callback_query.message?.chat?.id;
-        const data = update.callback_query.data || '';
-        const msgId = update.callback_query.message?.message_id;
+        const fromId     = update.callback_query.from?.id;
+        const chatId     = update.callback_query.message?.chat?.id;
+        const data       = update.callback_query.data || '';
+        const msgId      = update.callback_query.message?.message_id;
         const callbackId = update.callback_query.id;
-        const nome = [update.callback_query.from?.first_name, update.callback_query.from?.last_name].filter(Boolean).join(' ') || `User${chatId}`;
-        // Ignorar callbacks de bots
-        if (update.callback_query.from?.is_bot) return;
-        // Admin clicou num botão de divergência do relatório
+        const nome       = [update.callback_query.from?.first_name, update.callback_query.from?.last_name].filter(Boolean).join(' ') || `User${chatId}`;
+        if (update.callback_query.from?.is_bot) { console.log('[SKIP] bot callback'); return; }
+
+        // Admin clicou num botão de divergência
         if (fromId === ADMIN_ID && data.startsWith('div:')) {
-          await processarDivAdmin(req, callbackId, data, msgId);
+          // tokens já foram buscados acima — passados por valor, sem depender do req
+          await processarDivAdmin(sheetsToken, calToken, callbackId, data, msgId);
           return;
         }
+
+        // Callback de cliente
         await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ callback_query_id: callbackId }),
         });
         await processarCallback(req, chatId, data, nome);
       }
 
-    } catch (e: any) {
-      console.error('Erro webhook:', e.message);
-    }
+    } catch (e: any) { console.error('Erro webhook:', e.message); }
   })();
 
-  return responsePromise;
+  return new Response('ok', { status: 200 });
 });
