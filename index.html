@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Los Hombres — Atendimento</title>
+  <!-- PWA: modo tela cheia no iOS e Android -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Los Hombres">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="https://www.loshombres.com.br/imagens/logo.png">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --gold:#c9a84c;--gold2:#7a5418;
+      --bg:#0a0a0a;--surface:#141414;--surface2:#1c1c1c;
+      --border:#282828;--text:#f0f0f0;--muted:#555;
+      --bot:#0f0f22;--tg:#229ED9;--green:#22c55e;--red:#ef4444;
+    }
+    html,body{height:100%;min-height:100%;background:var(--bg);color:var(--text);
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden;}
+    .wrap{display:flex;flex-direction:column;height:100vh;max-width:640px;margin:0 auto}
+
+    /* HEADER */
+    .hdr{background:linear-gradient(180deg,#1f1f1f,#111);border-bottom:1px solid var(--border);
+      padding:12px 16px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+    .av-wrap{position:relative;flex-shrink:0}
+    .av{width:64px;height:64px;border-radius:50%;object-fit:cover;object-position:top center;
+      border:3px solid var(--gold);box-shadow:0 0 0 5px rgba(201,168,76,.18),0 4px 16px rgba(0,0,0,.6);display:block;}
+    .dot-on{position:absolute;bottom:3px;right:3px;width:14px;height:14px;background:var(--green);
+      border-radius:50%;border:3px solid #141414;}
+    .hdr-info{flex:1}
+    .hdr-info h2{font-size:17px;font-weight:700;letter-spacing:-.3px;color:#fff}
+    .hdr-info .status{font-size:12px;color:var(--green);font-weight:600;margin-top:1px}
+    .hdr-info .sub{font-size:11px;color:var(--muted);margin-top:2px}
+    .logo{font-size:9px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;font-weight:800;line-height:1.7;text-align:right;flex-shrink:0}
+    .notice{text-align:center;font-size:11px;color:var(--muted);padding:5px 16px;background:#0d0d0d;border-bottom:1px solid var(--border);flex-shrink:0;}
+
+    /* MSGS */
+    .msgs{flex:1;overflow-y:auto;padding:16px 13px 6px;display:flex;flex-direction:column;gap:11px;}
+    .msgs::-webkit-scrollbar{width:3px}
+    .msgs::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
+    .row{display:flex;align-items:flex-end;gap:8px}
+    .row.bot{justify-content:flex-start}
+    .row.me{justify-content:flex-end}
+    .row-av{width:34px;height:34px;border-radius:50%;object-fit:cover;object-position:top center;flex-shrink:0;border:2px solid var(--gold);}
+    .col{display:flex;flex-direction:column;max-width:82%}
+    .row.me .col{align-items:flex-end}
+    .bub{padding:11px 15px;border-radius:20px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+    .bub.bot{background:var(--bot);border-bottom-left-radius:4px;border:1px solid #1e1e3a;}
+    .bub.me{background:linear-gradient(135deg,var(--gold),var(--gold2));border-bottom-right-radius:4px;color:#fff;font-weight:600;}
+    .bub.img-msg{padding:6px;background:var(--surface2);border:1px solid var(--border);}
+    .bub.img-msg img{width:100%;max-width:240px;border-radius:12px;display:block;}
+    .ts{font-size:10px;color:var(--muted);margin-top:4px;padding:0 4px}
+
+    /* BOTÕES PÓS-AGENDAMENTO */
+    .action-btns{display:flex;flex-direction:column;gap:8px;margin-top:6px;width:100%;}
+    .action-btns a,.action-btns button{
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      padding:12px 16px;border-radius:14px;font-size:14px;font-weight:700;
+      text-decoration:none;border:none;cursor:pointer;width:100%;
+    }
+    .btn-wa{background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;box-shadow:0 3px 12px rgba(37,211,102,.3);}
+    .btn-cancel{background:var(--surface2);color:var(--red);border:1px solid var(--red);}
+    .btn-cancel:active{opacity:.8}
+
+    /* PIX UPLOAD */
+    .pix-area{display:flex;flex-direction:column;gap:8px;width:100%;margin-top:4px;}
+    .pix-btn{display:flex;align-items:center;justify-content:center;gap:8px;
+      padding:12px 16px;border-radius:14px;font-size:14px;font-weight:700;
+      background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;
+      border:none;cursor:pointer;width:100%;box-shadow:0 3px 12px rgba(201,168,76,.3);}
+    #fileInput{display:none}
+    .pix-preview{max-width:200px;border-radius:12px;margin-top:4px;display:none;}
+    .pix-status{font-size:12px;color:var(--muted);text-align:center;display:none;}
+
+    /* TYPING */
+    .typing-bub{display:inline-flex;align-items:center;gap:5px;padding:14px 18px;background:var(--bot);
+      border-radius:20px;border-bottom-left-radius:4px;border:1px solid #1e1e3a;}
+    .td{width:8px;height:8px;background:#333;border-radius:50%;animation:bounce 1.3s infinite}
+    .td:nth-child(2){animation-delay:.22s}.td:nth-child(3){animation-delay:.44s}
+    @keyframes bounce{0%,55%,100%{transform:translateY(0);background:#333}27%{transform:translateY(-8px);background:var(--gold)}}
+
+    /* INPUT */
+    .inp-area{background:var(--surface);border-top:1px solid var(--border);
+      padding:12px 14px;display:flex;align-items:flex-end;gap:10px;flex-shrink:0;}
+    #inp{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:24px;
+      padding:12px 16px;font-size:15px;color:var(--text);outline:none;resize:none;
+      max-height:120px;min-height:46px;font-family:inherit;line-height:1.45;transition:border-color .2s;}
+    #inp:focus{border-color:var(--gold)}
+    #inp::placeholder{color:var(--muted)}
+    #sbtn{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));
+      border:none;outline:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;box-shadow:0 2px 12px rgba(201,168,76,.35);transition:transform .12s;-webkit-tap-highlight-color:transparent;}
+    #sbtn:active{transform:scale(.9)}
+    #sbtn svg{display:block;pointer-events:none}
+
+    /* FAB */
+    #fab{position:fixed;bottom:86px;right:15px;background:var(--tg);color:#fff;
+      border-radius:50px;padding:12px 17px;font-size:13px;font-weight:600;
+      display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(34,158,217,.4);
+      text-decoration:none;z-index:200;-webkit-tap-highlight-color:transparent;}
+    @media(max-width:420px){#fab .fab-txt{display:none}#fab{border-radius:50%;padding:13px;bottom:78px;right:12px}}
+
+    /* PIX MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:none;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;max-width:320px;width:90%;text-align:center;}
+    .modal-box h3{color:var(--gold);font-size:17px;margin-bottom:8px;}
+    .modal-box p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:16px;}
+    .modal-img{width:100%;max-height:200px;object-fit:contain;border-radius:12px;margin-bottom:12px;display:none;}
+    .modal-btns{display:flex;gap:10px;flex-direction:column;}
+    .modal-btns button{padding:12px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;}
+    .btn-upload-pix{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;}
+    .btn-ok-pix{background:var(--green);color:#fff;display:none;}
+    .btn-skip-pix{background:var(--surface2);color:var(--muted);border:1px solid var(--border)!important;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="av-wrap">
+      <img class="av" id="avHdr" src="https://www.loshombres.com.br/imagens/poster-video.jpg" alt="Jonathan">
+      <div class="dot-on"></div>
+    </div>
+    <div class="hdr-info">
+      <h2>Jonathan</h2>
+      <div class="status">● online agora</div>
+      <div class="sub">Massagista · Savassi &amp; Betim · BH</div>
+    </div>
+    <div class="logo">LOS<br>HOMBRES</div>
+  </div>
+  <div class="notice">🔒 Atendimento sigiloso · Suas informações não são compartilhadas</div>
+  <div class="msgs" id="msgs"></div>
+  <div class="inp-area">
+    <textarea id="inp" rows="1" placeholder="Digite sua mensagem..." maxlength="600"></textarea>
+    <button id="sbtn" type="button">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<a id="fab" href="https://t.me/Atendimentoloshombresbot" target="_blank" rel="noopener">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.01 9.47c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.48 14.4l-2.95-.924c-.64-.204-.654-.64.136-.95l11.527-4.444c.537-.194 1.006.131.37.166z"/></svg>
+  <span class="fab-txt">Continuar no Telegram</span>
+</a>
+
+<!-- MODAL SINAL R0 — PIX + Cartão -->
+<div class="modal-overlay" id="pixModal">
+  <div class="modal-box" style="max-width:360px;max-height:90vh;overflow-y:auto;padding:20px;">
+
+    <!-- TELA ESCOLHA -->
+    <div id="pixTelaEscolha">
+      <h3 style="color:var(--gold);margin-bottom:6px;">💳 Sinal de R0</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+        O sinal reserva seu horário. Sem ele, o agendamento não é confirmado.<br>Escolha como pagar:
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="irParaTela('pixTelaPix')"
+          style="background:linear-gradient(135deg,#1DB954,#128C7E);color:#fff;padding:14px;border-radius:14px;border:none;font-size:14px;font-weight:700;cursor:pointer;">
+          🏦 Pagar via PIX
+        </button>
+        <button onclick="irParaTela('pixTelaCartao')"
+          style="background:linear-gradient(135deg,#c9a84c,#7a5418);color:#fff;padding:14px;border-radius:14px;border:none;font-size:14px;font-weight:700;cursor:pointer;">
+          💳 Pagar com Cartão de Crédito
+        </button>
+      </div>
+    </div>
+
+    <!-- TELA PIX -->
+    <div id="pixTelaPix" style="display:none;">
+      <h3 style="color:#1DB954;margin-bottom:6px;">🏦 Pagar via PIX</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Escaneie o QR Code ou copie a chave:</p>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABkUlEQVR4nO2ZwY4DMQhDn1f9/1/2HoAk6qWnZdCmGY3UZHywEDGGynxYP58AX8Q/RrxA8csI587H6RSmbfHAAEIWirgg1+kYpn3xiCgAFlg28j6dwrQxHrlEREBYW2anMG1HOKKRqfEcj0cRL8jLsgJybPt4TEHguhl+e+rzFKZt+bGkQqRs1LVp5DEIEWKhyBAsJPLVLKYNiKqsmQ/CCgfiOp3CtBFhbKUxFUinoo5i+ucIudIjvJj8njJTmDb2L1b0LgDIqSiOzRSmbQijvDBVYJwdnYYx7UEoc+IwpwacNmQQ0wbEIRZZWwgRgexipjDt86flR43Lrq6j2/xpBMB4+XbsMGbY9/n1QNQFWflRZbeZx/OImo8pRx7KDZYiOFOYNvb78q60WWVv1dPX1s49Eyv/ga6rt8d83dHiCosjOlOY9urHOVmPuXJ9mMK0Uz/21LTEI5Pmxv5lL0dUFHX32npby8LLtkfNvVFP16x03ZcUlBiHTGHaF4/SikyM6O7CfFyXH8cfcY/y+CJmIn4BDyzB5ShSvBcAAAAASUVORK5CYII="
+           style="width:170px;height:170px;border-radius:12px;border:3px solid #1DB954;display:block;margin:0 auto 10px;" alt="QR PIX">
+      <div style="background:#0d1117;border:1px solid #1DB954;border-radius:10px;padding:10px;margin-bottom:10px;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;">🔑 Chave PIX (UUID Nubank)</div>
+        <div style="font-size:10px;color:#1DB954;word-break:break-all;font-family:monospace;margin-bottom:6px;">42d583b1-66d3-41fd-a4cc-346996931548</div>
+        <button onclick="copiarChavePix()" style="background:#1DB954;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%;">📋 Copiar chave</button>
+      </div>
+      <div style="font-size:11px;color:#555;margin-bottom:12px;line-height:1.6;">
+        Beneficiário: <strong style="color:#aaa;">JG Espaço Multserviços</strong><br>
+        CNPJ: 17.342.740/0001-09 · Nubank · <strong style="color:#1DB954;">R$ 30,00</strong>
+      </div>
+      <div style="border-top:1px solid #222;padding-top:12px;margin-bottom:8px;">
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px;">📤 Após pagar, envie o comprovante:</div>
+        <img class="modal-img" id="pixPreviewImg" alt="preview">
+        <div id="pixAnaliseStatus" style="font-size:13px;color:#aaa;margin-bottom:10px;display:none;"></div>
+        <div id="pixRejeicaoMsg" style="display:none;background:#1a0000;border:1px solid #ef4444;border-radius:10px;padding:12px;font-size:13px;color:#ef4444;margin-bottom:10px;line-height:1.5;"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn-upload-pix" id="btnEscolherFoto">📷 Câmera ou galeria</button>
+          <button class="btn-ok-pix" id="btnConfirmarPix">✅ Confirmar pagamento</button>
+        </div>
+      </div>
+      <button onclick="irParaTela('pixTelaEscolha')" style="margin-top:4px;background:transparent;border:1px solid #333;color:#888;border-radius:10px;padding:8px;font-size:12px;cursor:pointer;width:100%;">← Trocar forma de pagamento</button>
+    </div>
+
+    <!-- TELA CARTÃO -->
+    <div id="pixTelaCartao" style="display:none;">
+      <h3 style="color:var(--gold);margin-bottom:6px;">💳 Cartão de Crédito</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Escaneie ou clique no link — R0 via PagSeguro:</p>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOgAAADoAQAAAADN0pXVAAABNElEQVR4nO2YsRLDMAhDpV7//5dfB8DXLh3qOKG+JEMIGioKBhSjL9fjG3ijf4A+JYeFkYzF8DTlPBmvkCQL54PyNOU8G68sEXnGkdzwNOV8EIpAme0+rG50vp4jpZaR4vByLat1aNSwFIHWXVBPzjOoebejO1/PaikaLdkWJsN1etty/hmteo4HECZiz3oWVKz5/mZsGG8skeMtlqzh68l59vwiy5YlMIixb7XlPIMiYZAcq2Sulr6W1SL0mUVsgeTqXlnZPTkfM3+HFWpw0/NbGgHxsUmC2LU/lxlKn2rZ3lTvj68ZmBT99Sf05Dyrj+r7RgwiV03TlfM06pxEJQy97zz6QGMIATmCe7BahbpGsUP67zp/UwKWEZnlUlZr+1U2aI/GTIXfk/NB8/fU373Rc9AX1zyMpsN2hhoAAAAASUVORK5CYII="
+           style="width:150px;height:150px;border-radius:12px;border:3px solid #c9a84c;display:block;margin:0 auto 10px;" alt="QR PagSeguro">
+      <a href="https://pag.ae/81NcUNZjq" target="_blank" rel="noopener" onclick="registrarCartao()"
+         style="display:block;background:linear-gradient(135deg,#c9a84c,#7a5418);color:#fff;text-decoration:none;padding:12px;border-radius:12px;font-size:14px;font-weight:700;margin-bottom:10px;text-align:center;">
+        🔗 Abrir link de pagamento
+      </a>
+      <div style="background:#0d1117;border:1px solid #333;border-radius:10px;padding:10px;font-size:11px;color:#888;margin-bottom:12px;line-height:1.6;">
+        ✅ Após pagar, avise pelo WhatsApp:<br>
+        <a href="https://wa.me/5531983244713" style="color:#c9a84c;font-weight:700;">(31) 98324-4713</a><br>
+        <span style="font-size:10px;color:#555;">Confirmamos seu agendamento manualmente</span>
+      </div>
+      <button onclick="irParaTela('pixTelaEscolha')" style="background:transparent;border:1px solid #333;color:#888;border-radius:10px;padding:8px;font-size:12px;cursor:pointer;width:100%;">← Trocar forma de pagamento</button>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+</div>
+
+</div>
+
+<script>
+// ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
+var FOTO = 'https://www.loshombres.com.br/imagens/poster-video.jpg';
+var API_CHAT  = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente';
+var API_PIX   = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/analisarPix';
+var API_IMGBB = 'https://api.imgbb.com/1/upload?key=6ca78a7f1fb8b0a7f8a5b5c5d5e5f5a1'; // fallback
+var WA_NUMBER = '5531983244713';
+
+// ── RASTREABILIDADE E MEMÓRIA PERSISTENTE ─────────────────────────────────────
+var STORAGE_KEY    = 'lh_chat_v4';
+var CLIENTE_ID_KEY = 'lh_cliente_id'; // ID permanente do dispositivo
+
+// Gerar fingerprint do dispositivo (não muda entre sessões)
+function gerarFingerprint() {
+  var raw = [
+    navigator.userAgent || '',
+    navigator.language || '',
+    screen.width + 'x' + screen.height,
+    screen.colorDepth || '',
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || '',
+    navigator.platform || '',
+    (navigator.plugins || []).length,
+  ].join('|');
+  // Hash simples djb2
+  var hash = 5381;
+  for (var i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) + hash) + raw.charCodeAt(i);
+    hash = hash & hash; // 32bit
+  }
+  return 'fp_' + Math.abs(hash).toString(36);
+}
+
+// ID permanente do cliente neste dispositivo
+function getClienteId() {
+  try {
+    var id = localStorage.getItem(CLIENTE_ID_KEY);
+    if (id) return id;
+    id = 'cli_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+    localStorage.setItem(CLIENTE_ID_KEY, id);
+    return id;
+  } catch(e) {
+    return gerarFingerprint(); // fallback sem localStorage
+  }
+}
+
+function gerarSessao() { return 'web_' + Math.random().toString(36).slice(2) + '_' + Date.now(); }
+
+function loadState() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+function saveState(extra) {
+  try {
+    var current = loadState() || {};
+    var merged = Object.assign({}, current, extra, {
+      ts: Date.now(),
+      sessao: sessao,
+      clienteId: clienteId,
+      fingerprint: fingerprint,
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  } catch(e) {}
+}
+
+function clearState() {
+  try {
+    // Preservar clienteId e memória do cliente ao limpar sessão
+    var state = loadState() || {};
+    var keepAlive = {
+      clienteId: state.clienteId || clienteId,
+      fingerprint: state.fingerprint || fingerprint,
+      nomeCliente: state.nomeCliente || '',
+      whatsappCliente: state.whatsappCliente || '',
+      historico: state.historico || [],
+      histIA: [], // limpar histIA ao resetar sessão
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(keepAlive));
+  } catch(e) {}
+}
+
+// Estado global
+var msgsEl = document.getElementById('msgs');
+var inpEl  = document.getElementById('inp');
+var sbtnEl = document.getElementById('sbtn');
+var busy   = false;
+var sessao = '';
+var dadosPendentes = null;
+var pixImageUrl    = null;
+var clienteId      = getClienteId();
+var fingerprint    = gerarFingerprint();
+var histIA         = []; // histórico de IA: [{role, content}] — enviado ao backend
+
+// Restaurar sessão ou criar nova
+var savedState = loadState();
+if (savedState && savedState.sessao) {
+  sessao = savedState.sessao;
+  if (savedState.clienteId) clienteId = savedState.clienteId;
+  // Restaurar histórico de IA para manter contexto da conversa
+  if (savedState.histIA && Array.isArray(savedState.histIA)) {
+    histIA = savedState.histIA;
+  }
+} else {
+  sessao = gerarSessao();
+  saveState({ sessao: sessao });
+}
+
+// ── Saudação personalizada baseada em memória ─────────────────────────────
+function montarSaudacaoInicial() {
+  var st = loadState() || {};
+  var nome = st.nomeCliente || '';
+  var hist = st.historico || [];
+  var ultimoAgend = hist[0] || null;
+
+  if (nome && ultimoAgend) {
+    return 'Olá, ' + nome.split(' ')[0] + '! 🌿 Que bom ter você de volta.\n\nSua última visita foi uma ' + (ultimoAgend.massagem || 'massagem') + '. Posso agendar algo novo para você?';
+  } else if (nome) {
+    return 'Olá, ' + nome.split(' ')[0] + '! 🌿 Que bom ter você de volta.\n\nNo que posso te ajudar hoje?';
+  }
+  return null; // cliente novo — iniciar fluxo normal
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function hora() {
+  var d = new Date();
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function scroll() { msgsEl.scrollTop = msgsEl.scrollHeight; }
+function mkAv() {
+  var img = document.createElement('img');
+  img.className = 'row-av'; img.src = FOTO; img.alt = 'J';
+  return img;
+}
+
+function addMsg(txt, tipo, extra) {
+  var row = document.createElement('div');
+  row.className = 'row ' + tipo;
+  if (tipo === 'bot') row.appendChild(mkAv());
+  var col = document.createElement('div');
+  col.className = 'col';
+  var bub = document.createElement('div');
+  bub.className = 'bub ' + tipo;
+  bub.textContent = txt;
+  var ts = document.createElement('div');
+  ts.className = 'ts';
+  ts.textContent = hora();
+  col.appendChild(bub);
+
+  // Botões extras
+  if (extra && extra.btns) renderBtns(col, extra.btns);
+  if (extra && extra.pixUpload) renderPixUpload(col, extra);
+
+  col.appendChild(ts);
+  row.appendChild(col);
+  msgsEl.appendChild(row);
+  scroll();
+  return bub;
+}
+
+function renderBtns(col, btns) {
+  var wrap = document.createElement('div');
+  wrap.className = 'action-btns';
+  btns.forEach(function(b) {
+    var el;
+    if (b.url) {
+      el = document.createElement('a');
+      el.href = b.url; el.target = '_blank'; el.rel = 'noopener';
+    } else {
+      el = document.createElement('button');
+      el.onclick = b.onclick;
+    }
+    el.className = b.cls || 'btn-cancel';
+    el.innerHTML = b.label;
+    wrap.appendChild(el);
+  });
+  col.appendChild(wrap);
+}
+
+function renderPixUpload(col, extra) {
+  var area = document.createElement('div');
+  area.className = 'pix-area';
+  var btn = document.createElement('button');
+  btn.className = 'pix-btn';
+  btn.innerHTML = '📷 Enviar comprovante PIX';
+  btn.onclick = function() { abrirModalPix(extra.dadosAgend); };
+  area.appendChild(btn);
+  col.appendChild(area);
+}
+
+function showTyping() {
+  var row = document.createElement('div');
+  row.className = 'row bot'; row.id = 'typing';
+  row.appendChild(mkAv());
+  var tb = document.createElement('div');
+  tb.className = 'typing-bub';
+  for (var i = 0; i < 3; i++) {
+    var d = document.createElement('div'); d.className = 'td'; tb.appendChild(d);
+  }
+  row.appendChild(tb);
+  msgsEl.appendChild(row);
+  scroll();
+}
+function hideTyping() { var el = document.getElementById('typing'); if (el) el.parentNode.removeChild(el); }
+
+// ── ENVIAR MENSAGEM ───────────────────────────────────────────────────────────
+function enviar() {
+  if (busy) return;
+  var txt = inpEl.value.trim();
+  if (!txt) return;
+  inpEl.value = '';
+  inpEl.style.height = 'auto';
+  busy = true;
+  addMsg(txt, 'me');
+  showTyping();
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API_CHAT, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.timeout = 20000;
+  xhr.onload = function() {
+    hideTyping();
+    busy = false;
+    inpEl.focus();
+    try {
+      var r = JSON.parse(xhr.responseText);
+      processarResposta(r);
+    } catch(e) {
+      addMsg('Tive um probleminha. Chama no WhatsApp: (31) 98324-4713 😊', 'bot');
+    }
+  };
+  xhr.onerror = xhr.ontimeout = function() {
+    hideTyping(); busy = false;
+    addMsg('Tive um probleminha. Chama no WhatsApp: (31) 98324-4713 😊', 'bot');
+  };
+  // Enriquecer payload com identidade e histórico de IA
+  var state = loadState() || {};
+  // Adicionar mensagem do usuário ao histIA
+  histIA.push({ role: 'user', content: txt });
+  if (histIA.length > 30) histIA = histIA.slice(-30);
+  saveState({ histIA: histIA });
+  xhr.send(JSON.stringify({
+    sessao: sessao,
+    mensagem: txt,
+    historico: histIA.slice(0, -1), // enviar histórico SEM a última msg (backend adiciona)
+    clienteId: clienteId,
+    fingerprint: fingerprint,
+    nomeCliente: state.nomeCliente || null,
+    whatsapp: state.whatsappCliente || null,
+  }));
+}
+
+// ── PROCESSAR RESPOSTA DO BACKEND ─────────────────────────────────────────────
+function processarResposta(r) {
+  if (!r || !r.resposta) return;
+  histIA.push({ role: 'assistant', content: r.resposta });
+  if (histIA.length > 30) histIA = histIA.slice(-30);
+  saveState({ histIA: histIA });
+
+  var conf = r.confirmacao || {};
+
+  // ── AGUARDANDO PIX: dados coletados, abrir modal de pagamento ──────────────
+  if (conf.aguardandoPix === 'true' && conf.nome && conf.horario) {
+    addMsg(r.resposta, 'bot');
+    // Salvar dados no localStorage para sobreviver reload da câmera
+    saveState({
+      dadosAgendamento: conf,
+      acao: 'aguardandoPix',
+      nomeCliente: conf.nome,
+      whatsappCliente: conf.whatsapp
+    });
+    dadosPendentes = conf;
+    // Abrir modal PIX após pequeno delay (dá tempo da mensagem aparecer)
+    setTimeout(function() { abrirModalPix(conf); }, 800);
+    return;
+  }
+
+  // ── AGENDAMENTO CONFIRMADO (após PIX validado pelo backend) ────────────────
+  if (conf.nome && conf.horario && !conf.aguardandoPix) {
+    var d = conf;
+    dadosPendentes = d;
+    var telC = (d.whatsapp || '').replace(/\D/g, '');
+    var waNum = telC.startsWith('55') ? telC : '55' + telC;
+    var waTxt = encodeURIComponent(
+      'Olá ' + (d.nome||'').split(' ')[0] + '! Seu agendamento na unidade ' + d.unidade +
+      ' está confirmado para ' + d.data + ' às ' + d.horario + 'h. Até breve! 🌿'
+    );
+    var waLink = d.waMsg || ('https://wa.me/' + waNum + '?text=' + waTxt);
+
+    addMsg(r.resposta, 'bot', {
+      btns: [
+        { label: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22C6.486 22 2 17.514 2 12S6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg> Falar com a gente no WhatsApp', cls: 'btn-wa', url: waLink },
+        { label: '❌ Cancelar agendamento', cls: 'btn-cancel', onclick: function() { solicitarCancelamento(d); } }
+      ]
+    });
+    if (d.nome) saveState({ nomeCliente: d.nome });
+    if (d.whatsapp) saveState({ whatsappCliente: d.whatsapp });
+    // Limpar sessão mas manter memória do cliente
+    histIA = [];
+    clearState();
+    sessao = gerarSessao();
+    saveState({ sessao: sessao });
+    return;
+  }
+
+  // ── RESPOSTA NORMAL ────────────────────────────────────────────────────────
+  addMsg(r.resposta, 'bot');
+  if (r.audio) {
+    var au = document.createElement('audio');
+    au.controls = true; au.src = r.audio;
+    au.style.cssText = 'width:100%;margin-top:6px;border-radius:8px;';
+    var lastBub = msgsEl.lastElementChild;
+    if (lastBub) lastBub.querySelector('.bub') && lastBub.querySelector('.col').appendChild(au);
+  }
+}
+
+// ── MODAL PIX ─────────────────────────────────────────────────────────────────
+function irParaTela(id) {
+  ['pixTelaEscolha','pixTelaPix','pixTelaCartao'].forEach(function(t) {
+    var el = document.getElementById(t);
+    if (el) el.style.display = (t === id) ? '' : 'none';
+  });
+  if (id !== 'pixTelaPix') {
+    var pr = document.getElementById('pixPreviewImg');
+    var as = document.getElementById('pixAnaliseStatus');
+    var rm = document.getElementById('pixRejeicaoMsg');
+    var cp = document.getElementById('btnConfirmarPix');
+    var ef = document.getElementById('btnEscolherFoto');
+    var fi = document.getElementById('fileInput');
+    if(pr) pr.style.display = 'none';
+    if(as) as.style.display = 'none';
+    if(rm) rm.style.display = 'none';
+    if(cp) cp.style.display = 'none';
+    if(ef) { ef.disabled = false; ef.textContent = '📷 Câmera ou galeria'; }
+    if(fi) fi.value = '';
+    pixImageUrl = null;
+  }
+}
+
+function copiarChavePix() {
+  var chave = '42d583b1-66d3-41fd-a4cc-346996931548';
+  var btn = event && event.target ? event.target : document.querySelector('[onclick="copiarChavePix()"]');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(chave).then(function() {
+      if(btn) { btn.textContent = '✅ Copiado!'; setTimeout(function(){ btn.textContent = '📋 Copiar chave'; }, 2000); }
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = chave; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    if(btn) { btn.textContent = '✅ Copiado!'; setTimeout(function(){ btn.textContent = '📋 Copiar chave'; }, 2000); }
+  }
+}
+
+function abrirModalPix(dadosAgend) {
+  // Salvar dados no localStorage ANTES de abrir câmera (evitar perda ao voltar da galeria)
+  if (dadosAgend) {
+    dadosPendentes = dadosAgend;
+    saveState({ dadosAgendamento: dadosAgend, acao: 'aguardandoPix' });
+  }
+  dadosPendentes = dadosAgend;
+  pixImageUrl = null;
+  irParaTela('pixTelaEscolha');
+  document.getElementById('pixModal').classList.add('open');
+}
+
+function registrarCartao() {
+  setTimeout(function() {
+    addMsg('Vou pagar com cartão de crédito.', 'me');
+    addMsg('Perfeito! 💳 Finalize o pagamento de R$30 no PagSeguro.\n\nAssim que pagar, avise pelo WhatsApp e confirmamos: https://wa.me/5531983244713 🌿', 'bot');
+  }, 400);
+}
+
+document.getElementById('btnEscolherFoto').onclick = function() {
+  document.getElementById('fileInput').click();
+};
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  // Preview imediato
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var previewImg = document.getElementById('pixPreviewImg');
+    previewImg.src = ev.target.result;
+    previewImg.style.display = 'block';
+    document.getElementById('pixAnaliseStatus').textContent = '🔍 Analisando comprovante...';
+    document.getElementById('pixAnaliseStatus').style.display = 'block';
+    document.getElementById('btnEscolherFoto').disabled = true;
+    // Upload + análise
+    uploadEAnalisar(file);
+  };
+  reader.readAsDataURL(file);
+});
+
+function uploadEAnalisar(file) {
+  // Converter para base64 e enviar para o endpoint analisarPix via base64 URL
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var base64 = ev.target.result; // data:image/jpeg;base64,...
+    pixImageUrl = base64; // temporário para análise
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', API_PIX, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 30000;
+    xhr.onload = function() {
+      try {
+        var r = JSON.parse(xhr.responseText);
+        var statusEl = document.getElementById('pixAnaliseStatus');
+        if (r.valido) {
+          // ✅ Aprovado
+          statusEl.innerHTML =
+            '✅ <strong>Comprovante aprovado!</strong>' +
+            (r.valor ? '<br>💰 Valor: ' + r.valor : '') +
+            (r.beneficiario ? '<br>👤 Destinatário: ' + r.beneficiario : '') +
+            (r.status_transacao ? '<br>📌 Status: ' + r.status_transacao : '');
+          statusEl.style.color = '#22c55e';
+          statusEl.style.display = 'block';
+          document.getElementById('pixRejeicaoMsg').style.display = 'none';
+          document.getElementById('btnConfirmarPix').style.display = 'block';
+        } else {
+          // ❌ Reprovado — mostrar motivo específico
+          statusEl.style.display = 'none';
+          var rejEl = document.getElementById('pixRejeicaoMsg');
+          var detalhe = r.motivo_rejeicao_detalhe || '';
+          var instrucao = '';
+          if (detalhe === 'NOT_PIX') {
+            instrucao = '📌 Envie o <strong>print do comprovante PIX</strong> gerado pelo seu banco — não uma foto comum.';
+          } else if (detalhe === 'PIX_AGENDADO') {
+            instrucao = '📌 PIX agendado não é aceito. Aguarde o pagamento ser <strong>Efetuado/Concluído</strong> e envie o comprovante final.' +
+              (r.status_transacao ? '<br>Status detectado: <strong>' + r.status_transacao + '</strong>' : '');
+          } else if (detalhe === 'DEST_ERRADO') {
+            instrucao = '📌 O PIX deve ser enviado para <strong>JG Espaço Multserviços</strong> ou <strong>Jonathan Guimarães</strong>.' +
+              (r.beneficiario ? '<br>Destinatário detectado: <strong>' + r.beneficiario + '</strong>' : '');
+          } else {
+            instrucao = '📌 Certifique-se de que o comprovante mostra: valor, data e destinatário correto.';
+          }
+          rejEl.innerHTML =
+            '❌ <strong>Comprovante recusado</strong><br><br>' +
+            (r.motivo || 'Comprovante inválido.') + '<br><br>' +
+            instrucao + '<br><br>' +
+            '💳 Prefere pagar com cartão? Use o botão abaixo.';
+          rejEl.style.display = 'block';
+          document.getElementById('btnEscolherFoto').disabled = false;
+          document.getElementById('btnEscolherFoto').textContent = '📷 Enviar outro comprovante';
+          document.getElementById('btnConfirmarPix').style.display = 'none';
+          pixImageUrl = null;
+          // Limpar o preview para não confundir
+          document.getElementById('pixPreviewImg').style.display = 'none';
+        }
+        pixImageUrl = r.imageUrl || base64;
+      } catch(e2) {
+        document.getElementById('pixAnaliseStatus').textContent = 'Não foi possível analisar — confirme manualmente.';
+        document.getElementById('btnConfirmarPix').style.display = 'block';
+      }
+    };
+    xhr.onerror = xhr.ontimeout = function() {
+      var statusEl2 = document.getElementById('pixAnaliseStatus');
+      statusEl2.textContent = '⚠️ Não foi possível analisar — tente novamente ou use o cartão.';
+      statusEl2.style.color = '#f59e0b';
+      statusEl2.style.display = 'block';
+      document.getElementById('btnEscolherFoto').disabled = false;
+      document.getElementById('btnEscolherFoto').textContent = '📷 Tentar novamente';
+    };
+    // Enviar base64 como imageUrl (gpt-4o aceita data: URLs)
+    xhr.send(JSON.stringify({
+      imageUrl: base64,
+      dia: dadosPendentes ? dadosPendentes.dia : null,
+      mes: dadosPendentes ? dadosPendentes.mes : null,
+      hora: dadosPendentes ? dadosPendentes.horario : null,
+      nomeCliente: dadosPendentes ? dadosPendentes.nome : null,
+    }));
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('btnConfirmarPix').onclick = function() {
+  document.getElementById('pixModal').classList.remove('open');
+  addMsg('Comprovante enviado! ✅', 'me');
+  // Buscar dados do agendamento do localStorage
+  var st = loadState() || {};
+  var ag = dadosPendentes || st.dadosAgendamento || {};
+  var nomeC = ag.nome || st.nomeCliente || '';
+  var wppC = (ag.whatsapp || st.whatsappCliente || '').replace(/\D/g, '');
+  showTyping();
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API_CHAT, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.timeout = 25000;
+  xhr.onload = function() {
+    hideTyping();
+    try { processarResposta(JSON.parse(xhr.responseText)); } catch(e) {}
+  };
+  xhr.onerror = xhr.ontimeout = function() {
+    hideTyping();
+    addMsg('Agendamento registrado! Entraremos em contato em breve. 🌿', 'bot');
+  };
+  // Envia pixConfirmado=true com histórico completo para o backend gravar
+  xhr.send(JSON.stringify({
+    sessao: sessao,
+    mensagem: 'pix confirmado',
+    historico: histIA.slice(-20),
+    clienteId: clienteId,
+    fingerprint: fingerprint,
+    nomeCliente: nomeC,
+    whatsapp: wppC,
+    pixConfirmado: true
+  }));
+};
+
+// ── CANCELAMENTO ──────────────────────────────────────────────────────────────
+function solicitarCancelamento(d) {
+  if (!confirm('Tem certeza que quer cancelar?\nO sinal de R$30 será retido se faltar menos de 12h.')) return;
+
+  addMsg('Solicitei o cancelamento do meu agendamento.', 'me');
+  showTyping();
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API_CHAT, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.timeout = 15000;
+  xhr.onload = xhr.onerror = xhr.ontimeout = function() {
+    hideTyping();
+    finalizarCancelamento(d);
+  };
+  xhr.send(JSON.stringify({ sessao: sessao, acao: 'cancelar' }));
+  clearState();
+  sessao = gerarSessao();
+}
+
+function finalizarCancelamento(d) {
+  var nome    = (d && d.nome)    || '';
+  var servico = (d && d.servico) || '';
+  var unidade = (d && d.unidade) || '';
+  var dia     = (d && d.dia)     || '';
+  var mes     = (d && d.mes)     || '';
+  var horario = (d && d.horario) || '';
+  var valor   = (d && d.valor)   || '';
+  var imgUrl  = (pixImageUrl && pixImageUrl.length < 300) ? pixImageUrl : '';
+
+  var dataFmt = (dia && mes) ? dia + '/' + String(mes).padStart(2, '0') : '';
+
+  var msg = 'Olá! Preciso cancelar meu agendamento e solicitar devolução do sinal.';
+  msg += '\n\n📋 DETALHES DO CANCELAMENTO';
+  if(nome)    msg += '\n👤 Nome: ' + nome;
+  if(servico) msg += '\n💆 Serviço: ' + servico;
+  if(unidade) msg += '\n📍 Unidade: ' + unidade;
+  if(dataFmt && horario) msg += '\n📅 Data/Hora: ' + dataFmt + ' às ' + horario + 'h';
+  if(valor)   msg += '\n💰 Valor do sinal: R$30,00';
+  msg += '\n\n💳 MEUS DADOS PARA DEVOLUÇÃO DO PIX';
+  msg += '\n🔑 Chave PIX: (preencha aqui)';
+  msg += '\n👤 Nome titular: (preencha aqui)';
+  msg += '\n🏦 Banco: (preencha aqui)';
+  if(imgUrl)  msg += '\n\n🧾 Comprovante do sinal: ' + imgUrl;
+  msg += '\n\nAguardo a confirmação. Obrigado!';
+
+  var waLink = 'https://wa.me/5531983244713?text=' + encodeURIComponent(msg);
+
+  addMsg(
+    'Cancelamento registrado. 🌿\n\nPara receber o sinal de volta, abra o WhatsApp abaixo — a mensagem já vem preenchida. Só adicione sua chave PIX, nome e banco.',
+    'bot',
+    {
+      btns: [
+        { label: '📱 Solicitar devolução do sinal via WhatsApp', cls: 'btn-wa', url: waLink }
+      ]
+    }
+  );
+}
+
+
+// ── ENVIO PROGRAMÁTICO ────────────────────────────────────────────────────────
+function enviarMensagem(msg) {
+  if (busy) return;
+  busy = true;
+  showTyping();
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API_CHAT, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.timeout = 20000;
+  xhr.onload = function() {
+    hideTyping(); busy = false;
+    try { processarResposta(JSON.parse(xhr.responseText)); } catch(e) {}
+  };
+  xhr.onerror = xhr.ontimeout = function() { hideTyping(); busy = false; };
+  var st2 = loadState() || {};
+  xhr.send(JSON.stringify({ sessao: sessao, mensagem: msg, clienteId: clienteId, fingerprint: fingerprint, nomeCliente: st2.nomeCliente || null, whatsapp: st2.whatsappCliente || null }));
+}
+
+// ── EVENTOS INPUT ─────────────────────────────────────────────────────────────
+inpEl.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+inpEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); }
+});
+sbtnEl.addEventListener('click', enviar);
+
+// ── INIT — restaurar histórico, reconhecer cliente, boas-vindas ───────────────
+(function init() {
+  var state = loadState();
+  // histIA em memória já foi restaurado antes deste init
+  var temHistorico = state && state.historico && state.historico.length > 0;
+  var temHistIA    = histIA && histIA.length > 0; // conversa de IA em andamento
+  var temCliente   = state && (state.nomeCliente || state.whatsappCliente);
+
+  if (temHistorico) {
+    // Restaurar bolhas visuais da conversa
+    state.historico.forEach(function(h) {
+      if (h.txt && h.tipo) addMsg(h.txt, h.tipo);
+    });
+    // Agendamento pendente de comprovante PIX
+    if ((state.acao === 'agendado' || state.acao === 'aguardandoPix') && state.dadosAgendamento) {
+      dadosPendentes = state.dadosAgendamento;
+      addMsg('Seu horário ainda está sendo reservado. Envie o comprovante PIX para confirmar. 🌿', 'bot', {
+        btns: [
+          { label: '✅ Enviar comprovante PIX', cls: 'btn-wa', onclick: function() { abrirModalPix(state.dadosAgendamento); } },
+          { label: '📱 Confirmar via WhatsApp', cls: 'btn-wa', url: 'https://wa.me/'+WA_NUMBER }
+        ]
+      });
+    }
+    // NÃO mostrar boas-vindas — conversa já está em andamento
+  } else if (temCliente) {
+    // Cliente reconhecido mas sem bolhas visuais — saudação personalizada
+    setTimeout(function() {
+      var saudacao = montarSaudacaoInicial();
+      addMsg(saudacao || 'Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿\n\nAqui você pode simplesmente existir e receber.\n\nQual experiência você está buscando hoje?', 'bot');
+    }, 500);
+  } else {
+    // Primeiro acesso — boas-vindas padrão
+    setTimeout(function() {
+      addMsg('Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿\n\nAqui você pode simplesmente existir e receber.\n\nQual experiência você está buscando hoje?', 'bot');
+    }, 500);
+  }
+  inpEl.focus();
+})();
+
+
+// Salvar histórico ao adicionar mensagem (patch para persistência)
+var _addMsgOrig = addMsg;
+addMsg = function(txt, tipo, extra) {
+  var bub = _addMsgOrig(txt, tipo, extra);
+  try {
+    var state = loadState() || {};
+    var hist = state.historico || [];
+    hist.push({ txt: txt, tipo: tipo });
+    if (hist.length > 40) hist = hist.slice(-40); // manter últimas 40
+    saveState({ historico: hist });
+  } catch(e) {}
+  return bub;
+};
+</script>
+</body>
+</html>
