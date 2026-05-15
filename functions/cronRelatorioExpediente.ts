@@ -13,7 +13,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const CRON_SECRET = Deno.env.get('CRON_SECRET') || 'loshombres2026';
-const BOT_TOKEN   = Deno.env.get('TELEGRAM_BOT_TOKEN') || '';
+const BOT_TOKEN   = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || Deno.env.get('TELEGRAM_BOT_TOKEN') || '';
 const ADMIN_ID    = '7200577395';
 const SHEET_ID    = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
 const ABAS: Record<number,string> = {1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
@@ -281,90 +281,44 @@ Deno.serve(async(req:Request)=>{
     const divs=montarDivergencias(hoje,amanha,pH,cH,pA,cA);
 
     if(divs.length===0){
-      await sendAdmin('✅ Planilha e Calendar sincronizados. Sem divergências.','plain');
+      await sendAdmin('✅ Planilha e Calendar sincronizados. Sem divergencias.');
     } else {
-      await sendAdmin(`⚠️ ${divs.length} divergência(s) encontrada(s). Apresento uma por uma:\n(Responda: incluir / excluir / criar / ignorar)`,'plain');
+      await sendAdmin(`⚠️ ${divs.length} divergencia(s) detectada(s). Toque nos botoes para resolver cada uma:`);
       await new Promise(r=>setTimeout(r,800));
 
       for(let i=0;i<divs.length;i++){
         const d=divs[i];
         const dStr=String(d.dia).padStart(2,'0'); const mStr=String(d.mes).padStart(2,'0');
-        let texto='';
+        const nomeShort=(d.nome||'').slice(0,25).replace(/:/g,'-');
+        const base=`div:__:${d.tipo}:${d.dia}:${d.mes}:${d.hora||'0000'}:${nomeShort}`;
+        let texto=''; let teclado:any[][];
         if(d.tipo==='so_calendar'){
           texto=[
-            `⚠️ Divergência ${i+1}/${divs.length}`,
-            `📆 Está no Calendar — NÃO está na Planilha`,
-            `📅 ${dStr}/${mStr} às ${d.hora||'??:??'}`,
-            `👤 ${d.nome}`,
-            d.tel?`📱 ${d.tel}`:'',
-            d.servico?`🏷️ ${d.servico}`:'',
-            ``,
-            `Responda:  incluir  |  excluir  |  ignorar`,
+            `[${i+1}/${divs.length}] CALENDAR — nao esta na Planilha`,
+            `${dStr}/${mStr} as ${d.hora||'??:??'} — ${d.nome}`,
+            d.tel?`Tel: ${d.tel}`:'',d.servico?`Local: ${d.servico.slice(0,30)}`:'',
           ].filter(Boolean).join('\n');
+          teclado=[[
+            {text:'✅ Incluir Planilha',callback_data:base.replace(':__:',':incluir:')},
+            {text:'🗑️ Excluir Calendar',callback_data:base.replace(':__:',':excluir:')},
+          ],[{text:'↩️ Ignorar',callback_data:base.replace(':__:',':ignorar:')}]];
         } else {
           texto=[
-            `⚠️ Divergência ${i+1}/${divs.length}`,
-            `📋 Está na Planilha — NÃO está no Calendar`,
-            `📅 ${dStr}/${mStr} às ${d.hora||'??:??'}`,
-            `👤 ${d.nome}`,
-            d.tel?`📱 ${d.tel}`:'',
-            d.servico?`🏷️ ${d.servico}`:'',
-            ``,
-            `Responda:  criar  |  ignorar`,
+            `[${i+1}/${divs.length}] PLANILHA — nao esta no Calendar`,
+            `${dStr}/${mStr} as ${d.hora||'??:??'} — ${d.nome}`,
+            d.tel?`Tel: ${d.tel}`:'',
           ].filter(Boolean).join('\n');
+          teclado=[[
+            {text:'📅 Criar Calendar',callback_data:base.replace(':__:',':criar:')},
+            {text:'↩️ Ignorar',callback_data:base.replace(':__:',':ignorar:')},
+          ]];
         }
-        await sendAdmin(texto,'plain');
-
-        // Aguardar resposta até 45s
-        let resposta='';
-        const deadline=Date.now()+45000;
-        while(Date.now()<deadline){
-          await new Promise(r=>setTimeout(r,7000));
-          try{
-            const upd=await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1&timeout=5`);
-            const data=await upd.json();
-            const msgs=(data.result||[]).filter((u:any)=>
-              u.message?.chat?.id?.toString()===ADMIN_ID&&u.message?.text&&(Date.now()/1000-u.message.date)<90
-            );
-            if(msgs.length>0){resposta=msgs[msgs.length-1].message.text.toLowerCase().trim();break;}
-          }catch(_){}
-        }
-
-        if(d.tipo==='so_calendar'&&resposta==='incluir'){
-          const aba=ABAS[d.mes]||'MAI';
-          const lRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:H500`,{headers:{Authorization:`Bearer ${sheetsToken}`}});
-          const rows:string[][]=(await lRes.json()).values||[];
-          let linhaAlvo=-1;
-          for(let j=0;j<rows.length;j++){
-            const r=[...rows[j]];while(r.length<8)r.push('');
-            if((r[0].trim()===String(d.dia)||r[0].trim()===String(d.dia).padStart(2,'0'))&&normHora((r[6]||'').trim())===d.hora&&!(r[1]||'').trim()){linhaAlvo=j+1;break;}
-          }
-          if(linhaAlvo>0){
-            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!B${linhaAlvo}:D${linhaAlvo}?valueInputOption=USER_ENTERED`,
-              {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-               body:JSON.stringify({range:`${aba}!B${linhaAlvo}:D${linhaAlvo}`,values:[[d.nome,d.tel||'',d.servico||'']]})});
-            await sendAdmin(`✅ Incluído na planilha — linha ${linhaAlvo}.`,'plain');
-          } else {
-            await sendAdmin(`⚠️ Linha não encontrada para ${d.hora} no dia ${d.dia}. Verifique manualmente.`,'plain');
-          }
-        } else if(d.tipo==='so_planilha'&&resposta==='criar'){
-          const dStr2=`2026-${String(d.mes).padStart(2,'0')}-${String(d.dia).padStart(2,'0')}`;
-          const hh2=d.hora.slice(0,2); const mm2=d.hora.slice(3,5);
-          const ini=new Date(`${dStr2}T${hh2}:${mm2}:00-03:00`);
-          const fim=new Date(ini.getTime()+90*60000);
-          const calR=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',
-            {method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
-             body:JSON.stringify({summary:d.nome,description:d.tel?`Tel: ${d.tel}\nServiço: ${d.servico||''}`:d.servico||'',
-               start:{dateTime:ini.toISOString(),timeZone:'America/Sao_Paulo'},
-               end:{dateTime:fim.toISOString(),timeZone:'America/Sao_Paulo'}})});
-          await sendAdmin(calR.ok?`✅ Evento criado no Calendar para ${d.hora}.`:`❌ Erro ao criar evento. Tente manualmente.`,'plain');
-        } else {
-          await sendAdmin(`↩️ Divergência ${i+1} mantida (${resposta||'sem resposta'}).`,'plain');
-        }
-        await new Promise(r=>setTimeout(r,600));
+        await sendAdmin(texto,{inline_keyboard:teclado});
+        await new Promise(r=>setTimeout(r,500));
       }
-      await sendAdmin('✅ Revisão concluída. Bom descanso! 🌿','plain');
+      await sendAdmin('Toque nos botoes acima para resolver. Bom descanso! 🌿');
     }
+
 
     return new Response(JSON.stringify({ok:true,divs:divs.length}),{headers:{'Content-Type':'application/json'}});
   }catch(e:any){

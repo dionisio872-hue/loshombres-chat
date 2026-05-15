@@ -9,7 +9,7 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') || '';
+const BOT_TOKEN = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || Deno.env.get('TELEGRAM_BOT_TOKEN') || '';
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || '';
 
@@ -463,6 +463,85 @@ async function processarCallback(req: Request, chatId: number, data: string, nom
 
 // ─── WEBHOOK HANDLER ──────────────────────────────────────────────────────────
 
+
+const ADMIN_ID = 7200577395;
+const ADMIN_STR = '7200577395';
+const SHEET_ID_BOT = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
+const ABAS_BOT: Record<number,string> = {1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
+
+function normHoraBot(h:string):string{
+  if(!h)return '';
+  const c=h.replace(/[hH]/,':').replace(/\s/g,'');
+  const p=c.split(':'); const hh=p[0].replace(/\D/g,'');
+  const mm=(p[1]||'00').replace(/\D/g,'').slice(0,2)||'00';
+  if(!hh||isNaN(Number(hh)))return '';
+  return hh.padStart(2,'0')+':'+mm.padStart(2,'0');
+}
+
+// Processar callback de divergência do admin (botões inline do relatório)
+async function processarDivAdmin(req:Request, callbackId:string, data:string, msgId:number){
+  const api=`https://api.telegram.org/bot${BOT_TOKEN}`;
+  // Formato do data: "div:ACAO:TIPO:DIA:MES:HORA:NOME"
+  // ACAO: incluir|excluir|criar|ignorar
+  const parts=data.split(':');
+  if(parts[0]!=='div'||parts.length<7){return;}
+  const [,acao,tipo,dia,mes,hora,...nomeArr]=parts;
+  const nome=nomeArr.join(':');
+
+  // Confirmar callback imediatamente
+  await fetch(`${api}/answerCallbackQuery`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({callback_query_id:callbackId,text:`Processando: ${acao}...`})});
+
+  let resultado='';
+  try{
+    const b=createClientFromRequest(req);
+    const rs=await b.asServiceRole.connectors.getConnection('googlesheets').catch(()=>({accessToken:''}));
+    const rc=await b.asServiceRole.connectors.getConnection('googlecalendar').catch(()=>({accessToken:''}));
+    const sheetsToken=rs.accessToken||''; const calToken=rc.accessToken||'';
+
+    if(acao==='incluir'&&tipo==='so_calendar'&&sheetsToken){
+      const dInt=parseInt(dia); const mInt=parseInt(mes);
+      const aba=ABAS_BOT[mInt]||'MAI';
+      const lRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_BOT}/values/${aba}!A1:H500`,
+        {headers:{Authorization:`Bearer ${sheetsToken}`}});
+      const rows:string[][]=(await lRes.json()).values||[];
+      let alvo=-1;
+      for(let j=0;j<rows.length;j++){
+        const r=[...rows[j]];while(r.length<8)r.push('');
+        if((r[0].trim()===String(dInt)||r[0].trim()===String(dInt).padStart(2,'0'))&&normHoraBot(r[6])===hora&&!r[1].trim()){alvo=j+1;break;}
+      }
+      if(alvo>0){
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_BOT}/values/${aba}!B${alvo}:D${alvo}?valueInputOption=USER_ENTERED`,
+          {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+           body:JSON.stringify({range:`${aba}!B${alvo}:D${alvo}`,values:[[nome,'','','']]})});
+        resultado=`✅ Incluido na planilha — linha ${alvo}`;
+      } else resultado=`⚠️ Linha nao encontrada para ${hora} no dia ${dia}. Verifique manualmente.`;
+
+    } else if(acao==='criar'&&tipo==='so_planilha'&&calToken){
+      const dInt=parseInt(dia); const mInt=parseInt(mes);
+      const dStr=`2026-${String(mInt).padStart(2,'0')}-${String(dInt).padStart(2,'0')}`;
+      const hArr=hora.split(':');
+      const ini=new Date(`${dStr}T${hArr[0].padStart(2,'0')}:${(hArr[1]||'00').padStart(2,'0')}:00-03:00`);
+      const fim=new Date(ini.getTime()+90*60000);
+      const calR=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',
+        {method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
+         body:JSON.stringify({summary:nome,start:{dateTime:ini.toISOString(),timeZone:'America/Sao_Paulo'},end:{dateTime:fim.toISOString(),timeZone:'America/Sao_Paulo'}})});
+      resultado=calR.ok?`✅ Evento criado no Calendar para ${hora}`:`❌ Erro ao criar evento. Tente manualmente.`;
+
+    } else if(acao==='excluir'){
+      resultado=`↩️ Excluido do Calendar — ainda nao implementado automaticamente. Remova manualmente.`;
+    } else if(acao==='ignorar'){
+      resultado=`↩️ Divergencia ignorada.`;
+    } else {
+      resultado=`Acao nao reconhecida: ${acao}`;
+    }
+  }catch(e:any){resultado=`Erro: ${e.message}`;}
+
+  // Editar mensagem original com resultado
+  await fetch(`${api}/editMessageText`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({chat_id:ADMIN_ID,message_id:msgId,text:`${resultado}\n\n(divergencia processada)`,reply_markup:{inline_keyboard:[]}})});
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ ok: true, status: 'Bot Los Hombres ativo', canal: 'telegram' }), {
@@ -493,19 +572,35 @@ Deno.serve(async (req) => {
 
       if (update.message?.text) {
         const chatId = update.message.chat.id;
+        const fromId = update.message.from?.id;
         const texto = update.message.text;
         const nome = [update.message.from?.first_name, update.message.from?.last_name].filter(Boolean).join(' ') || `User${chatId}`;
+        // Ignorar mensagens de bots e canais
+        if (update.message.from?.is_bot) { console.log('[SKIP] mensagem de bot ignorada'); return; }
+        if (update.message.chat?.type === 'channel') { console.log('[SKIP] post de canal ignorado'); return; }
+        // Admin (Jonathan) — não processar como cliente
+        if (fromId === ADMIN_ID) { console.log('[ADMIN] mensagem do admin — ignorada no atendimento'); return; }
         await processarMensagem(req, chatId, texto, nome);
       }
 
       if (update.callback_query) {
-        const chatId = update.callback_query.message.chat.id;
-        const data = update.callback_query.data;
+        const fromId = update.callback_query.from?.id;
+        const chatId = update.callback_query.message?.chat?.id;
+        const data = update.callback_query.data || '';
+        const msgId = update.callback_query.message?.message_id;
+        const callbackId = update.callback_query.id;
         const nome = [update.callback_query.from?.first_name, update.callback_query.from?.last_name].filter(Boolean).join(' ') || `User${chatId}`;
+        // Ignorar callbacks de bots
+        if (update.callback_query.from?.is_bot) return;
+        // Admin clicou num botão de divergência do relatório
+        if (fromId === ADMIN_ID && data.startsWith('div:')) {
+          await processarDivAdmin(req, callbackId, data, msgId);
+          return;
+        }
         await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ callback_query_id: update.callback_query.id }),
+          body: JSON.stringify({ callback_query_id: callbackId }),
         });
         await processarCallback(req, chatId, data, nome);
       }
