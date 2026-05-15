@@ -291,24 +291,29 @@ async function gravarAgendamento(req:Request,p:{
         }
 
         if(linhaExata>=0){
-          // UPDATE: gravar B,C,D,E,F,H na linha que já tem a hora em G
+          // UPDATE: gravar B,C,D,E,F (nome,tel,serv,form,obs) + H (valor)
+          // NUNCA tocar em col G — hora já está pré-preenchida na planilha
           const linhaNum=linhaExata+1;
-          const range=`${aba}!B${linhaNum}:H${linhaNum}`;
-          const horaOriginal=rows[linhaExata][6]||p.horario; // preservar G como está
+          const rangeBF=`${aba}!B${linhaNum}:F${linhaNum}`;
           await fetch(
-            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`,
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${rangeBF}?valueInputOption=USER_ENTERED`,
             {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-             body:JSON.stringify({range,values:[[
+             body:JSON.stringify({range:rangeBF,values:[[
                p.nome.toUpperCase(),
                p.whatsapp,
                p.servico.toUpperCase(),
                FORM_URL,
-               `Sinal R$${sinal} pago - falta R$${restante}`,
-               horaOriginal,
-               `R$${p.valor}`
+               `Sinal R$${sinal} pago - falta R$${restante}`
              ]]})}
           );
-          console.log('✅ Planilha UPDATE linha',linhaNum,'(dia',dInt2,'hora',horaAlvo,')');
+          // H separado (pula G)
+          const rangeH=`${aba}!H${linhaNum}`;
+          await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${rangeH}?valueInputOption=USER_ENTERED`,
+            {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+             body:JSON.stringify({range:rangeH,values:[[`R$${p.valor}`]]})}
+          );
+          console.log('✅ Planilha UPDATE linha',linhaNum,'B:F+H — G intacto');
         } else if(ultimaLinhaDia>=0){
           // INSERT: hora não existe como linha pré-criada — inserir nova no bloco do dia
           const metaRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`,{headers:{Authorization:`Bearer ${sheetsToken}`}});
