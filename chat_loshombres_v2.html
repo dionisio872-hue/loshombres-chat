@@ -148,11 +148,11 @@
     <img class="modal-img" id="pixPreviewImg" alt="preview">
     <div id="pixAnaliseStatus" style="font-size:13px;color:#aaa;margin-bottom:12px;display:none;"></div>
     <div class="modal-btns">
-      <button class="btn-upload-pix" id="btnEscolherFoto">📷 Escolher foto do comprovante</button>
+      <button class="btn-upload-pix" id="btnEscolherFoto">📷 Câmera ou galeria — comprovante</button>
       <button class="btn-ok-pix" id="btnConfirmarPix">✅ Confirmar pagamento</button>
       <button class="btn-skip-pix" id="btnSkipPix">Confirmar sem foto (paguei)</button>
     </div>
-    <input type="file" id="fileInput" accept="image/*" capture="environment">
+    <input type="file" id="fileInput" accept="image/*">
   </div>
 </div>
 
@@ -463,28 +463,63 @@ document.getElementById('btnConfirmarPix').onclick = function() {
 
 // ── CANCELAMENTO ──────────────────────────────────────────────────────────────
 function solicitarCancelamento(d) {
-  if (!confirm('Tem certeza que quer cancelar o agendamento? O sinal de R$30 será retido se faltar menos de 12h.')) return;
-  addMsg('Quero cancelar meu agendamento.', 'me');
+  if (!confirm('Tem certeza que quer cancelar?\nO sinal de R$30 será retido se faltar menos de 12h.')) return;
+
+  addMsg('Solicitei o cancelamento do meu agendamento.', 'me');
   showTyping();
+
   var xhr = new XMLHttpRequest();
   xhr.open('POST', API_CHAT, true);
   xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.timeout = 15000;
-  xhr.onload = function() {
+  xhr.onload = xhr.onerror = xhr.ontimeout = function() {
     hideTyping();
-    try {
-      var r = JSON.parse(xhr.responseText);
-      addMsg(r.resposta || 'Agendamento cancelado. Qualquer dúvida, nos chame no WhatsApp.', 'bot');
-    } catch(e) { addMsg('Para cancelar, fale conosco: (31) 98324-4713', 'bot'); }
-  };
-  xhr.onerror = xhr.ontimeout = function() {
-    hideTyping();
-    addMsg('Para cancelar, fale conosco: https://wa.me/5531983244713', 'bot');
+    finalizarCancelamento(d);
   };
   xhr.send(JSON.stringify({ sessao: sessao, acao: 'cancelar' }));
   clearState();
   sessao = gerarSessao();
 }
+
+function finalizarCancelamento(d) {
+  var nome    = (d && d.nome)    || '';
+  var servico = (d && d.servico) || '';
+  var unidade = (d && d.unidade) || '';
+  var dia     = (d && d.dia)     || '';
+  var mes     = (d && d.mes)     || '';
+  var horario = (d && d.horario) || '';
+  var valor   = (d && d.valor)   || '';
+  var imgUrl  = (pixImageUrl && pixImageUrl.length < 300) ? pixImageUrl : '';
+
+  var dataFmt = (dia && mes) ? dia + '/' + String(mes).padStart(2, '0') : '';
+
+  var msg = 'Olá! Preciso cancelar meu agendamento e solicitar devolução do sinal.';
+  msg += '\n\n📋 DETALHES DO CANCELAMENTO';
+  if(nome)    msg += '\n👤 Nome: ' + nome;
+  if(servico) msg += '\n💆 Serviço: ' + servico;
+  if(unidade) msg += '\n📍 Unidade: ' + unidade;
+  if(dataFmt && horario) msg += '\n📅 Data/Hora: ' + dataFmt + ' às ' + horario + 'h';
+  if(valor)   msg += '\n💰 Valor do sinal: R$30,00';
+  msg += '\n\n💳 MEUS DADOS PARA DEVOLUÇÃO DO PIX';
+  msg += '\n🔑 Chave PIX: (preencha aqui)';
+  msg += '\n👤 Nome titular: (preencha aqui)';
+  msg += '\n🏦 Banco: (preencha aqui)';
+  if(imgUrl)  msg += '\n\n🧾 Comprovante do sinal: ' + imgUrl;
+  msg += '\n\nAguardo a confirmação. Obrigado!';
+
+  var waLink = 'https://wa.me/5531983244713?text=' + encodeURIComponent(msg);
+
+  addMsg(
+    'Cancelamento registrado. 🌿\n\nPara receber o sinal de volta, abra o WhatsApp abaixo — a mensagem já vem preenchida. Só adicione sua chave PIX, nome e banco.',
+    'bot',
+    {
+      btns: [
+        { label: '📱 Solicitar devolução do sinal via WhatsApp', cls: 'btn-wa', url: waLink }
+      ]
+    }
+  );
+}
+
 
 // ── ENVIO PROGRAMÁTICO ────────────────────────────────────────────────────────
 function enviarMensagem(msg) {
