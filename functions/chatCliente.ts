@@ -46,6 +46,8 @@ async function getGoogleTokens(req: Request): Promise<{sheetsToken:string;calTok
   return { sheetsToken, calToken, gmailToken };
 }
 const ADMIN_ID   = '7200577395';
+const GRUPO_JG_ID = '-1003866193031'; // Gestão JG
+const MIN_ANTECEDENCIA_HORAS = 2; // Mínimo 2h de antecedência para agendamento
 const SHEET_ID   = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
 const DEST_EMAIL = 'dionisio872@gmail.com';
 const FOTO_URL   = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/mp/public/6a04cc22bf7a0dcea87e3c43/461551448_jonathan_perfil.jpg';
@@ -274,6 +276,25 @@ async function buscarHorariosLivres(
     }catch(ce:any){console.error('Calendar busca erro:',ce.message);}
   }
 
+  // ── FILTRAR slots com menos de 2h de antecedência (agendamento no mesmo dia) ──
+  const agora = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+  const agoraMins = agora.getHours()*60 + agora.getMinutes();
+  // Verificar se a data solicitada é hoje
+  const dataReq = new Date(`${dataISO}T12:00:00-03:00`);
+  const dataHoje = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+  const ehHoje = dataReq.getDate()===dataHoje.getDate() && dataReq.getMonth()===dataHoje.getMonth();
+  if(ehHoje){
+    const MIN_ANTEC = 120; // 2 horas = 120 minutos
+    const livresFiltrados = livres.filter(slot=>{
+      const norm = normHora(slot.hora);
+      if(!norm) return false;
+      const [h,m] = norm.split(':').map(Number);
+      const slotMins = h*60 + m;
+      return (slotMins - agoraMins) >= MIN_ANTEC;
+    });
+    console.log(`Filtro 2h: ${livres.length} slots → ${livresFiltrados.length} disponíveis`);
+    return{livres:livresFiltrados,ocupados,diaSemana};
+  }
   return{livres,ocupados,diaSemana};
 }
 
@@ -387,7 +408,9 @@ async function gravarAgendamento(req:Request,p:{
         :'Rua Tomé de Souza, 503, Sala 208 - Savassi, BH';
       const ini=new Date(`2026-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00-03:00`);
       const fim=new Date(ini.getTime()+DUR*60000);
-      await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+      // Criar evento apenas no calendário principal (evitar duplicatas em múltiplas agendas)
+      const calendarId = 'primary';
+      const calEvRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,{
         method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
         body:JSON.stringify({
           summary:`${p.nome} - ${p.servico}`,
@@ -395,17 +418,52 @@ async function gravarAgendamento(req:Request,p:{
           description:`WhatsApp: ${p.whatsapp}\nValor: R$${p.valor} (sinal R$${sinal}, falta R$${restante})`,
           start:{dateTime:ini.toISOString(),timeZone:'America/Sao_Paulo'},
           end:{dateTime:fim.toISOString(),timeZone:'America/Sao_Paulo'},
+          guestsCanModify:false,
+          visibility:'private',
+          sendUpdates:'none',
         })
-      }).then(r=>console.log('Calendar:',r.status)).catch(()=>{});
+      });
+      console.log('Calendar status:',calEvRes.status);
+      if(!calEvRes.ok){const err=await calEvRes.text();console.error('Calendar erro:',err.slice(0,200));}
     }
 
     // ── 3. TELEGRAM ───────────────────────────────────────────────────────────
+    const agendaNow = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+    const agendaData = new Date(`2026-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00`);
+    const horasRestantes = Math.round((agendaData.getTime()-agendaNow.getTime())/(1000*60*60));
+    const isMesmodia = agendaData.getDate()===agendaNow.getDate() && agendaData.getMonth()===agendaNow.getMonth();
+
+    // Alerta padrão para o grupo
+    const textoBase = `🔔 *NOVO AGENDAMENTO — Chat Web*\n\n👤 *${p.nome}*\n📱 ${p.whatsapp}\n💆 ${p.servico}\n📍 ${p.unidade}\n📅 ${dStr}/${mStr} às ${p.horario}\n💰 R$${p.valor} (sinal R$${sinal} pago)\n✅ Planilha e Calendar atualizados.`;
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:ADMIN_ID,parse_mode:'Markdown',text:
-        `🔔 *NOVO AGENDAMENTO — Chat Web*\n\n👤 *${p.nome}*\n📱 ${p.whatsapp}\n💆 ${p.servico}\n📍 ${p.unidade}\n📅 ${dStr}/${mStr} às ${p.horario}\n💰 R$${p.valor} (sinal R$${sinal} pago)\n✅ Planilha e Calendar atualizados.`
-      })
+      body:JSON.stringify({chat_id:GRUPO_JG_ID,parse_mode:'Markdown',text:textoBase})
     }).catch(()=>{});
+
+    // Alerta de URGÊNCIA separado quando é no mesmo dia
+    if(isMesmodia){
+      const textoUrgencia = [
+        '🚨🚨🚨 *URGENTE — AGENDAMENTO HOJE* 🚨🚨🚨',
+        '⚠️⚠️⚠️ *ATENÇÃO IMEDIATA NECESSÁRIA* ⚠️⚠️⚠️',
+        '',
+        `🟡 Cliente chegando em aproximadamente *${horasRestantes}h*`,
+        '',
+        `👤 *${p.nome}*`,
+        `📱 ${p.whatsapp}`,
+        `💆 ${p.servico}`,
+        `📍 ${p.unidade}`,
+        `🕐 HOJE às *${p.horario}*`,
+        `💰 R$${p.valor}`,
+        '',
+        '🔴 *CONFIRME O PREPARO DO ESPAÇO* 🔴',
+        '─────────────────────────',
+        '✅ Planilha ✅ Calendar ✅ Sinal pago',
+      ].join('\n');
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({chat_id:GRUPO_JG_ID,parse_mode:'Markdown',text:textoUrgencia})
+      }).catch(()=>{});
+    }
 
     // ── 4. EMAIL ──────────────────────────────────────────────────────────────
     if(gmailToken){
