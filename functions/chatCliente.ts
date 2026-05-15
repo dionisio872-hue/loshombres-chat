@@ -1,5 +1,5 @@
 /**
- * chatCliente v17 — Los Hombres
+ * chatCliente v18 — Los Hombres
  * v15: fix tokens OAuth + horários corretos + fluxo rigoroso + sem RG/banho + gpt-4o + temperature 0.85
  * 1. Desconto 20% correto: só se data >= 30 dias a partir de HOJE
  * 2. Horários por unidade/dia da semana:
@@ -285,78 +285,74 @@ async function gravarAgendamento(req:Request,p:{
   nome:string;whatsapp:string;servico:string;unidade:string;
   dia:string;mes:number;horario:string;valor:number;
 }):Promise<{ok:boolean;erro?:string}>{
-  const {sheetsToken, calToken, gmailToken} = await getGoogleTokens(req);
-
+  const{sheetsToken,calToken,gmailToken}=await getGoogleTokens(req);
   const aba=ABAS[p.mes]||'MAI';
-  const dStr=String(parseInt(p.dia)).padStart(2,'0');
-  const mStr=String(p.mes).padStart(2,'0');
-  const sinal=30, restante=p.valor-sinal;
-  const[hh,mm]=(p.horario+':0').split(':').map(Number);
-
-  const normHora=(h:string)=>{
-    const clean=h.replace(/[hH]/,':').trim();
-    const parts=clean.split(':');
-    if(parts.length<2)return clean+':00';
-    return parts[0].padStart(2,'0')+':'+parts[1].padStart(2,'0');
-  };
+  const dInt=parseInt(p.dia),dStr=String(dInt).padStart(2,'0'),mStr=String(p.mes).padStart(2,'0');
+  const sinal=30,restante=p.valor-sinal;
+  const[hh,mm]=(p.horario+':00').split(':').map(Number);
 
   try{
-    // 1. PLANILHA — fazer UPDATE na linha existente com aquele dia e horário
+    // ── 1. PLANILHA: inserir nova linha no final do bloco do dia ─────────────
     if(sheetsToken){
-      let linhaAtualizada=false;
       try{
         const lRes=await fetch(
-          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:H300`,
+          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:H400`,
           {headers:{Authorization:`Bearer ${sheetsToken}`}}
         );
         const rows:string[][]=(await lRes.json()).values||[];
-        const diaInt=parseInt(p.dia);
-        const horaAlvo=normHora(p.horario);
 
+        // Achar a última linha do bloco do dia (col A == dInt)
+        let ultimaLinhaDia=-1;
         for(let i=0;i<rows.length;i++){
-          const r=[...rows[i]];while(r.length<8)r.push('');
-          const rDia=(r[0]||'').trim();
-          const rHora=normHora((r[6]||'').trim());
-          const rNome=(r[1]||'').trim();
-          if((rDia===String(diaInt)||rDia===dStr)&&rHora===horaAlvo&&!rNome){
-            const linhaNum=i+1;
-            // Colunas: A=dia(já existe), B=nome, C=telefone, D=serviço, E=formulário, F=observações, G=hora(já existe), H=valor
-            const range=`${aba}!B${linhaNum}:H${linhaNum}`;
-            const horaCell=rows[i][6]||p.horario; // manter hora que já existe na col G
-            const valores=[[
-              p.nome.toUpperCase(),
-              p.whatsapp,
-              p.servico.toUpperCase(),
-              FORM_URL,
-              `Sinal R$${sinal} pago - falta R$${restante}`,
-              horaCell,
-              `R$${p.valor}`
-            ]];
-            const upRes=await fetch(
-              `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`,
-              {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-               body:JSON.stringify({range,values:valores})}
-            );
-            // valor já incluído no range B:H acima
-            console.log('Planilha UPDATE OK — linha',linhaNum,'status',upRes.status);
-            linhaAtualizada=true;
-            break;
-          }
+          const rDia=(rows[i]?.[0]||'').trim();
+          if(rDia===String(dInt)||rDia===dStr) ultimaLinhaDia=i;
         }
-        if(!linhaAtualizada){
-          console.log('Linha pré-existente não encontrada — usando append como fallback');
-          const linha=[String(parseInt(p.dia)),p.nome.toUpperCase(),p.whatsapp,p.servico.toUpperCase(),FORM_URL,`Sinal R$${sinal} - Total R$${p.valor}`,p.horario,`R$ ${p.valor}`];
+
+        // Buscar sheetId da aba para batchUpdate
+        const metaRes=await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`,
+          {headers:{Authorization:`Bearer ${sheetsToken}`}}
+        );
+        const meta=await metaRes.json();
+        const sheetIdNum:number=meta.sheets?.find((s:any)=>s.properties?.title===aba)?.properties?.sheetId??0;
+
+        const novaLinha=[String(dInt),p.nome.toUpperCase(),p.whatsapp,p.servico.toUpperCase(),FORM_URL,`Sinal R$${sinal} pago - falta R$${restante}`,p.horario,`R$${p.valor}`];
+
+        if(ultimaLinhaDia>=0){
+          const linhaInsert=ultimaLinhaDia+2; // 1-indexado + inserir após
+          console.log('Inserindo linha de massagem na posição',linhaInsert,'(último dia=',dInt,'em L',ultimaLinhaDia+1,')');
+
+          // Inserir linha vazia no bloco do dia
+          await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,{
+            method:'POST',
+            headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+            body:JSON.stringify({requests:[{insertDimension:{
+              range:{sheetId:sheetIdNum,dimension:'ROWS',startIndex:linhaInsert-1,endIndex:linhaInsert},
+              inheritFromBefore:true
+            }}]})
+          });
+
+          // Escrever dados na nova linha
+          const rangeNova=`${aba}!A${linhaInsert}:H${linhaInsert}`;
+          const putRes=await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${rangeNova}?valueInputOption=USER_ENTERED`,
+            {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+             body:JSON.stringify({range:rangeNova,values:[novaLinha]})}
+          );
+          console.log('✅ Planilha INSERT OK — linha',linhaInsert,'status',putRes.status);
+        }else{
+          // Dia não encontrado — append no final
+          console.log('⚠️ Dia',dInt,'não encontrado na aba',aba,'— append no final');
           await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A:H:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-            {method:'POST',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},body:JSON.stringify({values:[linha]})}
+            {method:'POST',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+             body:JSON.stringify({values:[novaLinha]})}
           );
         }
       }catch(se:any){console.error('Sheets erro:',se.message);}
-    }else{
-      console.error('ERRO: sem sheetsToken');
-    }
+    }else{console.error('ERRO: sem sheetsToken');}
 
-    // 2. CALENDAR — criar evento
+    // ── 2. GOOGLE CALENDAR ───────────────────────────────────────────────────
     if(calToken){
       const enderecoUnidade=p.unidade.toLowerCase().includes('betim')
         ?'Rua Pernambuco, 341 - Betim, MG'
@@ -369,29 +365,26 @@ async function gravarAgendamento(req:Request,p:{
         body:JSON.stringify({
           summary:`${p.nome} - ${p.servico}`,
           location:enderecoUnidade,
-          description:`WhatsApp: ${p.whatsapp}\nValor: R$ ${p.valor} (sinal R$${sinal} pago, falta R$${restante})`,
+          description:`WhatsApp: ${p.whatsapp}\nValor: R$${p.valor} (sinal R$${sinal} pago, falta R$${restante})`,
           start:{dateTime:ini.toISOString(),timeZone:'America/Sao_Paulo'},
           end:{dateTime:fim.toISOString(),timeZone:'America/Sao_Paulo'},
         })
       });
       console.log('Calendar status:',calRes.status);
-    }else{
-      console.error('ERRO: sem calToken');
-    }
+    }else{console.error('ERRO: sem calToken');}
 
-    // 3. TELEGRAM alerta
+    // ── 3. TELEGRAM ───────────────────────────────────────────────────────────
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        chat_id:ADMIN_ID,parse_mode:'Markdown',
-        text:`🔔 *NOVO AGENDAMENTO — Chat Web*\n\n*${p.nome}*\n📱 ${p.whatsapp}\n💆 ${p.servico}\n📍 ${p.unidade}\n📅 ${dStr}/${mStr} às ${p.horario}\n💰 R$ ${p.valor} (sinal R$${sinal} pago)\n✅ Planilha e Calendar atualizados.`
+      body:JSON.stringify({chat_id:ADMIN_ID,parse_mode:'Markdown',text:
+        `🔔 *NOVO AGENDAMENTO — Chat Web*\n\n👤 *${p.nome}*\n📱 ${p.whatsapp}\n💆 ${p.servico}\n📍 ${p.unidade}\n📅 ${dStr}/${mStr} às ${p.horario}\n💰 R$${p.valor} (sinal R$${sinal} pago)\n✅ Planilha e Calendar atualizados.`
       })
     }).catch(()=>{});
 
-    // 4. EMAIL
+    // ── 4. EMAIL ──────────────────────────────────────────────────────────────
     if(gmailToken){
       const subj=`Agendamento: ${p.nome} - ${dStr}/${mStr} às ${p.horario}`;
-      const html=`<h2>Novo Agendamento</h2><p><b>Cliente:</b> ${p.nome}</p><p><b>WhatsApp:</b> ${p.whatsapp}</p><p><b>Serviço:</b> ${p.servico}</p><p><b>Unidade:</b> ${p.unidade}</p><p><b>Data:</b> ${dStr}/${mStr} às ${p.horario}</p><p><b>Valor:</b> R$ ${p.valor} (sinal R$${sinal}, falta R$${restante})</p>`;
+      const html=`<h2>🔔 Novo Agendamento</h2><p><b>Cliente:</b> ${p.nome}</p><p><b>WhatsApp:</b> ${p.whatsapp}</p><p><b>Serviço:</b> ${p.servico}</p><p><b>Unidade:</b> ${p.unidade}</p><p><b>Data:</b> ${dStr}/${mStr} às ${p.horario}</p><p><b>Valor:</b> R$${p.valor} (sinal R$${sinal}, falta R$${restante})</p>`;
       const raw=`To: ${DEST_EMAIL}\r\nSubject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subj)))}?=\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n${html}`;
       const enc=btoa(unescape(encodeURIComponent(raw))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
       await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
@@ -400,71 +393,21 @@ async function gravarAgendamento(req:Request,p:{
       }).catch(()=>{});
     }
 
-    // 5. Registrar lead
+    // ── 5. LEAD ───────────────────────────────────────────────────────────────
     try{
-      const b=createClientFromRequest(req);
+      const authReq=makeAuthRequest(req);
+      const b=createClientFromRequest(authReq);
       await b.asServiceRole.entities.LeadConversa.create({
         nome:p.nome,whatsapp:p.whatsapp,canal_origem:'chat_web',etapa_funil:'confirmado',
         massagem_interesse:p.servico,unidade_interesse:p.unidade,converteu:true,
         data_ultima_mensagem:new Date().toISOString(),
-        observacoes:`${dStr}/${mStr} às ${p.horario} — R$ ${p.valor}`
+        observacoes:`${dStr}/${mStr} às ${p.horario} — R$${p.valor}`
       });
     }catch(_){}
 
     return{ok:true};
-  }catch(e:any){
-    console.error('gravarAgendamento ERRO:',e.message);
-    return{ok:false,erro:e.message};
-  }
+  }catch(e:any){console.error('gravarAgendamento ERRO:',e.message);return{ok:false,erro:e.message};}
 }
-
-// ─── SYSTEM PROMPT ────────────────────────────────────────────────────────────
-const SYSTEM=`Você é Jonathan, massagista do Estúdio Los Hombres em BH. Fala em primeira pessoa, com voz masculina, calma, elegante e acolhedora.
-
-IDENTIDADE E TOM:
-Você é experiente, seguro, presente. Não usa linguagem robótica nem lista de itens. Escreve como alguém que realmente entende do que faz e que recebe cada pessoa com cuidado. Frases naturais, ritmo de conversa real. Sem perguntas desnecessárias, sem formalidade excessiva.
-Use linguagem sensorial quando descrever massagens: calor, fluidez, presença, entrega, toque, profundidade. Normalize desejos e remova inseguranças com naturalidade.
-
-REGRAS DE ESCRITA:
-- NUNCA use travessão. Vírgula ou dois-pontos quando precisar pausar.
-- Máximo 3 parágrafos curtos por mensagem. Sem listas numeradas nas respostas ao cliente.
-- Varie o ritmo. Conecte ideias. Não use frases curtas e repetitivas.
-- Emojis com moderação: 🌿 🔥 ✨ quando fizerem sentido. Nunca em excesso.
-
-FRASES QUE VOCÊ USA NATURALMENTE:
-"Aqui você pode simplesmente existir e receber."
-"Não há nada que precise esconder. Este é um espaço seguro."
-"Você merece essa entrega."
-"Permita-se o luxo de ser tocado com presença e intenção."
-
-QUANDO DESCREVER MASSAGENS:
-Fale como alguém que vive aquela experiência. Não liste características. Evoque sensações. Seja específico e evocativo, não genérico.
-
-DESCONTO 20%:
-Somente para datas com 30+ dias a partir de hoje. Para datas mais próximas, não há desconto e você não menciona o assunto. Se o cliente perguntar, explique naturalmente que o benefício é para quem planeja com bastante antecedência.
-
-ENDEREÇOS:
-Savassi: Rua Tomé de Souza, 503, Sala 208. Betim: Rua Pernambuco, 341, Bairro Nossa Sra. das Graças.
-
-HORÁRIOS (USE SEMPRE O CONTEXTO — NUNCA INVENTE):
-Betim: Terças (14h, 15:30, 17h, 18:30) e Quintas (16h, 17:30, 19h). NUNCA 21h em Betim. Outros dias: sem atendimento.
-Savassi: Quintas/Sextas/Sábados (18h, 19:30, 21h). Domingos/Segundas (19h, 20:30). Outros dias: sem atendimento.
-REGRA CRÍTICA: apresente APENAS os horários que aparecerem em "HORARIOS LIVRES" no CONTEXTO. Se não aparecerem, não há disponibilidade.
-
-FLUXO DE AGENDAMENTO (nunca pule etapas, nunca confirme sem ter todos os dados):
-1. Entender qual experiência o cliente busca — confirmar o nome EXATO da massagem antes de avançar
-2. Perguntar unidade: Savassi ou Betim (aguardar resposta)
-3. Perguntar data desejada (aguardar resposta)
-4. Consultar CONTEXTO e apresentar SOMENTE os horários de "HORARIOS LIVRES". NUNCA sugira horário que não esteja listado. Se vazio, não há disponibilidade naquele dia.
-5. Cliente escolhe horário: confirmar massagem + unidade + data + hora + valor. Pedir sinal R$30 via PIX CNPJ 17342740000109.
-6. Após "paguei"/"feito": pedir NOME COMPLETO e WHATSAPP para registrar.
-7. AGENDAMENTO GRAVADO no CONTEXTO: confirme brevemente, diga que entrará em contato pelo WhatsApp.
-
-ERROS GRAVES PROIBIDOS:
-- Sugerir horário diferente do que está em HORARIOS LIVRES
-- Confirmar agendamento antes de receber nome e WhatsApp do cliente
-- Usar nome errado de massagem (não existe "massagem sensual", é "Relaxante Sensual")
-- Informar valor incorreto`;
 
 async function chamarIA(msgs:{role:string;content:string}[],ctx?:string):Promise<string>{
   const sys=ctx?SYSTEM+'\n\nCONTEXTO DO SISTEMA:\n'+ctx:SYSTEM;
