@@ -663,6 +663,71 @@ async function executarCorrecao(
   return `❓ Ação desconhecida: ${acao} / tipo: ${tipo}`;
 }
 
+// ─── CANCELAR EVENTO (Calendar + Planilha) ───────────────────────────────────
+async function cancelarEvento(
+  sheetsToken:string, calToken:string,
+  diaN:number, mesN:number, hora:string, nomeHint:string
+):Promise<string> {
+  const SHEET_ID_C = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
+  const ABAS_C:Record<number,string>={1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
+  const resultados:string[]=[];
+  const horaMin=(h:string)=>{const n=normHoraBot(h);if(!n)return 9999;return parseInt(n.slice(0,2))*60+parseInt(n.slice(3));};
+  const hAlvo=horaMin(hora);
+
+  // 1. Remover do Google Calendar
+  if(calToken){
+    try{
+      const dStr2=`2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
+      const calRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${dStr2}T00:00:00-03:00&timeMax=${dStr2}T23:59:59-03:00&singleEvents=true`,{headers:{Authorization:`Bearer ${calToken}`}});
+      const eventos=(await calRes.json()).items||[];
+      for(const ev of eventos){
+        const dt=ev.start?.dateTime||'';
+        if(!dt.includes('T'))continue;
+        const eh=parseInt(dt.slice(11,13)),em=parseInt(dt.slice(14,16)||'0');
+        if(Math.abs((eh*60+em)-hAlvo)<=15){
+          const delRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${ev.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${calToken}`}});
+          if(delRes.ok||delRes.status===204) resultados.push(`✅ Calendar: evento "${ev.summary}" removido`);
+          else resultados.push(`⚠️ Calendar: erro ao remover "${ev.summary}" (${delRes.status})`);
+        }
+      }
+      if(!resultados.length) resultados.push('⚠️ Calendar: nenhum evento encontrado para este horário');
+    }catch(e:any){ resultados.push(`❌ Calendar erro: ${e.message}`); }
+  }
+
+  // 2. Limpar linha na planilha (apagar B, C, D, E, H, I — preservar A e G)
+  if(sheetsToken){
+    try{
+      const aba=ABAS_C[mesN]||'MAI';
+      const shRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_C}/values/${aba}!A1:I500`,{headers:{Authorization:`Bearer ${sheetsToken}`}});
+      const rows:string[][]=(await shRes.json()).values||[];
+      let linhaAlvo=-1;
+      for(let i=0;i<rows.length;i++){
+        const r=[...rows[i]];while(r.length<9)r.push('');
+        const colA=(r[0]||'').trim();
+        if(colA!==String(diaN)&&colA!==String(diaN).padStart(2,'0'))continue;
+        const hNorm=normHoraBot(r[6]||'');
+        if(hNorm&&Math.abs(horaMin(hNorm)-hAlvo)<=15){linhaAlvo=i+1;break;}
+      }
+      if(linhaAlvo>0){
+        // Limpar colunas B, C, D, E, H, I (preservar A=dia e G=hora)
+        const clearRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_C}/values/${aba}!B${linhaAlvo}:E${linhaAlvo}?valueInputOption=USER_ENTERED`,{
+          method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+          body:JSON.stringify({range:`${aba}!B${linhaAlvo}:E${linhaAlvo}`,values:[['','','','']]})
+        });
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_C}/values/${aba}!H${linhaAlvo}:I${linhaAlvo}?valueInputOption=USER_ENTERED`,{
+          method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+          body:JSON.stringify({range:`${aba}!H${linhaAlvo}:I${linhaAlvo}`,values:[['','']]})
+        });
+        resultados.push(clearRes.ok?`✅ Planilha L${linhaAlvo}: linha liberada (horário disponível novamente)`:`⚠️ Planilha: erro ao limpar L${linhaAlvo}`);
+      } else {
+        resultados.push(`⚠️ Planilha: linha não encontrada para ${hora}h dia ${diaN}`);
+      }
+    }catch(e:any){ resultados.push(`❌ Planilha erro: ${e.message}`); }
+  }
+
+  return [`❌ *EVENTO CANCELADO* — ${String(diaN).padStart(2,'0')}/${String(mesN).padStart(2,'0')} às ${hora}`, ...resultados, `👤 ${nomeHint||'cliente'}`].join('\n');
+}
+
 // Cache de divergências para o botão "Corrigir Tudo"
 const divsCache=new Map<string,any[]>(); // key=chatId, value=array de divs
 
@@ -798,8 +863,24 @@ Deno.serve(async (req) => {
 
         // Admin (ou membro do grupo JG) clicou num botão de divergência
         if (isAdminContext(fromId, chatId) && data.startsWith('div:')) {
-          // tokens já foram buscados acima — passados por valor, sem depender do req
           await processarDivAdmin(sheetsToken, calToken, callbackId, data, msgId, chatId);
+          return;
+        }
+
+        // Botão CANCELAR EVENTO do alerta de urgência
+        if (isAdminContext(fromId, chatId) && data.startsWith('cancel_urgente:')) {
+          await fetch(`${TELEGRAM_API}/answerCallbackQuery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callback_query_id:callbackId,text:'Cancelando evento...'})}).catch(()=>{});
+          const parts = data.split(':'); // cancel_urgente:dia:mes:hora:nome
+          const diaN  = parseInt(parts[1]||'0');
+          const mesN  = parseInt(parts[2]||'0');
+          const horaRaw = parts[3]||'0000';
+          const hora  = horaRaw.length===4?`${horaRaw.slice(0,2)}:${horaRaw.slice(2)}`:horaRaw;
+          const nomeKey = (parts[4]||'').replace(/_/g,' ');
+          const resultado = await cancelarEvento(sheetsToken, calToken, diaN, mesN, hora, nomeKey);
+          await fetch(`${TELEGRAM_API}/editMessageText`,{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({chat_id:chatId,message_id:msgId,text:resultado,reply_markup:{inline_keyboard:[]}})
+          }).catch(()=>{});
           return;
         }
 

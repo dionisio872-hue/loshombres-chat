@@ -442,26 +442,51 @@ async function gravarAgendamento(req:Request,p:{
 
     // Alerta de URGÊNCIA separado quando é no mesmo dia
     if(isMesmodia){
+      // Montar link WA com mensagem de confirmação para o cliente
+      const telCliente = (p.whatsapp||'').replace(/\D/g,'');
+      const waNumero   = telCliente.startsWith('55') ? telCliente : `55${telCliente}`;
+      const waMsgConf  = encodeURIComponent(
+        `Olá ${p.nome.split(' ')[0]}! 🌿 Seu agendamento está confirmado para HOJE às ${p.horario}h na unidade ${p.unidade}. Estamos te aguardando! ✨`
+      );
+      const waLink = `https://wa.me/${waNumero}?text=${waMsgConf}`;
+
+      // Callback ID para cancelar — codifica os dados mínimos necessários
+      const cancelKey = `cancel_urgente:${dStr}:${mStr}:${p.horario.replace(':','')}:${p.nome.slice(0,15).replace(/ /g,'_')}`;
+
       const textoUrgencia = [
         '🚨🚨🚨 *URGENTE — AGENDAMENTO HOJE* 🚨🚨🚨',
         '⚠️⚠️⚠️ *ATENÇÃO IMEDIATA NECESSÁRIA* ⚠️⚠️⚠️',
         '',
-        `🟡 Cliente chegando em aproximadamente *${horasRestantes}h*`,
+        `🟡 Cliente chegando em aprox. *${horasRestantes}h*`,
         '',
         `👤 *${p.nome}*`,
         `📱 ${p.whatsapp}`,
-        `💆 ${p.servico}`,
+        `💆 ${p.servico.replace(/\b\w/g,(c:string)=>c.toUpperCase())}`,
         `📍 ${p.unidade}`,
         `🕐 HOJE às *${p.horario}*`,
-        `💰 R$${p.valor}`,
+        `💰 R$${p.valor} (sinal R$30 pago · falta R$${p.valor-30})`,
         '',
-        '🔴 *CONFIRME O PREPARO DO ESPAÇO* 🔴',
-        '─────────────────────────',
-        '✅ Planilha ✅ Calendar ✅ Sinal pago',
+        '🔴 *AÇÃO NECESSÁRIA — use os botões abaixo* 🔴',
       ].join('\n');
+
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({chat_id:GRUPO_JG_ID,parse_mode:'Markdown',text:textoUrgencia})
+        body:JSON.stringify({
+          chat_id:GRUPO_JG_ID,
+          parse_mode:'Markdown',
+          text:textoUrgencia,
+          reply_markup:{
+            inline_keyboard:[
+              [
+                {text:'✅ Confirmar para cliente (WA)',url:waLink},
+              ],
+              [
+                {text:'❌ Cancelar evento',callback_data:cancelKey},
+                {text:'📋 Ver planilha',url:`https://docs.google.com/spreadsheets/d/1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk/edit`},
+              ],
+            ]
+          }
+        })
       }).catch(()=>{});
     }
 
