@@ -7,8 +7,29 @@
  */
 
 const OPENAI_KEY  = Deno.env.get('OPENAI_API_KEY') || '';
+const BOT_TOKEN   = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || '';
+const GRUPO_ID    = '-1003866193031'; // Gestão JG
 const SHEET_ID    = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
 const ABAS: Record<number,string> = {1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
+
+async function alertarData(nome: string, horarioAgend: string, dataComprov: string | null) {
+  if (!BOT_TOKEN || !dataComprov) return;
+  const msg = [
+    '⚠️ *ALERTA — DATA DO COMPROVANTE PIX*',
+    '',
+    `👤 Cliente: ${nome || 'desconhecido'}`,
+    `📅 Agendamento: ${horarioAgend}`,
+    `🧾 Data no comprovante: ${dataComprov}`,
+    '',
+    '❓ A data do comprovante não corresponde ao dia do agendamento.',
+    'Por favor, verifique manualmente se o pagamento é legítimo.',
+  ].join('\n');
+  await fetch(\`https://api.telegram.org/bot\${BOT_TOKEN}/sendMessage\`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: GRUPO_ID, text: msg, parse_mode: 'Markdown' }),
+  }).catch(() => {});
+}
 
 // Nomes aceitos como destinatário (variações com/sem acento)
 const DESTINATARIOS_VALIDOS = [
@@ -211,6 +232,29 @@ Deno.serve(async (req: Request) => {
     if (!imageUrl) return new Response(JSON.stringify({ erro: 'imageUrl obrigatório' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
 
     const analise = await analisarImagemPix(imageUrl);
+
+    // Verificar divergência de data — alertar no Telegram se comprovante muito distante
+    if (analise.valido && analise.data) {
+      const nomeCliente = body.nomeCliente || '';
+      const diaStr = dia ? String(dia).padStart(2,'0') : '';
+      const mesStr = mes ? String(mes).padStart(2,'0') : '';
+      const horarioLabel = `${diaStr}/${mesStr} às ${hora || '?'}`;
+
+      // Tentar extrair data do comprovante
+      const dataComp = analise.data;
+      const hoje = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+      const hojeDia = hoje.getDate();
+      const hojeStr = String(hojeDia).padStart(2,'0') + '/' + String(hoje.getMonth()+1).padStart(2,'0');
+
+      // Se a data do comprovante não contiver o dia de hoje nem o dia do agendamento → alerta
+      const dataCompNorm = dataComp.replace(/[^0-9\/\-]/g,' ').trim();
+      const contemHoje = dataCompNorm.includes(hojeStr) || dataComp.includes(String(hojeDia));
+      const contemDia  = diaStr ? (dataCompNorm.includes(diaStr + '/') || dataCompNorm.includes('/' + diaStr)) : true;
+      if (!contemHoje && !contemDia) {
+        // Datas muito divergentes — alertar Jonathan mas não bloquear
+        await alertarData(nomeCliente, horarioLabel, dataComp);
+      }
+    }
 
     let planilha: { ok: boolean; linha?: number; erro?: string } = { ok: false, erro: 'sheetsToken não fornecido' };
     if (analise.valido && sheetsToken && dia && mes) {
