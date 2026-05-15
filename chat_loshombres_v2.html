@@ -481,68 +481,64 @@ function enviar() {
 // ── PROCESSAR RESPOSTA DO BACKEND ─────────────────────────────────────────────
 function processarResposta(r) {
   if (!r || !r.resposta) return;
-  // Salvar resposta do bot no histIA para manter contexto
   histIA.push({ role: 'assistant', content: r.resposta });
   if (histIA.length > 30) histIA = histIA.slice(-30);
   saveState({ histIA: histIA });
 
-  // AGENDAMENTO CONFIRMADO — mostrar botões de ação
-  if (r.acao === 'agendado' && r.dados) {
-    var d = r.dados;
+  var conf = r.confirmacao || {};
+
+  // ── AGUARDANDO PIX: dados coletados, abrir modal de pagamento ──────────────
+  if (conf.aguardandoPix === 'true' && conf.nome && conf.horario) {
+    addMsg(r.resposta, 'bot');
+    // Salvar dados no localStorage para sobreviver reload da câmera
+    saveState({
+      dadosAgendamento: conf,
+      acao: 'aguardandoPix',
+      nomeCliente: conf.nome,
+      whatsappCliente: conf.whatsapp
+    });
+    dadosPendentes = conf;
+    // Abrir modal PIX após pequeno delay (dá tempo da mensagem aparecer)
+    setTimeout(function() { abrirModalPix(conf); }, 800);
+    return;
+  }
+
+  // ── AGENDAMENTO CONFIRMADO (após PIX validado pelo backend) ────────────────
+  if (conf.nome && conf.horario && !conf.aguardandoPix) {
+    var d = conf;
     dadosPendentes = d;
-    saveState({ dadosAgendamento: d, acao: 'agendado' });
+    var telC = (d.whatsapp || '').replace(/\D/g, '');
+    var waNum = telC.startsWith('55') ? telC : '55' + telC;
+    var waTxt = encodeURIComponent(
+      'Olá ' + (d.nome||'').split(' ')[0] + '! Seu agendamento na unidade ' + d.unidade +
+      ' está confirmado para ' + d.data + ' às ' + d.horario + 'h. Até breve! 🌿'
+    );
+    var waLink = d.waMsg || ('https://wa.me/' + waNum + '?text=' + waTxt);
 
     addMsg(r.resposta, 'bot', {
       btns: [
-        {
-          label: '✅ Enviar comprovante PIX',
-          cls: 'btn-wa',
-          onclick: function() { abrirModalPix(d); }
-        },
-        {
-          label: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22C6.486 22 2 17.514 2 12S6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg> Confirmar via WhatsApp',
-          cls: 'btn-wa',
-          url: d.waMsg || ('https://wa.me/'+WA_NUMBER)
-        },
-        {
-          label: '❌ Cancelar agendamento',
-          cls: 'btn-cancel',
-          onclick: function() { solicitarCancelamento(d); }
-        }
+        { label: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22C6.486 22 2 17.514 2 12S6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg> Falar com a gente no WhatsApp', cls: 'btn-wa', url: waLink },
+        { label: '❌ Cancelar agendamento', cls: 'btn-cancel', onclick: function() { solicitarCancelamento(d); } }
       ]
     });
-
-    // Salvar nome e WhatsApp na memória do dispositivo para reconhecimento futuro
     if (d.nome) saveState({ nomeCliente: d.nome });
     if (d.whatsapp) saveState({ whatsappCliente: d.whatsapp });
-    // Guardar no histórico de agendamentos deste cliente
-    try {
-      var st = loadState() || {};
-      var hist = st.historico || [];
-      hist.unshift({
-        data: new Date().toISOString(),
-        massagem: d.massagem || '',
-        horario: (d.data || '') + ' ' + (d.horario || ''),
-        valor: d.valor || '',
-      });
-      if (hist.length > 10) hist = hist.slice(0, 10); // manter últimos 10
-      saveState({ historico: hist });
-    } catch(ee) {}
-    // Renovar sessão mas manter memória do cliente — limpar histIA
+    // Limpar sessão mas manter memória do cliente
     histIA = [];
     clearState();
     sessao = gerarSessao();
     saveState({ sessao: sessao });
+    return;
+  }
 
-  // ETAPA PIX — oferecer upload
-  } else if (r.resposta && (r.resposta.includes('Sinal de confirmação') || r.resposta.includes('Sinal de comprometimento') || r.resposta.includes('Quase lá')) && (r.resposta.includes('PIX') || r.resposta.includes('sinal'))) {
-    addMsg(r.resposta, 'bot', {
-      pixUpload: true,
-      dadosAgend: { sessao: sessao }
-    });
-
-  } else {
-    addMsg(r.resposta, 'bot');
+  // ── RESPOSTA NORMAL ────────────────────────────────────────────────────────
+  addMsg(r.resposta, 'bot');
+  if (r.audio) {
+    var au = document.createElement('audio');
+    au.controls = true; au.src = r.audio;
+    au.style.cssText = 'width:100%;margin-top:6px;border-radius:8px;';
+    var lastBub = msgsEl.lastElementChild;
+    if (lastBub) lastBub.querySelector('.bub') && lastBub.querySelector('.col').appendChild(au);
   }
 }
 
@@ -585,6 +581,11 @@ function copiarChavePix() {
 }
 
 function abrirModalPix(dadosAgend) {
+  // Salvar dados no localStorage ANTES de abrir câmera (evitar perda ao voltar da galeria)
+  if (dadosAgend) {
+    dadosPendentes = dadosAgend;
+    saveState({ dadosAgendamento: dadosAgend, acao: 'aguardandoPix' });
+  }
   dadosPendentes = dadosAgend;
   pixImageUrl = null;
   irParaTela('pixTelaEscolha');
@@ -705,7 +706,35 @@ function uploadEAnalisar(file) {
 document.getElementById('btnConfirmarPix').onclick = function() {
   document.getElementById('pixModal').classList.remove('open');
   addMsg('Comprovante enviado! ✅', 'me');
-  enviarMensagem('confirmar');
+  // Buscar dados do agendamento do localStorage
+  var st = loadState() || {};
+  var ag = dadosPendentes || st.dadosAgendamento || {};
+  var nomeC = ag.nome || st.nomeCliente || '';
+  var wppC = (ag.whatsapp || st.whatsappCliente || '').replace(/\D/g, '');
+  showTyping();
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API_CHAT, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.timeout = 25000;
+  xhr.onload = function() {
+    hideTyping();
+    try { processarResposta(JSON.parse(xhr.responseText)); } catch(e) {}
+  };
+  xhr.onerror = xhr.ontimeout = function() {
+    hideTyping();
+    addMsg('Agendamento registrado! Entraremos em contato em breve. 🌿', 'bot');
+  };
+  // Envia pixConfirmado=true com histórico completo para o backend gravar
+  xhr.send(JSON.stringify({
+    sessao: sessao,
+    mensagem: 'pix confirmado',
+    historico: histIA.slice(-20),
+    clienteId: clienteId,
+    fingerprint: fingerprint,
+    nomeCliente: nomeC,
+    whatsapp: wppC,
+    pixConfirmado: true
+  }));
 };
 
 // ── CANCELAMENTO ──────────────────────────────────────────────────────────────
@@ -809,9 +838,10 @@ sbtnEl.addEventListener('click', enviar);
     state.historico.forEach(function(h) {
       if (h.txt && h.tipo) addMsg(h.txt, h.tipo);
     });
-    // Agendamento pendente de comprovante
-    if (state.acao === 'agendado' && state.dadosAgendamento) {
-      addMsg('Seu agendamento ainda está pendente de confirmação. 🌿', 'bot', {
+    // Agendamento pendente de comprovante PIX
+    if ((state.acao === 'agendado' || state.acao === 'aguardandoPix') && state.dadosAgendamento) {
+      dadosPendentes = state.dadosAgendamento;
+      addMsg('Seu horário ainda está sendo reservado. Envie o comprovante PIX para confirmar. 🌿', 'bot', {
         btns: [
           { label: '✅ Enviar comprovante PIX', cls: 'btn-wa', onclick: function() { abrirModalPix(state.dadosAgendamento); } },
           { label: '📱 Confirmar via WhatsApp', cls: 'btn-wa', url: 'https://wa.me/'+WA_NUMBER }
