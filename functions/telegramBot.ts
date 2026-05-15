@@ -635,24 +635,67 @@ async function executarCorrecao(
     });
     if(jaExiste)return `⚠️ Evento já existe no Calendar para ${hora}h dia ${diaN} — não duplicado.`;
 
+    // ── Buscar dados completos da planilha para enriquecer o evento ──────────
+    let nomeCalendar=nome||'(sem nome)';
+    let telCalendar=tel||'';
+    let servicoCalendar=servico||'';
+    let obsCalendar=obs||'';
+    if(sheetsToken){
+      try{
+        const abaC=ABAS_DIV[mesN]||'MAI';
+        const shC=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_DIV}/values/${abaC}!A1:I500`,{headers:{Authorization:`Bearer ${sheetsToken}`}});
+        const rowsC:string[][]=(await shC.json()).values||[];
+        const [hc2,mc2]=hora.split(':').map(Number);const hMinC=hc2*60+mc2;
+        for(const r of rowsC){
+          const rr=[...r];while(rr.length<9)rr.push('');
+          const colA=(rr[0]||'').trim();
+          if(colA!==String(diaN)&&colA!==String(diaN).padStart(2,'0'))continue;
+          const hNormC=normHoraBot(rr[6]||'');
+          if(!hNormC)continue;
+          const [rh,rm]=hNormC.split(':').map(Number);
+          if(Math.abs((rh*60+rm)-hMinC)<=15){
+            if(rr[1].trim())nomeCalendar=rr[1].trim();
+            if(rr[2].trim())telCalendar=rr[2].trim();
+            if(rr[3].trim())servicoCalendar=rr[3].trim();
+            if(rr[4].trim())obsCalendar=rr[4].trim();
+            break;
+          }
+        }
+      }catch(_){}
+    }
+    // Se nome veio do título do Calendar e contém prefixo, parsear
+    if(!tel&&!servico){
+      const parsed=parsearTitulo(nomeCalendar);
+      if(parsed.nome)nomeCalendar=parsed.nome;
+      if(!servicoCalendar&&parsed.servico)servicoCalendar=parsed.servico;
+    }
+
     const dStr=`2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
     const [hh2,mm2]=hora.split(':');
     const iniStr=`${dStr}T${hh2.padStart(2,'0')}:${(mm2||'00').padStart(2,'0')}:00-03:00`;
     const iniMs=new Date(iniStr).getTime();
     if(isNaN(iniMs))return `❌ Hora inválida: "${hora}"`;
     const fimStr=new Date(iniMs+90*60000).toISOString();
+    const descricao=[
+      telCalendar?`📱 WhatsApp: ${telCalendar}`:'📱 WhatsApp: (não informado)',
+      servicoCalendar?`💆 Serviço: ${servicoCalendar}`:'',
+      obsCalendar?`📝 Obs: ${obsCalendar}`:'',
+      'Criado via divergência',
+    ].filter(Boolean).join('\n');
     const calR=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
       method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
       body:JSON.stringify({
-        summary:nome,
-        description:`Tel: ${tel||'-'} | ${servico||'-'} | ${obs||'Criado via botão de divergência'}`,
+        summary:`${nomeCalendar}${servicoCalendar?' — '+servicoCalendar.slice(0,20):''}`,
+        description:descricao,
         start:{dateTime:iniStr,timeZone:'America/Sao_Paulo'},
         end:{dateTime:fimStr,timeZone:'America/Sao_Paulo'},
+        visibility:'private',
+        sendUpdates:'none',
       })
     });
     const d=await calR.json();
     return d.id
-      ?`✅ Calendar: ${nome} — ${hora}h dia ${diaN}`
+      ?`✅ Calendar: "${nomeCalendar}" | ${servicoCalendar||'-'} | ${telCalendar||'sem tel'} — ${hora}h dia ${diaN}`
       :`❌ Erro Calendar: ${JSON.stringify(d).slice(0,100)}`;
 
   }else if(acaoFinal==='ignorar'){
