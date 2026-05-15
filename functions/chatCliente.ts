@@ -301,6 +301,7 @@ async function buscarHorariosLivres(
 async function gravarAgendamento(req:Request,p:{
   nome:string;whatsapp:string;servico:string;unidade:string;
   dia:string;mes:number;horario:string;valor:number;
+  clienteId?:string;fingerprint?:string;
 }):Promise<{ok:boolean;erro?:string;linha?:number}>{
   const{sheetsToken,calToken,gmailToken}=await getGoogleTokens(req);
   const aba=ABAS[p.mes]||'MAI';
@@ -508,7 +509,7 @@ async function gravarAgendamento(req:Request,p:{
         nome:p.nome,whatsapp:p.whatsapp,canal_origem:'chat_web',etapa_funil:'confirmado',
         massagem_interesse:p.servico,unidade_interesse:p.unidade,converteu:true,
         data_ultima_mensagem:new Date().toISOString(),
-        observacoes:`${dStr}/${mStr} às ${p.horario} — R$${p.valor}`
+        observacoes:`${dStr}/${mStr} às ${p.horario} — R$${p.valor} | clienteId:${p.clienteId||''} fp:${p.fingerprint||''}`
       });
     }catch(_){}
 
@@ -733,6 +734,10 @@ Deno.serve(async(req:Request)=>{
   try{body=await req.json();}catch(_){}
   const mensagem=String(body.mensagem||'').slice(0,800);
   const historico=(Array.isArray(body.historico)?body.historico:[]) as {role:string;content:string}[];
+  const clienteIdWeb=String(body.clienteId||'').slice(0,100);
+  const fingerprintWeb=String(body.fingerprint||'').slice(0,100);
+  const nomeClienteWeb=String(body.nomeCliente||'').slice(0,100);
+  const whatsappWeb=String(body.whatsapp||'').slice(0,20);
   if(!mensagem)return new Response(JSON.stringify({resposta:'Me chama no WhatsApp: (31) 98324-4713'}),{headers:{...cors,'Content-Type':'application/json'}});
 
   const hist=[...historico,{role:'user',content:mensagem}];
@@ -782,7 +787,8 @@ UNIDADE: ${estado.unidade||'aguardar confirmação'}`;
     const res=await gravarAgendamento(req,{
       nome:nomeF,whatsapp:wppMsg,
       servico:estado.massagem.split(' ').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' '),
-      unidade:estado.unidade,dia:estado.dia,mes:estado.mes,horario:estado.horario,valor:estado.valor
+      unidade:estado.unidade,dia:estado.dia,mes:estado.mes,horario:estado.horario,valor:estado.valor,
+      clienteId:clienteIdWeb,fingerprint:fingerprintWeb
     });
     if(res.ok){
       const ds=String(parseInt(estado.dia)).padStart(2,'0');

@@ -222,18 +222,50 @@ var API_PIX   = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/
 var API_IMGBB = 'https://api.imgbb.com/1/upload?key=6ca78a7f1fb8b0a7f8a5b5c5d5e5f5a1'; // fallback
 var WA_NUMBER = '5531983244713';
 
-// ── SESSÃO PERSISTENTE (localStorage) ─────────────────────────────────────────
-var STORAGE_KEY = 'lh_chat_v3';
+// ── RASTREABILIDADE E MEMÓRIA PERSISTENTE ─────────────────────────────────────
+var STORAGE_KEY    = 'lh_chat_v4';
+var CLIENTE_ID_KEY = 'lh_cliente_id'; // ID permanente do dispositivo
+
+// Gerar fingerprint do dispositivo (não muda entre sessões)
+function gerarFingerprint() {
+  var raw = [
+    navigator.userAgent || '',
+    navigator.language || '',
+    screen.width + 'x' + screen.height,
+    screen.colorDepth || '',
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || '',
+    navigator.platform || '',
+    (navigator.plugins || []).length,
+  ].join('|');
+  // Hash simples djb2
+  var hash = 5381;
+  for (var i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) + hash) + raw.charCodeAt(i);
+    hash = hash & hash; // 32bit
+  }
+  return 'fp_' + Math.abs(hash).toString(36);
+}
+
+// ID permanente do cliente neste dispositivo
+function getClienteId() {
+  try {
+    var id = localStorage.getItem(CLIENTE_ID_KEY);
+    if (id) return id;
+    id = 'cli_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+    localStorage.setItem(CLIENTE_ID_KEY, id);
+    return id;
+  } catch(e) {
+    return gerarFingerprint(); // fallback sem localStorage
+  }
+}
+
 function gerarSessao() { return 'web_' + Math.random().toString(36).slice(2) + '_' + Date.now(); }
 
 function loadState() {
   try {
     var raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      var state = JSON.parse(raw);
-      // Só restaurar se for da última 6 horas
-      if (state.ts && (Date.now() - state.ts) < 6 * 60 * 60 * 1000) return state;
-    }
+    if (raw) return JSON.parse(raw);
   } catch(e) {}
   return null;
 }
@@ -241,13 +273,29 @@ function loadState() {
 function saveState(extra) {
   try {
     var current = loadState() || {};
-    var merged = Object.assign({}, current, extra, { ts: Date.now(), sessao: sessao });
+    var merged = Object.assign({}, current, extra, {
+      ts: Date.now(),
+      sessao: sessao,
+      clienteId: clienteId,
+      fingerprint: fingerprint,
+    });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
   } catch(e) {}
 }
 
 function clearState() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  try {
+    // Preservar clienteId e memória do cliente ao limpar sessão
+    var state = loadState() || {};
+    var keepAlive = {
+      clienteId: state.clienteId || clienteId,
+      fingerprint: state.fingerprint || fingerprint,
+      nomeCliente: state.nomeCliente || '',
+      whatsappCliente: state.whatsappCliente || '',
+      historico: state.historico || [],
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(keepAlive));
+  } catch(e) {}
 }
 
 // Estado global
@@ -256,16 +304,34 @@ var inpEl  = document.getElementById('inp');
 var sbtnEl = document.getElementById('sbtn');
 var busy   = false;
 var sessao = '';
-var dadosPendentes = null; // dados do agendamento aguardando PIX
-var pixImageUrl = null;
+var dadosPendentes = null;
+var pixImageUrl    = null;
+var clienteId      = getClienteId();
+var fingerprint    = gerarFingerprint();
 
 // Restaurar sessão ou criar nova
 var savedState = loadState();
 if (savedState && savedState.sessao) {
   sessao = savedState.sessao;
+  if (savedState.clienteId) clienteId = savedState.clienteId;
 } else {
   sessao = gerarSessao();
   saveState({ sessao: sessao });
+}
+
+// ── Saudação personalizada baseada em memória ─────────────────────────────
+function montarSaudacaoInicial() {
+  var st = loadState() || {};
+  var nome = st.nomeCliente || '';
+  var hist = st.historico || [];
+  var ultimoAgend = hist[0] || null;
+
+  if (nome && ultimoAgend) {
+    return 'Olá, ' + nome.split(' ')[0] + '! 🌿 Que bom ter você de volta.\n\nSua última visita foi uma ' + (ultimoAgend.massagem || 'massagem') + '. Posso agendar algo novo para você?';
+  } else if (nome) {
+    return 'Olá, ' + nome.split(' ')[0] + '! 🌿 Que bom ter você de volta.\n\nNo que posso te ajudar hoje?';
+  }
+  return null; // cliente novo — iniciar fluxo normal
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -379,7 +445,16 @@ function enviar() {
     hideTyping(); busy = false;
     addMsg('Tive um probleminha. Chama no WhatsApp: (31) 98324-4713 😊', 'bot');
   };
-  xhr.send(JSON.stringify({ sessao: sessao, mensagem: txt }));
+  // Enriquecer payload com identidade do cliente
+  var state = loadState() || {};
+  xhr.send(JSON.stringify({
+    sessao: sessao,
+    mensagem: txt,
+    clienteId: clienteId,
+    fingerprint: fingerprint,
+    nomeCliente: state.nomeCliente || null,
+    whatsapp: state.whatsappCliente || null,
+  }));
 }
 
 // ── PROCESSAR RESPOSTA DO BACKEND ─────────────────────────────────────────────
@@ -412,7 +487,23 @@ function processarResposta(r) {
       ]
     });
 
-    // Limpar sessão após confirmação bem-sucedida
+    // Salvar nome e WhatsApp na memória do dispositivo para reconhecimento futuro
+    if (d.nome) saveState({ nomeCliente: d.nome });
+    if (d.whatsapp) saveState({ whatsappCliente: d.whatsapp });
+    // Guardar no histórico de agendamentos deste cliente
+    try {
+      var st = loadState() || {};
+      var hist = st.historico || [];
+      hist.unshift({
+        data: new Date().toISOString(),
+        massagem: d.massagem || '',
+        horario: (d.data || '') + ' ' + (d.horario || ''),
+        valor: d.valor || '',
+      });
+      if (hist.length > 10) hist = hist.slice(0, 10); // manter últimos 10
+      saveState({ historico: hist });
+    } catch(ee) {}
+    // Renovar sessão mas manter memória do cliente
     clearState();
     sessao = gerarSessao();
     saveState({ sessao: sessao });
@@ -665,7 +756,8 @@ function enviarMensagem(msg) {
     try { processarResposta(JSON.parse(xhr.responseText)); } catch(e) {}
   };
   xhr.onerror = xhr.ontimeout = function() { hideTyping(); busy = false; };
-  xhr.send(JSON.stringify({ sessao: sessao, mensagem: msg }));
+  var st2 = loadState() || {};
+  xhr.send(JSON.stringify({ sessao: sessao, mensagem: msg, clienteId: clienteId, fingerprint: fingerprint, nomeCliente: st2.nomeCliente || null, whatsapp: st2.whatsappCliente || null }));
 }
 
 // ── EVENTOS INPUT ─────────────────────────────────────────────────────────────
@@ -678,16 +770,19 @@ inpEl.addEventListener('keydown', function(e) {
 });
 sbtnEl.addEventListener('click', enviar);
 
-// ── INIT — restaurar histórico ou boas-vindas ─────────────────────────────────
+// ── INIT — restaurar histórico, reconhecer cliente, boas-vindas ───────────────
 (function init() {
   var state = loadState();
-  if (state && state.historico && state.historico.length > 0) {
-    // Restaurar histórico salvo
+  var temHistorico = state && state.historico && state.historico.length > 0;
+  var temCliente   = state && (state.nomeCliente || state.whatsappCliente);
+
+  if (temHistorico) {
+    // Restaurar conversa salva
     state.historico.forEach(function(h) {
-      addMsg(h.txt, h.tipo);
+      if (h.txt && h.tipo) addMsg(h.txt, h.tipo);
     });
+    // Agendamento pendente de comprovante
     if (state.acao === 'agendado' && state.dadosAgendamento) {
-      // Mostrar botão de retomar
       addMsg('Seu agendamento ainda está pendente de confirmação. 🌿', 'bot', {
         btns: [
           { label: '✅ Enviar comprovante PIX', cls: 'btn-wa', onclick: function() { abrirModalPix(state.dadosAgendamento); } },
@@ -695,14 +790,29 @@ sbtnEl.addEventListener('click', enviar);
         ]
       });
     }
-  } else {
-    // Primeira vez — mensagem de boas-vindas
+  } else if (temCliente) {
+    // Cliente reconhecido — saudação personalizada
     setTimeout(function() {
-      addMsg('Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿\n\nAqui você pode simplesmente existir e receber.\n\nQual experiência você está buscando hoje?', 'bot');
+      var saudacao = montarSaudacaoInicial();
+      addMsg(saudacao || 'Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿
+
+Aqui você pode simplesmente existir e receber.
+
+Qual experiência você está buscando hoje?', 'bot');
+    }, 500);
+  } else {
+    // Primeiro acesso — boas-vindas padrão
+    setTimeout(function() {
+      addMsg('Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿
+
+Aqui você pode simplesmente existir e receber.
+
+Qual experiência você está buscando hoje?', 'bot');
     }, 500);
   }
   inpEl.focus();
 })();
+
 
 // Salvar histórico ao adicionar mensagem (patch para persistência)
 var _addMsgOrig = addMsg;
