@@ -488,7 +488,14 @@ async function executarCorrecao(
   sheetsToken:string,calToken:string
 ):Promise<string>{
 
-  if(acao==='incluir'&&tipo==='so_calendar'){
+  // Normalizar acao baseado no tipo quando vier do "Corrigir Tudo"
+  const acaoFinal = acao==='incluir'||tipo==='so_calendar' ? 'incluir' :
+                    acao==='criar'||tipo==='so_planilha'   ? 'criar'   : acao;
+  const tipoFinal = tipo==='so_calendar'||acao==='incluir' ? 'so_calendar' :
+                    tipo==='so_planilha'||acao==='criar'   ? 'so_planilha' : tipo;
+
+  if(acaoFinal==='incluir'){
+    // ── INCLUIR NA PLANILHA (vinha só do Calendar) ──────────────────────
     if(!sheetsToken)return '❌ Token Sheets indisponível.';
     const aba=ABAS_DIV[mesN]||'MAI';
     const lRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_DIV}/values/${aba}!A1:I500`,
@@ -501,7 +508,12 @@ async function executarCorrecao(
       const r=[...rows[j]];while(r.length<9)r.push('');
       const colA=r[0].trim();
       if(colA!==String(diaN)&&colA!==String(diaN).padStart(2,'0'))continue;
-      if(r[1].trim())continue;
+      // REGRA: nunca sobrescrever linha já preenchida (coluna B com nome)
+      if(r[1].trim()){
+        const hNorm2=normHoraBot(r[6].trim());
+        if(hNorm2){const [rh2,rm2]=hNorm2.split(':').map(Number);if(Math.abs((rh2*60+rm2)-horaMins)<=60)return `⚠️ Linha já preenchida (L${j+1}: ${r[1].trim()}) — não sobrescrita.`;}
+        continue;
+      }
       const hNorm=normHoraBot(r[6].trim());
       if(!hNorm)continue;
       const [rh,rm]=hNorm.split(':').map(Number);
@@ -519,8 +531,24 @@ async function executarCorrecao(
       ?`✅ Planilha L${alvo}: ${nome||'(sem nome)'} | ${tel||'-'} | ${servico||'-'}`
       :`❌ Erro planilha: ${(await putRes.text()).slice(0,80)}`;
 
-  }else if(acao==='criar'&&tipo==='so_planilha'){
+  }else if(acaoFinal==='criar'){
+    // ── CRIAR NO CALENDAR (vinha só da Planilha) ─────────────────────────
+    // Verificar se já existe evento no Calendar para evitar duplicata
     if(!calToken)return '❌ Token Calendar indisponível.';
+    const dStr2=`2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
+    const checkRes=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${dStr2}T00:00:00-03:00&timeMax=${dStr2}T23:59:59-03:00&singleEvents=true`,
+      {headers:{Authorization:`Bearer ${calToken}`}});
+    const existentes=(await checkRes.json()).items||[];
+    const [hc,mc]=hora.split(':').map(Number);
+    const hMin=hc*60+mc;
+    const jaExiste=existentes.some((ev:any)=>{
+      const dt=ev.start?.dateTime||'';
+      if(!dt.includes('T'))return false;
+      const [eh,em]=dt.slice(11,16).split(':').map(Number);
+      return Math.abs((eh*60+em)-hMin)<=15;
+    });
+    if(jaExiste)return `⚠️ Evento já existe no Calendar para ${hora}h dia ${diaN} — não duplicado.`;
+
     const dStr=`2026-${String(mesN).padStart(2,'0')}-${String(diaN).padStart(2,'0')}`;
     const [hh2,mm2]=hora.split(':');
     const iniStr=`${dStr}T${hh2.padStart(2,'0')}:${(mm2||'00').padStart(2,'0')}:00-03:00`;
@@ -531,22 +559,22 @@ async function executarCorrecao(
       method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
       body:JSON.stringify({
         summary:nome,
-        description:`Tel: ${tel||'-'} | ${servico||'-'} | ${obs||'Criado via botão'}`,
+        description:`Tel: ${tel||'-'} | ${servico||'-'} | ${obs||'Criado via botão de divergência'}`,
         start:{dateTime:iniStr,timeZone:'America/Sao_Paulo'},
         end:{dateTime:fimStr,timeZone:'America/Sao_Paulo'},
       })
     });
     const d=await calR.json();
     return d.id
-      ?`✅ Calendar: ${nome} ${hora}h dia ${diaN}`
+      ?`✅ Calendar: ${nome} — ${hora}h dia ${diaN}`
       :`❌ Erro Calendar: ${JSON.stringify(d).slice(0,100)}`;
 
-  }else if(acao==='ignorar'){
+  }else if(acaoFinal==='ignorar'){
     return `↩ Ignorado: ${hora}h dia ${diaN}`;
-  }else if(acao==='excluir'){
-    return `↩ Excluir manualmente do Calendar: ${hora}h dia ${diaN}`;
+  }else if(acaoFinal==='excluir'){
+    return `↩ Excluir manualmente: ${hora}h dia ${diaN}`;
   }
-  return `❓ Ação desconhecida: ${acao}`;
+  return `❓ Ação desconhecida: ${acao} / tipo: ${tipo}`;
 }
 
 // Cache de divergências para o botão "Corrigir Tudo"
