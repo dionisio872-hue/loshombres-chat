@@ -480,27 +480,45 @@ function uploadEAnalisar(file) {
         var r = JSON.parse(xhr.responseText);
         var statusEl = document.getElementById('pixAnaliseStatus');
         if (r.valido) {
-          statusEl.textContent = '✅ Comprovante válido!' + (r.valor ? ' — Valor: ' + r.valor : '');
+          // ✅ Aprovado
+          statusEl.innerHTML =
+            '✅ <strong>Comprovante aprovado!</strong>' +
+            (r.valor ? '<br>💰 Valor: ' + r.valor : '') +
+            (r.beneficiario ? '<br>👤 Destinatário: ' + r.beneficiario : '') +
+            (r.status_transacao ? '<br>📌 Status: ' + r.status_transacao : '');
           statusEl.style.color = '#22c55e';
           statusEl.style.display = 'block';
           document.getElementById('pixRejeicaoMsg').style.display = 'none';
           document.getElementById('btnConfirmarPix').style.display = 'block';
         } else {
-          // Rejeição firme — bloquear e orientar
+          // ❌ Reprovado — mostrar motivo específico
           statusEl.style.display = 'none';
           var rejEl = document.getElementById('pixRejeicaoMsg');
-          var motivo = r.motivo || 'A imagem enviada não parece ser um comprovante PIX.';
+          var detalhe = r.motivo_rejeicao_detalhe || '';
+          var instrucao = '';
+          if (detalhe === 'NOT_PIX') {
+            instrucao = '📌 Envie o <strong>print do comprovante PIX</strong> gerado pelo seu banco — não uma foto comum.';
+          } else if (detalhe === 'PIX_AGENDADO') {
+            instrucao = '📌 PIX agendado não é aceito. Aguarde o pagamento ser <strong>Efetuado/Concluído</strong> e envie o comprovante final.' +
+              (r.status_transacao ? '<br>Status detectado: <strong>' + r.status_transacao + '</strong>' : '');
+          } else if (detalhe === 'DEST_ERRADO') {
+            instrucao = '📌 O PIX deve ser enviado para <strong>JG Espaço Multserviços</strong> ou <strong>Jonathan Guimarães</strong>.' +
+              (r.beneficiario ? '<br>Destinatário detectado: <strong>' + r.beneficiario + '</strong>' : '');
+          } else {
+            instrucao = '📌 Certifique-se de que o comprovante mostra: valor, data e destinatário correto.';
+          }
           rejEl.innerHTML =
-            '❌ <strong>Imagem recusada</strong><br><br>' +
-            motivo + '<br><br>' +
-            '📌 Precisa ser o <strong>print do comprovante PIX</strong> de R$30 — ' +
-            'com data, valor e beneficiário visíveis.<br><br>' +
-            'Prefere pagar com cartão? Use o botão abaixo.';
+            '❌ <strong>Comprovante recusado</strong><br><br>' +
+            (r.motivo || 'Comprovante inválido.') + '<br><br>' +
+            instrucao + '<br><br>' +
+            '💳 Prefere pagar com cartão? Use o botão abaixo.';
           rejEl.style.display = 'block';
           document.getElementById('btnEscolherFoto').disabled = false;
-          document.getElementById('btnEscolherFoto').textContent = '📷 Tentar outro comprovante';
+          document.getElementById('btnEscolherFoto').textContent = '📷 Enviar outro comprovante';
           document.getElementById('btnConfirmarPix').style.display = 'none';
           pixImageUrl = null;
+          // Limpar o preview para não confundir
+          document.getElementById('pixPreviewImg').style.display = 'none';
         }
         pixImageUrl = r.imageUrl || base64;
       } catch(e2) {
