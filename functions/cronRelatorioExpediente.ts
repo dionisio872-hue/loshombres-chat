@@ -10,7 +10,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const CRON_SECRET = Deno.env.get('CRON_SECRET') || 'loshombres2026';
 const BOT_TOKEN   = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || '';
-const ADMIN_ID    = '7200577395';
+const ADMIN_ID    = Deno.env.get('GRUPO_JG_ID') || '-1003866193031';
 const SHEET_ID    = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
 const ABAS:Record<number,string> = {1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
 const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
