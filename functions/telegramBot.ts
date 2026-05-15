@@ -482,6 +482,59 @@ function normHoraBot(h:string):string{
 const SHEET_ID_DIV = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
 const ABAS_DIV:Record<number,string>={1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
 
+// ─── PARSER DE TÍTULO DO CALENDAR ────────────────────────────────────────────
+// Ex: "SM GRAVACAO - Mauricio"      → nome="Mauricio",    servico="Gravação"
+// Ex: "Tântrica Experience - Pedro" → nome="Pedro",       servico="Tântrica"
+// Ex: "DEBUTANTE NILCE 319..."      → nome="NILCE 319..", servico="Debutante"
+function parsearTitulo(titulo:string):{nome:string;servico:string}{
+  const TIPOS=[
+    {p:/gravac|grav|recording/i,    l:'Gravação'},
+    {p:/tattoo|tatuagem|tatu/i,       l:'Tatuagem'},
+    {p:/ensaio|photosh|foto/i,        l:'Ensaio'},
+    {p:/reuniao|meeting|online/i,     l:'Reunião'},
+    {p:/relaxante\s*sensual/i,        l:'Relaxante Sensual'},
+    {p:/tantrica|tantric|tântrica/i,  l:'Tântrica'},
+    {p:/nuru/i,                       l:'Nuru Summa'},
+    {p:/blind/i,                      l:'Blind Experience'},
+    {p:/deuses/i,                     l:'Massagem dos Deuses'},
+    {p:/summa/i,                      l:'Summa Experientia'},
+    {p:/quick/i,                      l:'Quick Massage'},
+    {p:/hidro/i,                      l:'Hidrotantra'},
+    {p:/miofascial/i,                 l:'Miofascial'},
+    {p:/burn/i,                   l:'Burn'},
+    {p:/hot/i,                    l:'HOT'},
+    {p:/bdsm|tie|teaser/i,            l:'Tie and Teaser'},
+    {p:/podo/i,                       l:'Podoloterapia'},
+    {p:/4\s*maos|quatro\s*maos/i,     l:'4 Mãos'},
+    {p:/casal/i,                      l:'Casal'},
+    {p:/debutante/i,                  l:'Debutante'},
+    {p:/massagem/i,                   l:'Massagem'},
+  ];
+  const eServico=(s:string)=>TIPOS.some(t=>t.p.test(s));
+
+  let servico='';
+  for(const t of TIPOS){if(t.p.test(titulo)){servico=t.l;break;}}
+
+  let nome=titulo.trim();
+  // Remover bloco de MAIÚSCULAS inicial antes de " - " (ex: "SM GRAVACAO - ")
+  nome=nome.replace(/^[A-ZÁÀÉÍÓÚ][A-ZÁÀÉÍÓÚ\s]{1,20}\s*-\s*/,'').trim();
+
+  if(nome.includes(' - ')){
+    const partes=nome.split(' - ').map((s:string)=>s.trim()).filter(Boolean);
+    // Preferir a parte que NÃO é tipo de serviço (buscar de trás pra frente)
+    const nomeParte=[...partes].reverse().find((p:string)=>!eServico(p));
+    nome=nomeParte||partes[partes.length-1];
+  } else if(servico){
+    // Sem separador com serviço: remover palavras do serviço do texto
+    for(const t of TIPOS) nome=nome.replace(t.p,'').trim();
+    nome=nome.replace(/^[-\s]+|[-\s]+$/g,'').trim();
+  }
+
+  if(!nome||nome.length<2) nome='';
+  return {nome,servico};
+}
+
+
 async function executarCorrecao(
   acao:string,tipo:string,diaN:number,mesN:number,hora:string,
   nome:string,tel:string,servico:string,obs:string,
@@ -520,15 +573,22 @@ async function executarCorrecao(
       if(Math.abs((rh*60+rm)-horaMins)<=60){alvo=j+1;break;}
     }
     if(alvo<0)return `⚠️ Linha vazia não encontrada para ${hora}h dia ${diaN}`;
-    // Gravar B=nome, C=telefone, D=serviço, E=observações
+
+    // Parsear título do Calendar → extrair nome do cliente e tipo de serviço
+    const parsed=parsearTitulo(nome||'');
+    const nomeGravar   = parsed.nome    || nome    || '(sem nome)';
+    const servicoGravar= servico        || parsed.servico || '';
+    const telGravar    = tel||'';
+    const obsGravar    = obs||'Incluído via botão de divergência';
+
     const range=`${aba}!B${alvo}:E${alvo}`;
     const putRes=await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID_DIV}/values/${range}?valueInputOption=USER_ENTERED`,
       {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-       body:JSON.stringify({range,values:[[nome||'(sem nome)',tel||'',servico||'',obs||'Incluído via botão']]})}
+       body:JSON.stringify({range,values:[[nomeGravar,telGravar,servicoGravar,obsGravar]]})}
     );
     return putRes.ok
-      ?`✅ Planilha L${alvo}: ${nome||'(sem nome)'} | ${tel||'-'} | ${servico||'-'}`
+      ?`✅ Planilha L${alvo}: "${nomeGravar}" | ${servicoGravar||'-'} | ${telGravar||'sem tel'}`
       :`❌ Erro planilha: ${(await putRes.text()).slice(0,80)}`;
 
   }else if(acaoFinal==='criar'){
