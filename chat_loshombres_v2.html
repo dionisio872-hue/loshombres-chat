@@ -810,20 +810,12 @@ sbtnEl.addEventListener('click', enviar);
     // Cliente reconhecido — saudação personalizada
     setTimeout(function() {
       var saudacao = montarSaudacaoInicial();
-      addMsg(saudacao || 'Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿
-
-Aqui você pode simplesmente existir e receber.
-
-Qual experiência você está buscando hoje?', 'bot');
+      addMsg(saudacao || 'Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿\n\nAqui você pode simplesmente existir e receber.\n\nQual experiência você está buscando hoje?', 'bot');
     }, 500);
   } else {
     // Primeiro acesso — boas-vindas padrão
     setTimeout(function() {
-      addMsg('Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿
-
-Aqui você pode simplesmente existir e receber.
-
-Qual experiência você está buscando hoje?', 'bot');
+      addMsg('Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿\n\nAqui você pode simplesmente existir e receber.\n\nQual experiência você está buscando hoje?', 'bot');
     }, 500);
   }
   inpEl.focus();
