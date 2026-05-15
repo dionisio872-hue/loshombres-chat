@@ -1,5 +1,5 @@
 /**
- * chatCliente v15 — Los Hombres
+ * chatCliente v17 — Los Hombres
  * v15: fix tokens OAuth + horários corretos + fluxo rigoroso + sem RG/banho + gpt-4o + temperature 0.85
  * 1. Desconto 20% correto: só se data >= 30 dias a partir de HOJE
  * 2. Horários por unidade/dia da semana:
@@ -140,8 +140,12 @@ function extrairData(texto:string):{dia:string|null;mes:number|null;dataISO:stri
     dataISO=`2026-${String(mes).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
   }else{
     const m1=texto.match(/(\d{1,2})[\/\-](\d{1,2})/);
-    if(m1){dia=m1[1];mes=parseInt(m1[2]);dataISO=`2026-${String(mes).padStart(2,'0')}-${m1[1].padStart(2,'0')}`;}
-    else{const m2=texto.match(/dia\s+(\d{1,2})/i);if(m2){dia=m2[1];mes=agora.getMonth()+1;dataISO=`2026-${String(mes).padStart(2,'0')}-${m2[1].padStart(2,'0')}`;}}
+    if(m1){
+      const d1=parseInt(m1[1]),m1v=parseInt(m1[2]);
+      // Validar: dia 1-31, mes 1-12
+      if(d1>=1&&d1<=31&&m1v>=1&&m1v<=12){dia=m1[1];mes=m1v;dataISO=`2026-${String(mes).padStart(2,'0')}-${m1[1].padStart(2,'0')}`;}
+    }
+    if(!dia){const m2=texto.match(/dia\s+(\d{1,2})/i);if(m2){dia=m2[1];mes=agora.getMonth()+1;dataISO=`2026-${String(mes).padStart(2,'0')}-${m2[1].padStart(2,'0')}`;}}
   }
   return{dia,mes,dataISO};
 }
@@ -317,25 +321,23 @@ async function gravarAgendamento(req:Request,p:{
           if((rDia===String(diaInt)||rDia===dStr)&&rHora===horaAlvo&&!rNome){
             const linhaNum=i+1;
             // Colunas: A=dia(já existe), B=nome, C=telefone, D=serviço, E=formulário, F=observações, G=hora(já existe), H=valor
-            const range=`${aba}!B${linhaNum}:F${linhaNum}`;
+            const range=`${aba}!B${linhaNum}:H${linhaNum}`;
+            const horaCell=rows[i][6]||p.horario; // manter hora que já existe na col G
             const valores=[[
               p.nome.toUpperCase(),
               p.whatsapp,
               p.servico.toUpperCase(),
               FORM_URL,
-              `Sinal R$${sinal} pago - falta R$${restante} | Total: R$ ${p.valor}`
+              `Sinal R$${sinal} pago - falta R$${restante}`,
+              horaCell,
+              `R$${p.valor}`
             ]];
             const upRes=await fetch(
               `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`,
               {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
                body:JSON.stringify({range,values:valores})}
             );
-            // Também atualizar coluna H com o valor
-            await fetch(
-              `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!H${linhaNum}?valueInputOption=USER_ENTERED`,
-              {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-               body:JSON.stringify({range:`${aba}!H${linhaNum}`,values:[[`R$ ${p.valor}`]]})}
-            );
+            // valor já incluído no range B:H acima
             console.log('Planilha UPDATE OK — linha',linhaNum,'status',upRes.status);
             linhaAtualizada=true;
             break;
@@ -483,8 +485,10 @@ function analisarHistorico(hist:{role:string;content:string}[]){
   const unidade=n.includes('betim')?'Betim':n.includes('savassi')?'Savassi':null;
   let dia:string|null=null,mes:number|null=null,dataISO:string|null=null,horario:string|null=null;
   for(const m of hist){
-    const d=extrairData(m.content||'');if(d.dia){dia=d.dia;mes=d.mes;dataISO=d.dataISO;}
-    const h=extrairHorario(m.content||'');if(h)horario=h;
+    const d=extrairData(m.content||'');
+    if(d.dia&&d.mes&&parseInt(d.dia)>=1&&d.mes>=1){dia=d.dia;mes=d.mes;dataISO=d.dataISO;}
+    const h=extrairHorario(m.content||'');
+    if(h&&parseInt(h.split(':')[0])>=8&&parseInt(h.split(':')[0])<=22)horario=h;
   }
   const valorBase=massagem?PRECOS[massagem]||300:300;
   const{valorFinal,dias,comDesconto}=calcularDesconto(dataISO,valorBase);
