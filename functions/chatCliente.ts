@@ -1,5 +1,5 @@
 /**
- * chatCliente v20 — Los Hombres
+ * chatCliente v23.4 — DATA AWARENESS + CALENDARIO 14 DIAS — Los Hombres
  * v15: fix tokens OAuth + horários corretos + fluxo rigoroso + sem RG/banho + gpt-4o + temperature 0.85
  * 1. Desconto 20% correto: só se data >= 30 dias a partir de HOJE
  * 2. Horários por unidade/dia da semana:
@@ -587,7 +587,23 @@ Para Summa Experientia: fale normalmente sobre o protocolo de saúde (PrEP + pre
 Respostas sempre em português.`;
 
 async function chamarIA(msgs:{role:string;content:string}[],ctx?:string):Promise<string>{
-  const sys=ctx?SYSTEM+'\n\nCONTEXTO DO SISTEMA:\n'+ctx:SYSTEM;
+  // Data atual BRT para a IA não errar datas
+  const agr=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+  const diasSemana=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  const dataStr=agr.getDate()+'/'+(agr.getMonth()+1)+'/'+agr.getFullYear()+' ('+diasSemana[agr.getDay()]+')';
+  // Gerar calendário dos próximos 14 dias para a IA não errar dia da semana
+  const diasNomes=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  let calendario='';
+  for(let i=0;i<=14;i++){
+    const d2=new Date(agr);d2.setDate(agr.getDate()+i);
+    const dd=String(d2.getDate()).padStart(2,'0');
+    const mm2=String(d2.getMonth()+1).padStart(2,'0');
+    const nomeDia=diasNomes[d2.getDay()];
+    const prefixo=i===0?'HOJE: ':'';
+    calendario+=prefixo+dd+'/'+mm2+' = '+nomeDia+'\n';
+  }
+  const SYSTEM_COM_DATA=SYSTEM+'\n\nDATA ATUAL: '+dataStr+'.\nCALENDÁRIO (use estes dados para identificar o dia da semana de qualquer data mencionada):\n'+calendario;
+  const sys=ctx?SYSTEM_COM_DATA+'\n\nCONTEXTO DO SISTEMA:\n'+ctx:SYSTEM_COM_DATA;
   const r=await fetch('https://api.openai.com/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${OPENAI_KEY}`},
