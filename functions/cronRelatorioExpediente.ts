@@ -186,7 +186,7 @@ function montarConfirmacoes(dia:number, mes:number, planilha:any[], calendar:any
     linhas.push(`${c.hora} - ${c.nome.slice(0,30)}`);
     if (tel.length >= 8) {
       const wa = tel.startsWith('55') ? tel : `55${tel}`;
-      linhas.push(`WA: https://wa.me/${wa}?text=${MSG}`);
+      linhas.push(`WA: https://api.whatsapp.com/send?phone=${wa}&text=${MSG}`);
     } else {
       linhas.push('Sem numero — confirmar manualmente');
     }

@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       const ultimoContato = new Date(l.data_ultimo_contato).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
       const horasAtras = Math.round((agora.getTime() - new Date(l.data_ultimo_contato).getTime()) / 3600000);
       const msg = getMensagem(l.massagem_interesse);
-      const waLink = `https://wa.me/55${l.whatsapp.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+      const waLink = `https://api.whatsapp.com/send?phone=55${l.whatsapp.replace(/\D/g,'')}&text=${encodeURIComponent(msg)}`;
       return `
       <tr>
         <td style="padding:12px;border-bottom:1px solid #eee;vertical-align:top">
