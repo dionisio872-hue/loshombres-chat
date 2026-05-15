@@ -587,22 +587,28 @@ Para Summa Experientia: fale normalmente sobre o protocolo de saúde (PrEP + pre
 Respostas sempre em português.`;
 
 async function chamarIA(msgs:{role:string;content:string}[],ctx?:string):Promise<string>{
-  // Data atual BRT para a IA não errar datas
-  const agr=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
-  const diasSemana=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
-  const dataStr=agr.getDate()+'/'+(agr.getMonth()+1)+'/'+agr.getFullYear()+' ('+diasSemana[agr.getDay()]+')';
-  // Gerar calendário dos próximos 14 dias para a IA não errar dia da semana
-  const diasNomes=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
-  let calendario='';
-  for(let i=0;i<=14;i++){
-    const d2=new Date(agr);d2.setDate(agr.getDate()+i);
-    const dd=String(d2.getDate()).padStart(2,'0');
-    const mm2=String(d2.getMonth()+1).padStart(2,'0');
-    const nomeDia=diasNomes[d2.getDay()];
-    const prefixo=i===0?'HOJE: ':'';
-    calendario+=prefixo+dd+'/'+mm2+' = '+nomeDia+'\n';
+  // Data atual BRT — UTC offset manual (getUTCDay) v23.5
+  const agora = Date.now();
+  const offsetBRT = -3 * 60 * 60 * 1000; // UTC-3
+  const brtMs = agora + offsetBRT;
+  const agr = new Date(brtMs); // this gives wrong UTC time but getUTC* gives BRT values
+  const brtDay   = agr.getUTCDay();    // 0=Dom,...,6=Sab
+  const brtDate  = agr.getUTCDate();
+  const brtMonth = agr.getUTCMonth()+1;
+  const brtYear  = agr.getUTCFullYear();
+  const NOMES_DIA=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  // Gerar calendário dos próximos 20 dias com dia da semana correto
+  let calendario='HOJE: '+String(brtDate).padStart(2,'0')+'/'+String(brtMonth).padStart(2,'0')+'/'+brtYear+' = '+NOMES_DIA[brtDay]+'\n';
+  for(let i=1;i<=20;i++){
+    const futMs=brtMs+(i*86400000);
+    const fut=new Date(futMs);
+    const dd=String(fut.getUTCDate()).padStart(2,'0');
+    const mm=String(fut.getUTCMonth()+1).padStart(2,'0');
+    const ano=fut.getUTCFullYear();
+    const dow=fut.getUTCDay();
+    calendario+=dd+'/'+mm+'/'+ano+' = '+NOMES_DIA[dow]+'\n';
   }
-  const SYSTEM_COM_DATA=SYSTEM+'\n\nDATA ATUAL: '+dataStr+'.\nCALENDÁRIO (use estes dados para identificar o dia da semana de qualquer data mencionada):\n'+calendario;
+  const SYSTEM_COM_DATA=SYSTEM+'\n\nDATA ATUAL: '+String(brtDate).padStart(2,'0')+'/'+String(brtMonth).padStart(2,'0')+'/'+brtYear+' ('+NOMES_DIA[brtDay]+').\nCALENDÁRIO EXATO — use sempre estes dados para identificar o dia da semana de QUALQUER data mencionada pelo cliente:\n'+calendario;
   const sys=ctx?SYSTEM_COM_DATA+'\n\nCONTEXTO DO SISTEMA:\n'+ctx:SYSTEM_COM_DATA;
   const r=await fetch('https://api.openai.com/v1/chat/completions',{
     method:'POST',
@@ -891,6 +897,7 @@ UNIDADE: ${estado.unidade||'aguardar confirmação'}`;
   let audio:string|null=null,video:string|null=null,nomeMidia:string|null=null;
   if(mAtual){const md=MIDIAS[mAtual];if(md){audio=md.audio;video=md.video;nomeMidia=mAtual.split(' ').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');}}
 
+  // v23.5 — calendário de datas correto via UTC offset manual
   const resposta=await chamarIA(
     [...historico.map((m:{role:string;content:string})=>({role:m.role,content:m.content})),{role:'user',content:mensagem}],
     ctx||undefined
