@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
 
   try {
     const base44 = createClientFromRequest(req);
-    const agora = new Date();
+    const agora = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'})); // BRT GMT-3
     const limite24h = new Date(agora.getTime() - 24 * 3600 * 1000).toISOString();
 
     // Buscar leads não convertidos, com WhatsApp, sem reengajamento, com mais de 24h de silêncio

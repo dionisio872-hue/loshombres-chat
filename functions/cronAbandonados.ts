@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
 
   try {
     const base44 = createClientFromRequest(req);
-    const agora = new Date();
+    const agora = new Date(Date.now() - 3*3600*1000); // BRT GMT-3
     const limite = new Date(agora.getTime() - 2 * 3600 * 1000).toISOString();
 
     // Buscar leads ativos que não converteram e ficaram mudos há mais de 2h

@@ -1,5 +1,5 @@
 /**
- * chatCliente v23.4 — DATA AWARENESS + CALENDARIO 14 DIAS — Los Hombres
+ * chatCliente v24.0 — FUSO BRASÍLIA GMT-3 CANÔNICO | sem hardcode 2026 | formatDataBR DD/MM/AAAA — Los Hombres
  * v15: fix tokens OAuth + horários corretos + fluxo rigoroso + sem RG/banho + gpt-4o + temperature 0.85
  * 1. Desconto 20% correto: só se data >= 30 dias a partir de HOJE
  * 2. Horários por unidade/dia da semana:
@@ -54,6 +54,38 @@ const FOTO_URL   = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/files/m
 const EP         = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente';
 const FORM_URL   = 'https://docs.google.com/forms/d/e/1FAIpQLSdL6c1o3rXGHQjRyi0wzSxvAKOZ6XPIZhX6TJHn2cfEnNoiWA/viewform';
 const ABAS: Record<number,string> = {1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
+
+// ─── HELPER CANÔNICO DE FUSO BRASIL (GMT-3) ──────────────────────────────────
+// Sempre usar estas funções — NUNCA new Date() puro nem toLocaleString('en-US')
+function agoraBRT(): Date {
+  // Deno roda em UTC; offset manual garante GMT-3 sem depender de locale
+  const ms = Date.now() - 3 * 3600 * 1000;
+  return new Date(ms); // usar sempre getUTC* neste objeto
+}
+function brtDate(d?: Date): { ano: number; mes: number; dia: number; dow: number; h: number; min: number } {
+  const ref = d ? new Date(d.getTime() - 3 * 3600 * 1000) : agoraBRT();
+  return {
+    ano: ref.getUTCFullYear(),
+    mes: ref.getUTCMonth() + 1,
+    dia: ref.getUTCDate(),
+    dow: ref.getUTCDay(), // 0=Dom,1=Seg,...,6=Sab
+    h:   ref.getUTCHours(),
+    min: ref.getUTCMinutes(),
+  };
+}
+function brtFromISO(iso: string): { ano: number; mes: number; dia: number; dow: number; h: number; min: number } {
+  // Parseia "YYYY-MM-DD" ou "YYYY-MM-DDTHH:MM" assumindo GMT-3
+  const d = new Date(iso.length === 10 ? iso + 'T12:00:00-03:00' : iso.includes('-03') || iso.includes('Z') ? iso : iso + '-03:00');
+  return brtDate(d);
+}
+function formatDataBR(ano: number, mes: number, dia: number): string {
+  return String(dia).padStart(2,'0') + '/' + String(mes).padStart(2,'0') + '/' + String(ano);
+}
+function formatHoraBR(h: number, min: number): string {
+  return String(h).padStart(2,'0') + ':' + String(min).padStart(2,'0');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const DUR = 90; // duração padrão em minutos
 
 // ─── REGRAS DE HORÁRIO POR UNIDADE E DIA DA SEMANA ────────────────────────
@@ -133,25 +165,25 @@ function detectarMassagem(texto:string):string|null{
 }
 
 function extrairData(texto:string):{dia:string|null;mes:number|null;dataISO:string|null}{
-  // Usar timezone Brasil
-  const agora = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+  const _brt = brtDate(); // sempre GMT-3
+  const agora = { getDate:()=>_brt.dia, getMonth:()=>_brt.mes-1, getFullYear:()=>_brt.ano, getDay:()=>_brt.dow };
   const n=texto.toLowerCase();
   let dia:string|null=null,mes:number|null=null,dataISO:string|null=null;
   if(n.includes('amanha')||n.includes('amanhã')){
     const a=new Date(agora);a.setDate(agora.getDate()+1);
     dia=String(a.getDate());mes=a.getMonth()+1;
-    dataISO=`2026-${String(mes).padStart(2,'0')}-${String(a.getDate()).padStart(2,'0')}`;
+    dataISO=`${_brt.ano}-${String(mes).padStart(2,'0')}-${String(a.getDate()).padStart(2,'0')}`;
   }else if(n.includes('hoje')){
     dia=String(agora.getDate());mes=agora.getMonth()+1;
-    dataISO=`2026-${String(mes).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
+    dataISO=`${_brt.ano}-${String(mes).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
   }else{
     const m1=texto.match(/(\d{1,2})[\/\-](\d{1,2})/);
     if(m1){
       const d1=parseInt(m1[1]),m1v=parseInt(m1[2]);
       // Validar: dia 1-31, mes 1-12
-      if(d1>=1&&d1<=31&&m1v>=1&&m1v<=12){dia=m1[1];mes=m1v;dataISO=`2026-${String(mes).padStart(2,'0')}-${m1[1].padStart(2,'0')}`;}
+      if(d1>=1&&d1<=31&&m1v>=1&&m1v<=12){dia=m1[1];mes=m1v;dataISO=`${_brt.ano}-${String(mes).padStart(2,'0')}-${m1[1].padStart(2,'0')}`;}
     }
-    if(!dia){const m2=texto.match(/dia\s+(\d{1,2})/i);if(m2){dia=m2[1];mes=agora.getMonth()+1;dataISO=`2026-${String(mes).padStart(2,'0')}-${m2[1].padStart(2,'0')}`;}}
+    if(!dia){const m2=texto.match(/dia\s+(\d{1,2})/i);if(m2){dia=m2[1];mes=agora.getMonth()+1;dataISO=`${_brt.ano}-${String(mes).padStart(2,'0')}-${m2[1].padStart(2,'0')}`;}}
   }
   return{dia,mes,dataISO};
 }
@@ -173,7 +205,7 @@ function extrairWhatsApp(texto:string):string|null{
 // CORREÇÃO 1: desconto só se data >= 30 dias a partir de HOJE
 function calcularDesconto(dataISO:string|null,valor:number):{valorFinal:number;dias:number;comDesconto:boolean}{
   if(!dataISO)return{valorFinal:valor,dias:0,comDesconto:false};
-  const hoje=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+  const _hoje=brtDate();const hoje={getDate:()=>_hoje.dia,getMonth:()=>_hoje.mes-1,getFullYear:()=>_hoje.ano,getDay:()=>_hoje.dow};
   hoje.setHours(0,0,0,0);
   const dataAlvo=new Date(dataISO+'T00:00:00');
   const dias=Math.floor((dataAlvo.getTime()-hoje.getTime())/86400000);
@@ -202,8 +234,8 @@ async function buscarHorariosLivres(
   const dInt=parseInt(dia);
   const dStr=String(dInt).padStart(2,'0');
   const mesStr=String(mes).padStart(2,'0');
-  const dataISO=`2026-${mesStr}-${dStr}`;
-  const dow=new Date(dataISO+'T12:00:00-03:00').getDay();
+  const dataISO=`${brtDate().ano}-${mesStr}-${dStr}`;
+  const dow=brtFromISO(dataISO+'T12:00:00-03:00').dow; // getDay via BRT helper
   const diaSemana=DIAS[dow];
 
   // ─── BLOQUEIO POR DIA/UNIDADE ────────────────────────────────────────────
@@ -294,12 +326,10 @@ async function buscarHorariosLivres(
   }
 
   // ── FILTRAR slots com menos de 2h de antecedência (agendamento no mesmo dia) ──
-  const agora = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
-  const agoraMins = agora.getHours()*60 + agora.getMinutes();
+  const _agr=brtDate();const agoraMins=_agr.h*60+_agr.min;
   // Verificar se a data solicitada é hoje
   const dataReq = new Date(`${dataISO}T12:00:00-03:00`);
-  const dataHoje = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
-  const ehHoje = dataReq.getDate()===dataHoje.getDate() && dataReq.getMonth()===dataHoje.getMonth();
+  const _dh=brtDate();const ehHoje=brtFromISO(dataISO).dia===_dh.dia&&brtFromISO(dataISO).mes===_dh.mes;
   if(ehHoje){
     const MIN_ANTEC = 120; // 2 horas = 120 minutos
     const livresFiltrados = livres.filter(slot=>{
@@ -424,7 +454,7 @@ async function gravarAgendamento(req:Request,p:{
       const enderecoUnidade=p.unidade.toLowerCase().includes('betim')
         ?'Rua Pernambuco, 341 - Betim, MG'
         :'Rua Tomé de Souza, 503, Sala 208 - Savassi, BH';
-      const ini=new Date(`2026-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00-03:00`);
+      const ini=new Date(`${brtDate().ano}-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00-03:00`);
       const fim=new Date(ini.getTime()+DUR*60000);
       // Criar evento apenas no calendário principal (evitar duplicatas em múltiplas agendas)
       const calEvRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/dionisio872%40gmail.com/events',{
@@ -445,8 +475,8 @@ async function gravarAgendamento(req:Request,p:{
     }
 
     // ── 3. TELEGRAM ───────────────────────────────────────────────────────────
-    const agendaNow = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
-    const agendaData = new Date(`2026-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00`);
+    const _an=brtDate();const agendaNow={getDate:()=>_an.dia,getMonth:()=>_an.mes-1,getFullYear:()=>_an.ano};
+    const agendaData = new Date(`${brtDate().ano}-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00-03:00`); // BRT
     const horasRestantes = Math.round((agendaData.getTime()-agendaNow.getTime())/(1000*60*60));
     const isMesmodia = agendaData.getDate()===agendaNow.getDate() && agendaData.getMonth()===agendaNow.getMonth();
 
@@ -525,7 +555,7 @@ async function gravarAgendamento(req:Request,p:{
       await b.asServiceRole.entities.LeadConversa.create({
         nome:p.nome,whatsapp:p.whatsapp,canal_origem:'chat_web',etapa_funil:'confirmado',
         massagem_interesse:p.servico,unidade_interesse:p.unidade,converteu:true,
-        data_ultima_mensagem:new Date().toISOString(),
+        data_ultima_mensagem:new Date(Date.now()-3*3600*1000).toISOString(), // BRT GMT-3
         observacoes:`${dStr}/${mStr} às ${p.horario} — R$${p.valor} | clienteId:${p.clienteId||''} fp:${p.fingerprint||''}`
       });
     }catch(_){}
@@ -587,28 +617,18 @@ Para Summa Experientia: fale normalmente sobre o protocolo de saúde (PrEP + pre
 Respostas sempre em português.`;
 
 async function chamarIA(msgs:{role:string;content:string}[],ctx?:string):Promise<string>{
-  // Data atual BRT — UTC offset manual (getUTCDay) v23.5
-  const agora = Date.now();
-  const offsetBRT = -3 * 60 * 60 * 1000; // UTC-3
-  const brtMs = agora + offsetBRT;
-  const agr = new Date(brtMs); // this gives wrong UTC time but getUTC* gives BRT values
-  const brtDay   = agr.getUTCDay();    // 0=Dom,...,6=Sab
-  const brtDate  = agr.getUTCDate();
-  const brtMonth = agr.getUTCMonth()+1;
-  const brtYear  = agr.getUTCFullYear();
+  // Data atual BRT — usando helper canônico GMT-3
+  const _cb=brtDate();
   const NOMES_DIA=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
-  // Gerar calendário dos próximos 20 dias com dia da semana correto
-  let calendario='HOJE: '+String(brtDate).padStart(2,'0')+'/'+String(brtMonth).padStart(2,'0')+'/'+brtYear+' = '+NOMES_DIA[brtDay]+'\n';
+  // Calendário 20 dias: cada dia = Date.now() - 3h + i*86400s
+  let calendario='HOJE: '+formatDataBR(_cb.ano,_cb.mes,_cb.dia)+' = '+NOMES_DIA[_cb.dow]+'\n';
   for(let i=1;i<=20;i++){
-    const futMs=brtMs+(i*86400000);
+    const futMs=(Date.now()-3*3600*1000)+(i*86400000);
     const fut=new Date(futMs);
-    const dd=String(fut.getUTCDate()).padStart(2,'0');
-    const mm=String(fut.getUTCMonth()+1).padStart(2,'0');
-    const ano=fut.getUTCFullYear();
-    const dow=fut.getUTCDay();
-    calendario+=dd+'/'+mm+'/'+ano+' = '+NOMES_DIA[dow]+'\n';
+    const _f={ano:fut.getUTCFullYear(),mes:fut.getUTCMonth()+1,dia:fut.getUTCDate(),dow:fut.getUTCDay()};
+    calendario+=formatDataBR(_f.ano,_f.mes,_f.dia)+' = '+NOMES_DIA[_f.dow]+'\n';
   }
-  const SYSTEM_COM_DATA=SYSTEM+'\n\nDATA ATUAL: '+String(brtDate).padStart(2,'0')+'/'+String(brtMonth).padStart(2,'0')+'/'+brtYear+' ('+NOMES_DIA[brtDay]+').\nCALENDÁRIO EXATO — use sempre estes dados para identificar o dia da semana de QUALQUER data mencionada pelo cliente:\n'+calendario;
+  const SYSTEM_COM_DATA=SYSTEM+'\n\nDATA ATUAL: '+formatDataBR(_cb.ano,_cb.mes,_cb.dia)+' ('+NOMES_DIA[_cb.dow]+') — fuso Brasília GMT-3.\nCALENDÁRIO EXATO — use SEMPRE estes dados para qualquer data mencionada pelo cliente. Nunca calcule datas por conta própria:\n'+calendario;
   const sys=ctx?SYSTEM_COM_DATA+'\n\nCONTEXTO DO SISTEMA:\n'+ctx:SYSTEM_COM_DATA;
   const r=await fetch('https://api.openai.com/v1/chat/completions',{
     method:'POST',
@@ -734,7 +754,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 var EP='__EP__',FOTO='__FOTO__',FORM='__FORM__';
 var el=document.getElementById('msgs'),inp=document.getElementById('inp'),sb=document.getElementById('sb'),qk=document.getElementById('qk');
 var busy=false,hist=[];
-function h(){var d=new Date();return('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+function h(){var d=new Date(Date.now()-3*3600*1000);return('0'+d.getUTCHours()).slice(-2)+':'+('0'+d.getUTCMinutes()).slice(-2);} // BRT GMT-3
 function sc(){el.scrollTop=el.scrollHeight;}
 function av(){var i=document.createElement('img');i.className='rav';i.src=FOTO;return i;}
 function delay(t){return Math.min(3500,Math.max(1200,(t||'').length*14));}
@@ -847,13 +867,13 @@ Deno.serve(async(req:Request)=>{
       const{valorFinal,dias,comDesconto}=calcularDesconto(dataF,estado.valor);
 
       // Filtrar livres com hora válida e respeitar 4h de antecedência
-      const agora=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+      const _now=brtDate();const agora={getDate:()=>_now.dia,getMonth:()=>_now.mes-1,getFullYear:()=>_now.ano,getDay:()=>_now.dow,getHours:()=>_now.h,getMinutes:()=>_now.min}; // BRT GMT-3
       const mesStr2=String(mesF).padStart(2,'0');
       const diaStr2=String(parseInt(diaF)).padStart(2,'0');
       const livresValidos=livres.filter(l=>{
         if(l.hora==='(sem hora)')return false;
         const[hh2,mm2]=(l.hora+':00').split(':').map(Number);
-        const dtSlot=new Date(`2026-${mesStr2}-${diaStr2}T${String(hh2).padStart(2,'0')}:${String(mm2).padStart(2,'0')}:00-03:00`);
+        const dtSlot=new Date(`${brtDate().ano}-${mesStr2}-${diaStr2}T${String(hh2).padStart(2,'0')}:${String(mm2).padStart(2,'0')}:00-03:00`);
         return dtSlot.getTime()-agora.getTime()>=4*3600000;
       });
 
