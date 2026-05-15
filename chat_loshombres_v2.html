@@ -143,14 +143,33 @@
 <!-- MODAL PIX -->
 <div class="modal-overlay" id="pixModal">
   <div class="modal-box">
-    <h3>💳 Comprovante PIX</h3>
-    <p>Envie a foto do comprovante de R$30 para confirmar seu agendamento.</p>
-    <img class="modal-img" id="pixPreviewImg" alt="preview">
-    <div id="pixAnaliseStatus" style="font-size:13px;color:#aaa;margin-bottom:12px;display:none;"></div>
-    <div class="modal-btns">
-      <button class="btn-upload-pix" id="btnEscolherFoto">📷 Câmera ou galeria — comprovante</button>
-      <button class="btn-ok-pix" id="btnConfirmarPix">✅ Confirmar pagamento</button>
-      <button class="btn-skip-pix" id="btnSkipPix">Confirmar sem foto (paguei)</button>
+    <h3>💳 Sinal de R$30</h3>
+    <p id="pixModalDesc">Este é o sinal de comprometimento do seu agendamento. Sem ele, o horário não fica reservado.<br><br>Escolha como pagar:</p>
+    <!-- Tela inicial: escolha de método -->
+    <div id="pixMetodoArea">
+      <div class="modal-btns">
+        <button class="btn-upload-pix" id="btnPagarPix" style="background:linear-gradient(135deg,#1DB954,#128C7E);">
+          🏦 Pagar via PIX — enviar comprovante
+        </button>
+        <a class="btn-upload-pix" id="btnPagarCartao"
+           href="https://pag.ae/81NcUNZjq" target="_blank" rel="noopener"
+           style="background:linear-gradient(135deg,#c9a84c,#7a5418);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:12px;color:#fff;font-weight:700;font-size:14px;"
+           onclick="registrarCartao()">
+          💳 Pagar com Cartão de Crédito
+        </a>
+        <div style="font-size:11px;color:#555;text-align:center;margin-top:2px;">PIX: 17.342.740/0001-09 (CNPJ) · R$30,00</div>
+      </div>
+    </div>
+    <!-- Tela PIX: upload comprovante -->
+    <div id="pixUploadArea" style="display:none;">
+      <img class="modal-img" id="pixPreviewImg" alt="preview">
+      <div id="pixAnaliseStatus" style="font-size:13px;color:#aaa;margin-bottom:12px;display:none;"></div>
+      <div id="pixRejeicaoMsg" style="display:none;background:#1a0000;border:1px solid #ef4444;border-radius:10px;padding:12px;font-size:13px;color:#ef4444;margin-bottom:12px;line-height:1.5;"></div>
+      <div class="modal-btns">
+        <button class="btn-upload-pix" id="btnEscolherFoto">📷 Câmera ou galeria</button>
+        <button class="btn-ok-pix" id="btnConfirmarPix">✅ Confirmar pagamento</button>
+        <button class="btn-skip-pix" id="btnVoltarMetodo" style="font-size:13px;">← Voltar / Pagar com cartão</button>
+      </div>
     </div>
     <input type="file" id="fileInput" accept="image/*">
   </div>
@@ -360,7 +379,7 @@ function processarResposta(r) {
     saveState({ sessao: sessao });
 
   // ETAPA PIX — oferecer upload
-  } else if (r.resposta && r.resposta.includes('Sinal de confirmação') && r.resposta.includes('PIX')) {
+  } else if (r.resposta && (r.resposta.includes('Sinal de confirmação') || r.resposta.includes('Sinal de comprometimento') || r.resposta.includes('Quase lá')) && (r.resposta.includes('PIX') || r.resposta.includes('sinal'))) {
     addMsg(r.resposta, 'bot', {
       pixUpload: true,
       dadosAgend: { sessao: sessao }
@@ -374,21 +393,57 @@ function processarResposta(r) {
 // ── MODAL PIX ─────────────────────────────────────────────────────────────────
 function abrirModalPix(dadosAgend) {
   dadosPendentes = dadosAgend;
-  document.getElementById('pixModal').classList.add('open');
+  pixImageUrl = null;
+  // Resetar para tela de escolha de método
+  document.getElementById('pixMetodoArea').style.display = '';
+  document.getElementById('pixUploadArea').style.display = 'none';
   document.getElementById('pixPreviewImg').style.display = 'none';
   document.getElementById('pixAnaliseStatus').style.display = 'none';
+  document.getElementById('pixRejeicaoMsg').style.display = 'none';
   document.getElementById('btnConfirmarPix').style.display = 'none';
-  document.getElementById('btnEscolherFoto').style.display = '';
+  document.getElementById('btnEscolherFoto').disabled = false;
+  document.getElementById('btnEscolherFoto').textContent = '📷 Câmera ou galeria';
+  document.getElementById('pixModal').classList.add('open');
+}
+
+// Escolheu PIX → ir para tela de upload
+document.getElementById('btnPagarPix').onclick = function() {
+  document.getElementById('pixMetodoArea').style.display = 'none';
+  document.getElementById('pixUploadArea').style.display = '';
+};
+
+// Voltar para escolha de método
+document.getElementById('btnVoltarMetodo').onclick = function() {
+  document.getElementById('pixMetodoArea').style.display = '';
+  document.getElementById('pixUploadArea').style.display = 'none';
+  document.getElementById('pixRejeicaoMsg').style.display = 'none';
+  document.getElementById('pixAnaliseStatus').style.display = 'none';
+  document.getElementById('pixPreviewImg').style.display = 'none';
+  document.getElementById('btnConfirmarPix').style.display = 'none';
+  document.getElementById('btnEscolherFoto').disabled = false;
+  document.getElementById('btnEscolherFoto').textContent = '📷 Câmera ou galeria';
   pixImageUrl = null;
+  document.getElementById('fileInput').value = '';
+};
+
+// Registrar escolha cartão (fechar modal e confirmar)
+function registrarCartao() {
+  setTimeout(function() {
+    document.getElementById('pixModal').classList.remove('open');
+    addMsg('Vou pagar com cartão de crédito.', 'me');
+    addMsg(
+      'Link aberto! ✅ Finalize o pagamento de R$30 pelo PagSeguro.
+
+Assim que confirmar, seu horário estará reservado. 🌿
+
+Qualquer dúvida: https://wa.me/5531983244713',
+      'bot'
+    );
+  }, 300);
 }
 
 document.getElementById('btnEscolherFoto').onclick = function() {
   document.getElementById('fileInput').click();
-};
-document.getElementById('btnSkipPix').onclick = function() {
-  document.getElementById('pixModal').classList.remove('open');
-  // Confirmar sem foto
-  enviarMensagem('paguei');
 };
 
 document.getElementById('fileInput').addEventListener('change', function(e) {
@@ -425,14 +480,27 @@ function uploadEAnalisar(file) {
         var r = JSON.parse(xhr.responseText);
         var statusEl = document.getElementById('pixAnaliseStatus');
         if (r.valido) {
-          statusEl.textContent = '✅ Comprovante válido!' + (r.valor ? ' Valor: ' + r.valor : '');
+          statusEl.textContent = '✅ Comprovante válido!' + (r.valor ? ' — Valor: ' + r.valor : '');
           statusEl.style.color = '#22c55e';
+          statusEl.style.display = 'block';
+          document.getElementById('pixRejeicaoMsg').style.display = 'none';
           document.getElementById('btnConfirmarPix').style.display = 'block';
         } else {
-          statusEl.textContent = '⚠️ ' + (r.motivo || 'Não parece um comprovante PIX. Tente outra imagem.');
-          statusEl.style.color = '#ef4444';
+          // Rejeição firme — bloquear e orientar
+          statusEl.style.display = 'none';
+          var rejEl = document.getElementById('pixRejeicaoMsg');
+          var motivo = r.motivo || 'A imagem enviada não parece ser um comprovante PIX.';
+          rejEl.innerHTML =
+            '❌ <strong>Imagem recusada</strong><br><br>' +
+            motivo + '<br><br>' +
+            '📌 Precisa ser o <strong>print do comprovante PIX</strong> de R$30 — ' +
+            'com data, valor e beneficiário visíveis.<br><br>' +
+            'Prefere pagar com cartão? Use o botão abaixo.';
+          rejEl.style.display = 'block';
           document.getElementById('btnEscolherFoto').disabled = false;
-          document.getElementById('btnEscolherFoto').textContent = '📷 Tentar outra foto';
+          document.getElementById('btnEscolherFoto').textContent = '📷 Tentar outro comprovante';
+          document.getElementById('btnConfirmarPix').style.display = 'none';
+          pixImageUrl = null;
         }
         pixImageUrl = r.imageUrl || base64;
       } catch(e2) {
@@ -441,8 +509,12 @@ function uploadEAnalisar(file) {
       }
     };
     xhr.onerror = xhr.ontimeout = function() {
-      document.getElementById('pixAnaliseStatus').textContent = 'Tempo esgotado — confirme manualmente.';
-      document.getElementById('btnConfirmarPix').style.display = 'block';
+      var statusEl2 = document.getElementById('pixAnaliseStatus');
+      statusEl2.textContent = '⚠️ Não foi possível analisar — tente novamente ou use o cartão.';
+      statusEl2.style.color = '#f59e0b';
+      statusEl2.style.display = 'block';
+      document.getElementById('btnEscolherFoto').disabled = false;
+      document.getElementById('btnEscolherFoto').textContent = '📷 Tentar novamente';
     };
     // Enviar base64 como imageUrl (gpt-4o aceita data: URLs)
     xhr.send(JSON.stringify({
