@@ -6,127 +6,103 @@
 <title>Los Hombres — Painel do Sistema</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0a0a0a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; }
+body { background: #0a0a0a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; }
 h1 { color: #c9a84c; font-size: 22px; margin-bottom: 4px; }
 .sub { color: #666; font-size: 13px; margin-bottom: 24px; }
 .section { background: #111; border: 1px solid #222; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
 .section h2 { font-size: 14px; color: #c9a84c; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .badge { background: #1a3a1a; color: #4caf50; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
 .badge.warn { background: #3a2a00; color: #f5a623; }
-.badge.red { background: #3a0000; color: #f44; }
-.row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #1a1a1a; font-size: 13px; }
+.badge.red { background: #3a0000; color: #f55; }
+.badge.blue { background: #0a1a3a; color: #6699ff; }
+.row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #1a1a1a; font-size: 13px; gap: 12px; }
 .row:last-child { border-bottom: none; }
-.label { color: #888; }
+.label { color: #888; flex-shrink: 0; }
 .val { color: #e0e0e0; font-weight: 500; text-align: right; }
 .val a { color: #c9a84c; text-decoration: none; }
 .val a:hover { text-decoration: underline; }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.day-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-.day { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.day-grid { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.day { padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; }
 .day.ok { background: #1a3a1a; color: #4caf50; }
-.day.off { background: #1a1a1a; color: #444; text-decoration: line-through; }
+.day.off { background: #1a1a1a; color: #444; }
 .version { display: inline-block; background: #1a1a2a; color: #6699ff; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-family: monospace; }
-.protect { background: #1a0a0a; border: 1px solid #3a1a1a; border-radius: 8px; padding: 12px; margin-top: 8px; }
-.protect p { font-size: 12px; color: #c97070; line-height: 1.6; }
+.protect-box { background: #0f0808; border: 1px solid #5a1a1a; border-radius: 10px; padding: 16px; margin-top: 0; }
+.protect-box p { font-size: 13px; color: #e0a0a0; line-height: 1.8; }
+.protect-box strong { color: #f5a623; }
 table { width: 100%; font-size: 12px; border-collapse: collapse; }
 th { text-align: left; color: #666; padding: 6px 0; border-bottom: 1px solid #222; font-weight: 500; }
-td { padding: 6px 0; border-bottom: 1px solid #111; color: #ccc; }
-td:last-child { color: #c9a84c; text-align: right; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; display: inline-block; margin-right: 6px; }
-.status-dot.off { background: #555; }
+td { padding: 6px 0; border-bottom: 1px solid #111; color: #ccc; vertical-align: top; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; display: inline-block; margin-right: 6px; flex-shrink: 0; }
+.dot.off { background: #444; }
+.activated { background: #0a1a0a; border: 1px solid #1a5a1a; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #4caf50; }
 </style>
 </head>
 <body>
 
 <h1>🏠 Los Hombres — Painel do Sistema</h1>
-<p class="sub">Visão completa de todos os fluxos configurados · Atualizado em 15/05/2026</p>
+<p class="sub">Visão completa de todos os fluxos · v22 · Atualizado 15/05/2026</p>
 
-<div class="grid">
-  <!-- STATUS GERAL -->
-  <div class="section" style="grid-column:1/-1">
-    <h2>⚡ Status dos Fluxos Principais</h2>
-    <div class="row">
-      <span class="label"><span class="status-dot"></span>Chat Web (chatCliente v22)</span>
-      <span class="val"><span class="badge">ATIVO</span></span>
-    </div>
-    <div class="row">
-      <span class="label"><span class="status-dot"></span>Bot Telegram (@Atendimentoloshombresbot)</span>
-      <span class="val"><span class="badge">ATIVO</span></span>
-    </div>
-    <div class="row">
-      <span class="label"><span class="status-dot"></span>Relatório Expediente (19h diário)</span>
-      <span class="val"><span class="badge">ATIVO</span></span>
-    </div>
-    <div class="row">
-      <span class="label"><span class="status-dot"></span>Validação PIX (OpenAI Vision)</span>
-      <span class="val"><span class="badge">ATIVO</span></span>
-    </div>
-    <div class="row">
-      <span class="label"><span class="status-dot"></span>Google Calendar + Planilha (sincronizados)</span>
-      <span class="val"><span class="badge">ATIVO</span></span>
-    </div>
-    <div class="row">
-      <span class="label"><span class="status-dot"></span>Alertas urgência (agendamento no mesmo dia)</span>
-      <span class="val"><span class="badge">ATIVO</span></span>
-    </div>
-  </div>
+<div class="activated">
+  🔒 <strong>Modo de proteção ATIVO</strong> desde 15/05/2026 às 16:03 — Nenhuma alteração em fluxos críticos sem confirmação de Jonathan.
+</div>
+
+<!-- STATUS -->
+<div class="section">
+  <h2>⚡ Status dos Fluxos</h2>
+  <div class="row"><span class="label"><span class="dot"></span>Chat Web (chatCliente v22)</span><span class="val"><span class="badge">ATIVO</span></span></div>
+  <div class="row"><span class="label"><span class="dot"></span>Bot Telegram (@Atendimentoloshombresbot)</span><span class="val"><span class="badge">ATIVO</span></span></div>
+  <div class="row"><span class="label"><span class="dot"></span>Relatório Expediente (19h diário → grupo JG)</span><span class="val"><span class="badge">ATIVO</span></span></div>
+  <div class="row"><span class="label"><span class="dot"></span>Validação PIX (OpenAI Vision)</span><span class="val"><span class="badge">ATIVO</span></span></div>
+  <div class="row"><span class="label"><span class="dot"></span>Google Calendar + Planilha sincronizados</span><span class="val"><span class="badge">ATIVO</span></span></div>
+  <div class="row"><span class="label"><span class="dot"></span>Alertas urgência (agendamento no mesmo dia)</span><span class="val"><span class="badge">ATIVO</span></span></div>
+  <div class="row"><span class="label"><span class="dot"></span>Bloqueio domingo + dias por unidade</span><span class="val"><span class="badge">ATIVO</span></span></div>
+  <div class="row"><span class="label"><span class="dot"></span>Desconto 20% automático (30+ dias)</span><span class="val"><span class="badge">ATIVO</span></span></div>
+  <div class="row"><span class="label"><span class="dot"></span>Histórico chat (localStorage 6h)</span><span class="val"><span class="badge">ATIVO</span></span></div>
 </div>
 
 <!-- CHAT WEB -->
 <div class="section">
   <h2>💬 Chat Web — chatCliente <span class="version">v22</span></h2>
-  <div class="row"><span class="label">URL do chat</span><span class="val"><a href="https://dionisio872-hue.github.io/loshombres-chat/" target="_blank">loshombres-chat (GitHub Pages)</a></span></div>
-  <div class="row"><span class="label">Função backend</span><span class="val"><a href="https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente" target="_blank">chatCliente</a></span></div>
-  <div class="row"><span class="label">Modelo IA</span><span class="val">GPT-4o · temperature 0.7 · max 350 tokens</span></div>
-  <div class="row"><span class="label">Tom / Personalidade</span><span class="val">Jonathan direto — sem frases de efeito, 2-3 frases por resposta</span></div>
-  <div class="row"><span class="label">Histórico persistente</span><span class="val">localStorage · sessão 6h</span></div>
-  <div class="row"><span class="label">Antecedência mínima</span><span class="val">2h (mesmo dia) · 4h (filtro de horários livres)</span></div>
-  <div class="row"><span class="label">Desconto automático</span><span class="val">20% para datas com 30+ dias de antecedência</span></div>
-  <div class="row"><span class="label">Mídia por massagem</span><span class="val">Áudio MP3 + link vídeo enviados automaticamente</span></div>
-  <div class="row"><span class="label">Pagamento</span><span class="val">Modal PIX (QR Code + linha digitável) ou Cartão (PagSeguro)</span></div>
-  <div class="row"><span class="label">Validação PIX</span><span class="val">OpenAI Vision verifica destinatário + status Efetuado + data</span></div>
+  <div class="row"><span class="label">URL permanente</span><span class="val"><a href="https://dionisio872-hue.github.io/loshombres-chat/" target="_blank">loshombres-chat (GitHub Pages)</a></span></div>
+  <div class="row"><span class="label">Backend</span><span class="val"><a href="https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente" target="_blank">chatCliente (Base44)</a></span></div>
+  <div class="row"><span class="label">IA</span><span class="val">GPT-4o · temp 0.7 · max 350 tokens</span></div>
+  <div class="row"><span class="label">Tom</span><span class="val">Jonathan direto — sem frases de efeito, máx 2-3 frases</span></div>
+  <div class="row"><span class="label">Antecedência mínima</span><span class="val">2h (mesmo dia) · 4h (filtro horários livres)</span></div>
+  <div class="row"><span class="label">Desconto</span><span class="val">20% automático para 30+ dias de antecedência</span></div>
+  <div class="row"><span class="label">Mídia por massagem</span><span class="val">Áudio MP3 + link vídeo automáticos ao mencionar massagem</span></div>
+  <div class="row"><span class="label">Pagamento PIX</span><span class="val">QR Code dinâmico + linha digitável + validação Vision</span></div>
+  <div class="row"><span class="label">Validação PIX</span><span class="val">Verifica destinatário + status "Efetuado" + data</span></div>
+  <div class="row"><span class="label">Gravação</span><span class="val">Planilha (B-I) + Calendar + Gmail + Telegram + LeadConversa</span></div>
 </div>
 
-<!-- DIAS DE ATENDIMENTO -->
+<!-- DIAS -->
 <div class="section">
-  <h2>📅 Dias de Atendimento (bloqueio na lógica do código)</h2>
+  <h2>📅 Dias de Atendimento — bloqueio na lógica do código</h2>
   <div class="row">
     <span class="label">Betim</span>
-    <span class="val">
-      <div class="day-grid" style="justify-content:flex-end">
-        <span class="day off">Dom</span>
-        <span class="day off">Seg</span>
-        <span class="day ok">Ter ✓</span>
-        <span class="day off">Qua</span>
-        <span class="day ok">Qui ✓</span>
-        <span class="day off">Sex</span>
-        <span class="day off">Sab</span>
-      </div>
-    </span>
+    <div class="day-grid">
+      <span class="day off">Dom</span><span class="day off">Seg</span><span class="day ok">Ter ✓</span>
+      <span class="day off">Qua</span><span class="day ok">Qui ✓</span><span class="day off">Sex</span><span class="day off">Sab</span>
+    </div>
   </div>
   <div class="row">
     <span class="label">Savassi</span>
-    <span class="val">
-      <div class="day-grid" style="justify-content:flex-end">
-        <span class="day off">Dom</span>
-        <span class="day ok">Seg ✓</span>
-        <span class="day off">Ter</span>
-        <span class="day off">Qua</span>
-        <span class="day ok">Qui ✓</span>
-        <span class="day ok">Sex ✓</span>
-        <span class="day ok">Sab ✓</span>
-      </div>
-    </span>
+    <div class="day-grid">
+      <span class="day off">Dom</span><span class="day ok">Seg ✓</span><span class="day off">Ter</span>
+      <span class="day off">Qua</span><span class="day ok">Qui ✓</span><span class="day ok">Sex ✓</span><span class="day ok">Sab ✓</span>
+    </div>
   </div>
-  <div class="row"><span class="label">Domingo</span><span class="val"><span class="badge red">BLOQUEADO em todas as unidades</span></span></div>
+  <div class="row"><span class="label">Domingo</span><span class="val"><span class="badge red">⛔ BLOQUEADO — todas as unidades</span></span></div>
 </div>
 
-<!-- DADOS TÉCNICOS -->
+<!-- CONFIGURAÇÃO TÉCNICA -->
 <div class="section">
   <h2>⚙️ Configuração Técnica</h2>
-  <div class="row"><span class="label">Google Calendar</span><span class="val">dionisio872@gmail.com (sempre explícito)</span></div>
-  <div class="row"><span class="label">Planilha</span><span class="val"><a href="https://docs.google.com/spreadsheets/d/1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk/edit" target="_blank">Ver planilha</a></span></div>
-  <div class="row"><span class="label">Grupo Telegram</span><span class="val">Gestão JG · ID: -1003866193031</span></div>
+  <div class="row"><span class="label">Google Calendar</span><span class="val">dionisio872@gmail.com (sempre ID explícito)</span></div>
+  <div class="row"><span class="label">Planilha</span><span class="val"><a href="https://docs.google.com/spreadsheets/d/1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk/edit" target="_blank">Abrir planilha</a></span></div>
+  <div class="row"><span class="label">Colunas planilha</span><span class="val">A=Dia · B=Nome · C=Tel · D=Serviço · E=Obs · F=Form · G=Hora · H=Status · I=Valor</span></div>
+  <div class="row"><span class="label">Grupo Telegram</span><span class="val">Gestão JG · -1003866193031</span></div>
   <div class="row"><span class="label">PIX sinal</span><span class="val">R$30 · CNPJ 17342740000109 (JG Espaço Multserviços)</span></div>
   <div class="row"><span class="label">Chave PIX</span><span class="val">42d583b1-66d3-41fd-a4cc-346996931548 (Nubank)</span></div>
   <div class="row"><span class="label">Cron-job.org</span><span class="val">loshombresestudiospa1@gmail.com · chave: loshombres2026</span></div>
@@ -138,59 +114,60 @@ td:last-child { color: #c9a84c; text-align: right; }
   <h2>💆 Massagens e Preços</h2>
   <table>
     <tr><th>Massagem</th><th style="text-align:right">Valor</th></tr>
-    <tr><td>Relaxante Sensual</td><td>R$320</td></tr>
-    <tr><td>Tântrica Experience</td><td>R$400</td></tr>
-    <tr><td>Quick Massage</td><td>R$250</td></tr>
-    <tr><td>Miofascial</td><td>R$320</td></tr>
-    <tr><td>Nuru Summa</td><td>R$499</td></tr>
-    <tr><td>Tântrica Mútua</td><td>R$499</td></tr>
-    <tr><td>Blind Experience</td><td>R$499</td></tr>
-    <tr><td>Massagem dos Deuses</td><td>R$750</td></tr>
-    <tr><td>HOT</td><td>R$200</td></tr>
-    <tr><td>Tie and Teaser (BDSM)</td><td>R$450</td></tr>
-    <tr><td>Hidrotantra</td><td>R$450</td></tr>
-    <tr><td>Burn</td><td>R$399</td></tr>
-    <tr><td>Summa Experientia ⚠️ (única com interação íntima)</td><td>R$1.350</td></tr>
-    <tr><td>Massagem 4 Mãos</td><td>R$650</td></tr>
-    <tr><td>Podoloterapia</td><td>R$449</td></tr>
-    <tr><td>Tântrica Casal</td><td>R$640</td></tr>
-    <tr><td>Relaxante Sensual Casal</td><td>R$600</td></tr>
-    <tr><td>Nuru Casal</td><td>R$650</td></tr>
+    <tr><td>Relaxante Sensual</td><td style="text-align:right">R$320</td></tr>
+    <tr><td>Tântrica Experience</td><td style="text-align:right">R$400</td></tr>
+    <tr><td>Quick Massage</td><td style="text-align:right">R$250</td></tr>
+    <tr><td>Miofascial</td><td style="text-align:right">R$320</td></tr>
+    <tr><td>Nuru Summa</td><td style="text-align:right">R$499</td></tr>
+    <tr><td>Tântrica Mútua</td><td style="text-align:right">R$499</td></tr>
+    <tr><td>Blind Experience</td><td style="text-align:right">R$499</td></tr>
+    <tr><td>Massagem dos Deuses</td><td style="text-align:right">R$750</td></tr>
+    <tr><td>HOT</td><td style="text-align:right">R$200</td></tr>
+    <tr><td>Tie and Teaser (BDSM)</td><td style="text-align:right">R$450</td></tr>
+    <tr><td>Hidrotantra</td><td style="text-align:right">R$450</td></tr>
+    <tr><td>Burn</td><td style="text-align:right">R$399</td></tr>
+    <tr><td>Summa Experientia ⚠️ única com interação íntima (PrEP + preservativo)</td><td style="text-align:right">R$1.350</td></tr>
+    <tr><td>Massagem 4 Mãos</td><td style="text-align:right">R$650</td></tr>
+    <tr><td>Podoloterapia</td><td style="text-align:right">R$449</td></tr>
+    <tr><td>Tântrica Casal</td><td style="text-align:right">R$640</td></tr>
+    <tr><td>Relaxante Sensual Casal</td><td style="text-align:right">R$600</td></tr>
+    <tr><td>Nuru Casal</td><td style="text-align:right">R$650</td></tr>
   </table>
-  <p style="font-size:11px;color:#666;margin-top:10px">Desconto 20% automático para agendamentos com 30+ dias de antecedência</p>
+  <p style="font-size:11px;color:#555;margin-top:10px">Desconto 20% automático para 30+ dias de antecedência</p>
 </div>
 
-<!-- HISTÓRICO VERSÕES -->
+<!-- HISTÓRICO -->
 <div class="section">
   <h2>📝 Histórico de Versões</h2>
   <table>
     <tr><th>Versão</th><th>Data</th><th>Mudança</th></tr>
-    <tr><td><span class="version">v22</span></td><td style="color:#888;text-align:left">15/05/26</td><td style="text-align:left;color:#ccc">Bloqueio hard por dia/unidade. Domingo bloqueado todas unidades.</td></tr>
-    <tr><td><span class="version">v21</span></td><td style="color:#888;text-align:left">15/05/26</td><td style="text-align:left;color:#ccc">SYSTEM humanizado — tom direto Jonathan, sem frases de efeito</td></tr>
-    <tr><td><span class="version">v20</span></td><td style="color:#888;text-align:left">15/05/26</td><td style="text-align:left;color:#ccc">SYSTEM prompt adicionado explicitamente ao código</td></tr>
-    <tr><td><span class="version">v19</span></td><td style="color:#888;text-align:left">15/05/26</td><td style="text-align:left;color:#ccc">PIX validation OpenAI Vision, localStorage, modal pagamento</td></tr>
-    <tr><td><span class="version">v15</span></td><td style="color:#888;text-align:left">14/05/26</td><td style="text-align:left;color:#ccc">Fix tokens OAuth, horários por dia/unidade, gpt-4o</td></tr>
+    <tr><td><span class="version">v22</span></td><td style="color:#888;white-space:nowrap;padding-right:12px">15/05/26</td><td style="color:#ccc">Bloqueio hard por dia/unidade na lógica. Domingo bloqueado todas unidades. Tom humanizado.</td></tr>
+    <tr><td><span class="version">v21</span></td><td style="color:#888;white-space:nowrap;padding-right:12px">15/05/26</td><td style="color:#ccc">SYSTEM humanizado — Jonathan direto, sem frases de efeito</td></tr>
+    <tr><td><span class="version">v20</span></td><td style="color:#888;white-space:nowrap;padding-right:12px">15/05/26</td><td style="color:#ccc">SYSTEM prompt adicionado explicitamente</td></tr>
+    <tr><td><span class="version">v19</span></td><td style="color:#888;white-space:nowrap;padding-right:12px">15/05/26</td><td style="color:#ccc">PIX validation OpenAI Vision, localStorage, modal pagamento</td></tr>
+    <tr><td><span class="version">v15</span></td><td style="color:#888;white-space:nowrap;padding-right:12px">14/05/26</td><td style="color:#ccc">Fix tokens OAuth, horários por dia/unidade, gpt-4o</td></tr>
   </table>
 </div>
 
 <!-- PROTEÇÃO -->
 <div class="section">
-  <h2>🔒 Proteção de Fluxos</h2>
-  <div class="protect">
+  <h2>🔒 Regras de Proteção — Ativas desde 15/05/2026</h2>
+  <div class="protect-box">
     <p>
-      <strong style="color:#f5a623">Regra ativa:</strong> Qualquer alteração nos fluxos críticos abaixo exige confirmação explícita de Jonathan antes do deploy.<br><br>
-      <strong>Fluxos protegidos:</strong> chatCliente · telegramBot · cronRelatorioExpediente · gravarAgendamento<br><br>
-      <strong>O que é verificado antes de qualquer deploy:</strong><br>
-      ✓ Mostrar ao Jonathan o que vai mudar<br>
-      ✓ Pedir confirmação ("Tem certeza?")<br>
-      ✓ Oferecer visualização do estado atual<br>
-      ✓ Testar após deploy e confirmar funcionamento<br>
-      ✓ Registrar a nova versão no histórico
+      <strong>REGRA MÁXIMA:</strong> Nunca apagar, sobrescrever ou quebrar o que já foi construído.<br>
+      Sempre melhorar e complementar — nunca destruir para recriar.<br><br>
+      <strong>Antes de qualquer deploy em fluxo crítico:</strong><br>
+      ① Mostrar exatamente o que vai mudar<br>
+      ② Avisar todos os possíveis efeitos em cascata<br>
+      ③ Aguardar confirmação explícita de Jonathan<br>
+      ④ Fazer apenas a mudança específica (cirúrgica)<br>
+      ⑤ Testar e registrar a nova versão aqui<br><br>
+      <strong>Fluxos protegidos:</strong> chatCliente · telegramBot · cronRelatorioExpediente · gravarAgendamento · analisarPix · crons ativos
     </p>
   </div>
 </div>
 
-<p style="text-align:center;color:#333;font-size:11px;margin-top:20px">Los Hombres Sistema · 15/05/2026</p>
+<p style="text-align:center;color:#333;font-size:11px;margin-top:20px;padding-bottom:20px">Los Hombres Sistema · Proteção ativa desde 15/05/2026 16:03</p>
 
 </body>
 </html>
