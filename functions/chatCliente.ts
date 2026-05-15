@@ -1,6 +1,6 @@
 /**
- * chatCliente v14 — Los Hombres
- * v14: fix planilha UPDATE + sem RG/banho + gpt-4o + temperature 0.85
+ * chatCliente v15 — Los Hombres
+ * v15: fix tokens OAuth + horários corretos + fluxo rigoroso + sem RG/banho + gpt-4o + temperature 0.85
  * 1. Desconto 20% correto: só se data >= 30 dias a partir de HOJE
  * 2. Horários por unidade/dia da semana:
  *    - Betim: terça a partir das 14h, quinta a partir das 16h (sem outros dias)
@@ -9,8 +9,42 @@
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || '';
-const BOT_TOKEN  = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || '';
+const OPENAI_KEY   = Deno.env.get('OPENAI_API_KEY') || '';
+const BOT_TOKEN    = Deno.env.get('TELEGRAM_CLIENT_BOT_TOKEN') || '';
+const SVC_TOKEN    = Deno.env.get('BASE44_SERVICE_TOKEN') || '';
+
+// Cria request autenticado com service token para uso em funções chamadas externamente
+function makeAuthRequest(originalReq: Request): Request {
+  const headers = new Headers(originalReq.headers);
+  if (!headers.get('Authorization') && SVC_TOKEN) {
+    headers.set('Authorization', `Bearer ${SVC_TOKEN}`);
+  }
+  return new Request(originalReq.url, {
+    method: originalReq.method,
+    headers,
+    body: null,
+  });
+}
+
+async function getGoogleTokens(req: Request): Promise<{sheetsToken:string;calToken:string;gmailToken:string}> {
+  let sheetsToken='', calToken='', gmailToken='';
+  try {
+    const authReq = makeAuthRequest(req);
+    const b = createClientFromRequest(authReq);
+    const [s, c, g] = await Promise.all([
+      b.asServiceRole.connectors.getConnection('googlesheets').catch(() => ({accessToken:''})),
+      b.asServiceRole.connectors.getConnection('googlecalendar').catch(() => ({accessToken:''})),
+      b.asServiceRole.connectors.getConnection('gmail').catch(() => ({accessToken:''})),
+    ]);
+    sheetsToken = s.accessToken || '';
+    calToken    = c.accessToken || '';
+    gmailToken  = g.accessToken || '';
+    console.log('Tokens OK — sheets:', sheetsToken.length>10, 'cal:', calToken.length>10, 'gmail:', gmailToken.length>10);
+  } catch(e:any) {
+    console.error('getGoogleTokens ERRO:', e.message);
+  }
+  return { sheetsToken, calToken, gmailToken };
+}
 const ADMIN_ID   = '7200577395';
 const SHEET_ID   = '1XHF_Jw2dPtw9w8b5Eae3EmPK1CyBepjOyZ7JKWZd7Uk';
 const DEST_EMAIL = 'dionisio872@gmail.com';
@@ -169,12 +203,7 @@ async function buscarHorariosLivres(req:Request,dia:string,mes:number,unidade:st
     return{livres:[],ocupados:{},diaSemana,temAtendimento:false};
   }
 
-  let sheetsToken='',calToken='';
-  try{
-    const b=createClientFromRequest(req);
-    sheetsToken=(await b.asServiceRole.connectors.getConnection('googlesheets')).accessToken||'';
-    calToken=(await b.asServiceRole.connectors.getConnection('googlecalendar')).accessToken||'';
-  }catch(e:any){console.error('tokens:',e.message);}
+  const {sheetsToken, calToken} = await getGoogleTokens(req);
 
   const aba=ABAS[mes]||'MAI';
   const ocupados:Record<string,string>={};
@@ -252,13 +281,7 @@ async function gravarAgendamento(req:Request,p:{
   nome:string;whatsapp:string;servico:string;unidade:string;
   dia:string;mes:number;horario:string;valor:number;
 }):Promise<{ok:boolean;erro?:string}>{
-  let sheetsToken='',calToken='',gmailToken='';
-  try{
-    const b=createClientFromRequest(req);
-    sheetsToken=(await b.asServiceRole.connectors.getConnection('googlesheets')).accessToken||'';
-    calToken=(await b.asServiceRole.connectors.getConnection('googlecalendar')).accessToken||'';
-    gmailToken=(await b.asServiceRole.connectors.getConnection('gmail')).accessToken||'';
-  }catch(e:any){console.error('tokens gravar:',e.message);}
+  const {sheetsToken, calToken, gmailToken} = await getGoogleTokens(req);
 
   const aba=ABAS[p.mes]||'MAI';
   const dStr=String(parseInt(p.dia)).padStart(2,'0');
@@ -421,19 +444,25 @@ Somente para datas com 30+ dias a partir de hoje. Para datas mais próximas, nã
 ENDEREÇOS:
 Savassi: Rua Tomé de Souza, 503, Sala 208. Betim: Rua Pernambuco, 341, Bairro Nossa Sra. das Graças.
 
-HORÁRIOS:
-Betim: Terças a partir das 14h e Quintas a partir das 16h. Outros dias não atendo lá.
-Savassi: Quintas, Sextas e Sábados a partir das 18h. Domingos e Segundas a partir das 19h. Outros dias não atendo lá.
-Se o dia não tiver horário na unidade escolhida, informe com naturalidade e ofereça os dias disponíveis.
+HORÁRIOS (USE SEMPRE O CONTEXTO — NUNCA INVENTE):
+Betim: Terças (14h, 15:30, 17h, 18:30) e Quintas (16h, 17:30, 19h). NUNCA 21h em Betim. Outros dias: sem atendimento.
+Savassi: Quintas/Sextas/Sábados (18h, 19:30, 21h). Domingos/Segundas (19h, 20:30). Outros dias: sem atendimento.
+REGRA CRÍTICA: apresente APENAS os horários que aparecerem em "HORARIOS LIVRES" no CONTEXTO. Se não aparecerem, não há disponibilidade.
 
-FLUXO DE AGENDAMENTO (siga sem pular etapas, mas com linguagem humana):
-1. Entender qual experiência o cliente busca
-2. Perguntar a unidade de preferência: Savassi ou Betim
-3. Perguntar a data desejada
-4. Usar SOMENTE os HORÁRIOS LIVRES do CONTEXTO. Nunca invente horários.
-5. Cliente escolhe horário: informar o valor correto (com ou sem desconto, conforme CONTEXTO) e pedir o sinal de R$30 via PIX, CNPJ 17342740000109 (JG Espaço Multserviços).
-6. Cliente confirma pagamento: pedir nome completo e número de WhatsApp para finalizar o registro.
-7. Quando CONTEXTO indicar AGENDAMENTO GRAVADO: confirme com calma que está tudo registrado, o horário está garantido. Diga que em breve enviará mais informações pelo WhatsApp informado.`;
+FLUXO DE AGENDAMENTO (nunca pule etapas, nunca confirme sem ter todos os dados):
+1. Entender qual experiência o cliente busca — confirmar o nome EXATO da massagem antes de avançar
+2. Perguntar unidade: Savassi ou Betim (aguardar resposta)
+3. Perguntar data desejada (aguardar resposta)
+4. Consultar CONTEXTO e apresentar SOMENTE os horários de "HORARIOS LIVRES". NUNCA sugira horário que não esteja listado. Se vazio, não há disponibilidade naquele dia.
+5. Cliente escolhe horário: confirmar massagem + unidade + data + hora + valor. Pedir sinal R$30 via PIX CNPJ 17342740000109.
+6. Após "paguei"/"feito": pedir NOME COMPLETO e WHATSAPP para registrar.
+7. AGENDAMENTO GRAVADO no CONTEXTO: confirme brevemente, diga que entrará em contato pelo WhatsApp.
+
+ERROS GRAVES PROIBIDOS:
+- Sugerir horário diferente do que está em HORARIOS LIVRES
+- Confirmar agendamento antes de receber nome e WhatsApp do cliente
+- Usar nome errado de massagem (não existe "massagem sensual", é "Relaxante Sensual")
+- Informar valor incorreto`;
 
 async function chamarIA(msgs:{role:string;content:string}[],ctx?:string):Promise<string>{
   const sys=ctx?SYSTEM+'\n\nCONTEXTO DO SISTEMA:\n'+ctx:SYSTEM;
