@@ -1,5 +1,5 @@
 /**
- * chatCliente v24.0 — FUSO BRASÍLIA GMT-3 CANÔNICO | sem hardcode 2026 | formatDataBR DD/MM/AAAA — Los Hombres
+ * chatCliente v24.1 — PIX antes de gravar + unidade fix + modal persist — FUSO BRASÍLIA GMT-3 CANÔNICO | sem hardcode 2026 | formatDataBR DD/MM/AAAA — Los Hombres
  * v15: fix tokens OAuth + horários corretos + fluxo rigoroso + sem RG/banho + gpt-4o + temperature 0.85
  * 1. Desconto 20% correto: só se data >= 30 dias a partir de HOJE
  * 2. Horários por unidade/dia da semana:
@@ -55,6 +55,7 @@ const EP         = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functio
 const FORM_URL   = 'https://docs.google.com/forms/d/e/1FAIpQLSdL6c1o3rXGHQjRyi0wzSxvAKOZ6XPIZhX6TJHn2cfEnNoiWA/viewform';
 const ABAS: Record<number,string> = {1:'JAN',2:'FEV',3:'MAR',4:'ABRI',5:'MAI',6:'JUN',7:'JUL',8:'AGO',9:'SET',10:'OUT',11:'NOV',12:'DEZ'};
 
+// BUILD_1778879743
 // ─── HELPER CANÔNICO DE FUSO BRASIL (GMT-3) ──────────────────────────────────
 // Sempre usar estas funções — NUNCA new Date() puro nem toLocaleString('en-US')
 function agoraBRT(): Date {
@@ -644,7 +645,10 @@ function analisarHistorico(hist:{role:string;content:string}[]){
   const txt=hist.map(m=>m.content||'').join(' ');
   const n=norm(txt);
   const massagem=detectarMassagem(txt);
-  const unidade=n.includes('betim')?'Betim':n.includes('savassi')?'Savassi':null;
+  // Detectar unidade APENAS nas msgs do usuário (evitar contaminação por respostas da IA)
+  const txtUser=hist.filter(m=>m.role==='user').map(m=>m.content||'').join(' ');
+  const nUser=norm(txtUser);
+  const unidade=nUser.includes('savassi')?'Savassi':nUser.includes('betim')?'Betim':null;
   let dia:string|null=null,mes:number|null=null,dataISO:string|null=null,horario:string|null=null;
   for(const m of hist){
     const d=extrairData(m.content||'');
@@ -662,7 +666,7 @@ function analisarHistorico(hist:{role:string;content:string}[]){
     m.role==='user'&&/paguei|feito|fiz|transferi|enviado|mandei|pago|ja fiz|ok|done/.test(norm(m.content||''))
   );
   const botPediuContato=hist.some(m=>
-    m.role==='assistant'&&/nome completo|whatsapp|numero de contato/.test(norm(m.content||''))
+    m.role==='assistant'&&/nome completo|whatsapp|numero|contato|seu nome/.test(norm(m.content||''))
   );
 
   let whatsapp:string|null=null,nome:string|null=null;
@@ -889,13 +893,17 @@ UNIDADE: ${estado.unidade||'aguardar confirmação'}`;
     }catch(e:any){console.error(e.message);}
   }
 
-  // GRAVAR se bot pediu contato e cliente respondeu com whatsapp
-  const wppMsg=extrairWhatsApp(mensagem);
-  if(estado.botPediuContato&&wppMsg&&estado.massagem&&estado.unidade&&estado.dia&&estado.mes&&estado.horario){
-    const semNum=mensagem.replace(/[\d\s\-\(\)\+]/g,' ').replace(/\s+/g,' ').trim();
-    const nomeF=semNum.length>3?semNum:(estado.nome||'Cliente');
+  // GRAVAR: apenas quando pixConfirmado=true (enviado pelo frontend após validar comprovante)
+  // OU quando mensagem contém whatsapp + bot pediu contato + flag pixConfirmado
+  const pixConfirmado=body.pixConfirmado===true;
+  const nomePayload=String(body.nomeCliente||'').trim();
+  const wppPayload=String(body.whatsapp||'').replace(/\D/g,'');
+
+  if(pixConfirmado&&nomePayload&&wppPayload&&estado.massagem&&estado.unidade&&estado.dia&&estado.mes&&estado.horario){
+    const nomeF=nomePayload||estado.nome||'Cliente';
+    const wppF=`(${wppPayload.slice(0,2)}) ${wppPayload.slice(2,7)}-${wppPayload.slice(7)}`;
     const res=await gravarAgendamento(req,{
-      nome:nomeF,whatsapp:wppMsg,
+      nome:nomeF,whatsapp:wppF,
       servico:estado.massagem.split(' ').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' '),
       unidade:estado.unidade,dia:estado.dia,mes:estado.mes,horario:estado.horario,valor:estado.valor,
       clienteId:clienteIdWeb,fingerprint:fingerprintWeb
@@ -903,12 +911,29 @@ UNIDADE: ${estado.unidade||'aguardar confirmação'}`;
     if(res.ok){
       const ds=String(parseInt(estado.dia)).padStart(2,'0');
       const ms=String(estado.mes).padStart(2,'0');
-      confirmacao={nome:nomeF,whatsapp:wppMsg,
+      confirmacao={nome:nomeF,whatsapp:wppF,
         servico:estado.massagem.split(' ').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' '),
         unidade:estado.unidade,data:`${ds}/${ms}`,horario:estado.horario,valor:String(estado.valor)};
-      ctx=(ctx?ctx+'\n\n':'')+`AGENDAMENTO GRAVADO COM SUCESSO na planilha e no Calendar. Confirme ao cliente: está tudo registrado, o link do formulário aparece abaixo. Diga que o horário está garantido e que entrará em contato pelo WhatsApp informado.`;
+      ctx=(ctx?ctx+'\n\n':'')+`AGENDAMENTO GRAVADO COM SUCESSO após confirmação de PIX. Confirme ao cliente: horário reservado, formulário abaixo. Diga que entrará em contato pelo WhatsApp.`;
     }else{
-      ctx=(ctx?ctx+'\n\n':'')+`ERRO ao gravar agendamento: ${res.erro}. Peça ao cliente para entrar em contato pelo WhatsApp (31) 98324-4713 para finalizar.`;
+      ctx=(ctx?ctx+'\n\n':'')+`ERRO ao gravar: ${res.erro}. Peça WhatsApp (31) 98324-4713.`;
+    }
+  } else if(!pixConfirmado){
+    // Detectar se temos todos os dados para acionar PIX — sinalizar para o frontend
+    const wppMsg=extrairWhatsApp(mensagem);
+    if(estado.botPediuContato&&wppMsg&&estado.massagem&&estado.unidade&&estado.dia&&estado.mes&&estado.horario){
+      const semNum=mensagem.replace(/[\d\s\-\(\)\+]/g,' ').replace(/\s+/g,' ').trim();
+      const nomeF=semNum.length>3?semNum:(estado.nome||'Cliente');
+      // Não grava ainda — sinaliza para frontend abrir modal PIX
+      confirmacao={
+        nome:nomeF,whatsapp:wppMsg,
+        servico:estado.massagem.split(' ').map((w:string)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' '),
+        unidade:estado.unidade,
+        data:`${String(parseInt(estado.dia)).padStart(2,'0')}/${String(estado.mes).padStart(2,'0')}`,
+        horario:estado.horario,valor:String(estado.valor),
+        aguardandoPix:'true'  // sinaliza: abrir modal PIX, não finalizou ainda
+      };
+      ctx=(ctx?ctx+'\n\n':'')+`DADOS DO CLIENTE COLETADOS. Agora diga ao cliente: "Para garantir seu horário, preciso do sinal de R$30 via PIX. Vou abrir a tela de pagamento pra você."`;
     }
   }
 
