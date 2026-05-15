@@ -2,8 +2,16 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Los Hombres — Atendimento</title>
+  <!-- PWA: modo tela cheia no iOS e Android -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Los Hombres">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="https://www.loshombres.com.br/imagens/logo.png">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -13,6 +21,8 @@
       --bot:#0f0f22;--tg:#229ED9;--green:#22c55e;--red:#ef4444;
     }
     html,body{height:100%;min-height:100%;background:var(--bg);color:var(--text);
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden;}
     .wrap{display:flex;flex-direction:column;height:100vh;max-width:640px;margin:0 auto}
 
@@ -789,11 +799,13 @@ sbtnEl.addEventListener('click', enviar);
 // ── INIT — restaurar histórico, reconhecer cliente, boas-vindas ───────────────
 (function init() {
   var state = loadState();
+  // histIA em memória já foi restaurado antes deste init
   var temHistorico = state && state.historico && state.historico.length > 0;
+  var temHistIA    = histIA && histIA.length > 0; // conversa de IA em andamento
   var temCliente   = state && (state.nomeCliente || state.whatsappCliente);
 
   if (temHistorico) {
-    // Restaurar conversa salva
+    // Restaurar bolhas visuais da conversa
     state.historico.forEach(function(h) {
       if (h.txt && h.tipo) addMsg(h.txt, h.tipo);
     });
@@ -806,8 +818,9 @@ sbtnEl.addEventListener('click', enviar);
         ]
       });
     }
+    // NÃO mostrar boas-vindas — conversa já está em andamento
   } else if (temCliente) {
-    // Cliente reconhecido — saudação personalizada
+    // Cliente reconhecido mas sem bolhas visuais — saudação personalizada
     setTimeout(function() {
       var saudacao = montarSaudacaoInicial();
       addMsg(saudacao || 'Olá! Seja muito bem-vindo ao Estúdio Los Hombres. 🌿\n\nAqui você pode simplesmente existir e receber.\n\nQual experiência você está buscando hoje?', 'bot');
