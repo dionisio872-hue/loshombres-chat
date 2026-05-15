@@ -200,10 +200,12 @@ async function buscarHorariosLivres(
   const dow=new Date(dataISO+'T12:00:00-03:00').getDay();
   const diaSemana=DIAS[dow];
 
-  const{sheetsToken}=await getGoogleTokens(req);
+  const{sheetsToken,calToken}=await getGoogleTokens(req);
   if(!sheetsToken) return{livres:[],ocupados:[],diaSemana};
 
   const aba=ABAS[mes]||'MAI';
+
+  // ─── 1. LER PLANILHA ────────────────────────────────────────────────────
   const res=await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:H500`,
     {headers:{Authorization:`Bearer ${sheetsToken}`}}
@@ -216,33 +218,60 @@ async function buscarHorariosLivres(
   for(let i=0;i<rows.length;i++){
     const r=[...rows[i]];while(r.length<8)r.push('');
     const colA=(r[0]||'').trim();
-    const colG=(r[6]||'').trim(); // HORA
-    const colB=(r[1]||'').trim(); // NOME (info)
-
-    // Só interessa linhas cujo dia (col A) bate com o dia buscado
+    const colG=(r[6]||'').trim();
+    const colB=(r[1]||'').trim();
     if(colA!==String(dInt)&&colA!==dStr) continue;
-
-    // Regra: col G vazia = livre | col G preenchida = ocupado
-    if(!colG){
-      livres.push({hora:'(sem hora)',linha:i+1});
+    if(!colG) continue;
+    const horaDisplay=normHora(colG)||colG;
+    const ehHoraValida=/^\d{1,2}[h:]\d{0,2}$|^\d{1,2}h$/i.test(colG.trim());
+    if(ehHoraValida){
+      if(!colB) livres.push({hora:horaDisplay,linha:i+1});
+      else ocupados.push({hora:horaDisplay,linha:i+1,quem:colB});
     } else {
-      // Normalizar hora para exibir
-      const horaDisplay=normHora(colG)||colG;
-      // Verificar se é hora de massagem válida (formato HH:MM ou Hh)
-      const ehHoraValida=/^\d{1,2}[h:]\d{0,2}$|^\d{1,2}h$/i.test(colG.trim());
-      if(ehHoraValida){
-        // col G tem hora E col B vazia = slot de massagem LIVRE
-        if(!colB){
-          livres.push({hora:horaDisplay,linha:i+1});
-        } else {
-          // col G tem hora E col B preenchida = OCUPADO
-          ocupados.push({hora:horaDisplay,linha:i+1,quem:colB});
-        }
-      } else {
-        // Col G tem texto não-hora (evento, festa, etc) = OCUPADO
-        ocupados.push({hora:colG.slice(0,20),linha:i+1,quem:colB||'evento'});
-      }
+      ocupados.push({hora:colG.slice(0,20),linha:i+1,quem:colB||'evento'});
     }
+  }
+
+  // ─── 2. CRUZAR COM GOOGLE CALENDAR ──────────────────────────────────────
+  // Busca todos os eventos do dia no Calendar e bloqueia slots livres que conflitem
+  if(calToken){
+    try{
+      const calRes=await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${dataISO}T00:00:00-03:00&timeMax=${dataISO}T23:59:59-03:00&singleEvents=true&orderBy=startTime`,
+        {headers:{Authorization:`Bearer ${calToken}`}}
+      );
+      const calData=await calRes.json();
+      const eventos:(typeof calData.items)=calData.items||[];
+      console.log(`Calendar dia ${dStr}/${mesStr}: ${eventos.length} eventos`);
+
+      for(const ev of eventos){
+        const dtStart=ev.start?.dateTime||ev.start?.date||'';
+        if(!dtStart) continue;
+        const evH=parseInt(dtStart.slice(11,13));
+        const evM=parseInt(dtStart.slice(14,16)||'0');
+        const evHora=`${String(evH).padStart(2,'0')}:${String(evM).padStart(2,'0')}`;
+        const quem=ev.summary||'evento externo';
+
+        // Para cada slot livre da planilha, verificar se conflita com evento do Calendar
+        for(let idx=livres.length-1;idx>=0;idx--){
+          const slotNorm=normHora(livres[idx].hora);
+          if(slotNorm===evHora){
+            console.log(`⚠️ Slot ${evHora} livre na planilha mas OCUPADO no Calendar por: ${quem} — bloqueando`);
+            // Mover de livres para ocupados
+            ocupados.push({hora:livres[idx].hora,linha:livres[idx].linha,quem:`[Calendar] ${quem}`});
+            livres.splice(idx,1);
+          }
+        }
+
+        // Também registrar eventos do Calendar que não têm linha na planilha
+        const jaOcupado=ocupados.some(o=>normHora(o.hora)===evHora);
+        const jaLivre=livres.some(l=>normHora(l.hora)===evHora);
+        if(!jaOcupado&&!jaLivre){
+          console.log(`📅 Evento no Calendar sem linha na planilha: ${evHora} — ${quem}`);
+          ocupados.push({hora:evHora,linha:-1,quem:`[Calendar] ${quem}`});
+        }
+      }
+    }catch(ce:any){console.error('Calendar busca erro:',ce.message);}
   }
 
   return{livres,ocupados,diaSemana};
