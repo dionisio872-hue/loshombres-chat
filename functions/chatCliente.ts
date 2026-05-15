@@ -1,5 +1,5 @@
 /**
- * chatCliente v18 — Los Hombres
+ * chatCliente v19 — Los Hombres
  * v15: fix tokens OAuth + horários corretos + fluxo rigoroso + sem RG/banho + gpt-4o + temperature 0.85
  * 1. Desconto 20% correto: só se data >= 30 dias a partir de HOJE
  * 2. Horários por unidade/dia da semana:
@@ -189,140 +189,133 @@ function getHorariosBase(unidade:string|null, dataISO:string|null):string[]{
 }
 
 // ─── BUSCAR HORÁRIOS LIVRES ──────────────────────────────────────────────────
-async function buscarHorariosLivres(req:Request,dia:string,mes:number,unidade:string|null):Promise<{
-  livres:string[];ocupados:Record<string,string>;diaSemana:string;temAtendimento:boolean
-}>{
+async function buscarHorariosLivres(
+  req:Request, dia:string, mes:number, _unidade:string|null
+):Promise<{livres:{hora:string;linha:number}[];ocupados:{hora:string;linha:number;quem:string}[];diaSemana:string}>{
   const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-  const diaInt=parseInt(dia);
-  const diaStr=String(diaInt).padStart(2,'0');
+  const dInt=parseInt(dia);
+  const dStr=String(dInt).padStart(2,'0');
   const mesStr=String(mes).padStart(2,'0');
-  const dataISO=`2026-${mesStr}-${diaStr}`;
-  const dt=new Date(dataISO+'T12:00:00-03:00');
-  const dow=dt.getDay();
+  const dataISO=`2026-${mesStr}-${dStr}`;
+  const dow=new Date(dataISO+'T12:00:00-03:00').getDay();
   const diaSemana=DIAS[dow];
 
-  // Verificar se há atendimento nesse dia/unidade
-  const horariosBase=getHorariosBase(unidade,dataISO);
-  if(horariosBase.length===0){
-    return{livres:[],ocupados:{},diaSemana,temAtendimento:false};
-  }
-
-  const {sheetsToken, calToken} = await getGoogleTokens(req);
+  const{sheetsToken}=await getGoogleTokens(req);
+  if(!sheetsToken) return{livres:[],ocupados:[],diaSemana};
 
   const aba=ABAS[mes]||'MAI';
-  const ocupados:Record<string,string>={};
+  const res=await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:H500`,
+    {headers:{Authorization:`Bearer ${sheetsToken}`}}
+  );
+  const rows:string[][]=(await res.json()).values||[];
 
-  // Planilha
-  if(sheetsToken){
-    try{
-      const res=await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:I300`,
-        {headers:{Authorization:`Bearer ${sheetsToken}`}}
-      );
-      const rows:string[][]=(await res.json()).values||[];
-      for(const r of rows){
-        const rDia=(r[0]||'').trim();
-        if(rDia!==String(diaInt)&&rDia!==diaStr)continue;
-        const rNome=(r[1]||'').trim();
-        const rHor=(r[6]||'').trim().replace(/h/i,':');
-        if(!rHor||!rNome||rNome.toUpperCase().includes('CANCELADO'))continue;
-        ocupados[rHor]=rNome;
-        const[h,m2]=(rHor+':0').split(':').map(Number);
-        const fimMin=h*60+(m2||0)+DUR;
-        for(const hr of horariosBase){
-          const[hh,mm]=hr.split(':').map(Number);
-          const hrMin=hh*60+mm;
-          if(hrMin>(h*60+(m2||0))&&hrMin<fimMin)ocupados[hr]=`bloqueado(${rHor})`;
+  const livres:{hora:string;linha:number}[]=[];
+  const ocupados:{hora:string;linha:number;quem:string}[]=[];
+
+  for(let i=0;i<rows.length;i++){
+    const r=[...rows[i]];while(r.length<8)r.push('');
+    const colA=(r[0]||'').trim();
+    const colG=(r[6]||'').trim(); // HORA
+    const colB=(r[1]||'').trim(); // NOME (info)
+
+    // Só interessa linhas cujo dia (col A) bate com o dia buscado
+    if(colA!==String(dInt)&&colA!==dStr) continue;
+
+    // Regra: col G vazia = livre | col G preenchida = ocupado
+    if(!colG){
+      livres.push({hora:'(sem hora)',linha:i+1});
+    } else {
+      // Normalizar hora para exibir
+      const horaDisplay=normHora(colG)||colG;
+      // Verificar se é hora de massagem válida (formato HH:MM ou Hh)
+      const ehHoraValida=/^\d{1,2}[h:]\d{0,2}$|^\d{1,2}h$/i.test(colG.trim());
+      if(ehHoraValida){
+        // col G tem hora E col B vazia = slot de massagem LIVRE
+        if(!colB){
+          livres.push({hora:horaDisplay,linha:i+1});
+        } else {
+          // col G tem hora E col B preenchida = OCUPADO
+          ocupados.push({hora:horaDisplay,linha:i+1,quem:colB});
         }
+      } else {
+        // Col G tem texto não-hora (evento, festa, etc) = OCUPADO
+        ocupados.push({hora:colG.slice(0,20),linha:i+1,quem:colB||'evento'});
       }
-    }catch(e:any){console.error('sheets:',e.message);}
+    }
   }
 
-  // Calendar
-  if(calToken){
-    try{
-      const ini=encodeURIComponent(`2026-${mesStr}-${diaStr}T00:00:00-03:00`);
-      const fim=encodeURIComponent(`2026-${mesStr}-${diaStr}T23:59:00-03:00`);
-      const res=await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${ini}&timeMax=${fim}&singleEvents=true&orderBy=startTime`,
-        {headers:{Authorization:`Bearer ${calToken}`}}
-      );
-      const evs=(await res.json()).items||[];
-      for(const ev of evs){
-        if(ev.status==='cancelled')continue;
-        const s=ev.start?.dateTime||'';if(!s)continue;
-        const dt2=new Date(s);
-        let durEv=DUR;
-        const sn=norm(ev.summary||'');
-        if(sn.includes('curso'))durEv=300;
-        else if(sn.includes('gravacao'))durEv=150;
-        else if(sn.includes('reuniao'))durEv=30;
-        const evEnd=ev.end?.dateTime?new Date(ev.end.dateTime):new Date(dt2.getTime()+durEv*60000);
-        const inicioEv=dt2.getHours()*60+dt2.getMinutes();
-        const fimEv=evEnd.getHours()*60+evEnd.getMinutes();
-        for(const hr of horariosBase){
-          const[hh,mm]=hr.split(':').map(Number);
-          const hrMin=hh*60+mm;
-          if(hrMin+DUR>inicioEv&&hrMin<fimEv)ocupados[hr]=ev.summary||'Ocupado';
-        }
-      }
-    }catch(e:any){console.error('calendar:',e.message);}
-  }
-
-  // Regra 4h mínimo
-  const agora=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
-  for(const hr of horariosBase){
-    const[hh,mm]=hr.split(':').map(Number);
-    const dtS=new Date(`2026-${mesStr}-${diaStr}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00-03:00`);
-    if(dtS.getTime()-agora.getTime()<4*3600000)ocupados[hr]='menos de 4h';
-  }
-
-  return{livres:horariosBase.filter(h=>!ocupados[h]),ocupados,diaSemana,temAtendimento:true};
+  return{livres,ocupados,diaSemana};
 }
 
-// ─── GRAVAR AGENDAMENTO (UPDATE na linha correta da planilha) ─────────────────
 async function gravarAgendamento(req:Request,p:{
   nome:string;whatsapp:string;servico:string;unidade:string;
   dia:string;mes:number;horario:string;valor:number;
-}):Promise<{ok:boolean;erro?:string}>{
+}):Promise<{ok:boolean;erro?:string;linha?:number}>{
   const{sheetsToken,calToken,gmailToken}=await getGoogleTokens(req);
   const aba=ABAS[p.mes]||'MAI';
   const dInt=parseInt(p.dia),dStr=String(dInt).padStart(2,'0'),mStr=String(p.mes).padStart(2,'0');
   const sinal=30,restante=p.valor-sinal;
-  const[hh,mm]=(p.horario+':00').split(':').map(Number);
+  const horaAlvo=normHora(p.horario);
+  const[hh,mm]=(horaAlvo+':00').split(':').map(Number);
 
   try{
-    // ── 1. PLANILHA: inserir nova linha no final do bloco do dia ─────────────
+    // ── 1. PLANILHA ──────────────────────────────────────────────────────────
+    // Lógica: col A = dia buscado + col G = hora buscada + col B VAZIA = gravar aqui (UPDATE)
+    // Se não encontrar linha exata, inserir nova linha no bloco do dia
     if(sheetsToken){
       try{
         const lRes=await fetch(
-          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:H400`,
+          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A1:H500`,
           {headers:{Authorization:`Bearer ${sheetsToken}`}}
         );
         const rows:string[][]=(await lRes.json()).values||[];
+        const dInt2=parseInt(p.dia);
 
-        // Achar a última linha do bloco do dia (col A == dInt)
-        let ultimaLinhaDia=-1;
+        let linhaExata=-1;      // linha com dia+hora+nome vazio
+        let ultimaLinhaDia=-1;  // última linha do bloco deste dia (fallback insert)
+
         for(let i=0;i<rows.length;i++){
-          const rDia=(rows[i]?.[0]||'').trim();
-          if(rDia===String(dInt)||rDia===dStr) ultimaLinhaDia=i;
+          const r=[...rows[i]];while(r.length<8)r.push('');
+          const colA=(r[0]||'').trim();
+          const colG=normHora((r[6]||'').trim());
+          const colB=(r[1]||'').trim();
+
+          if(colA!==String(dInt2)&&colA!==dStr) continue;
+          ultimaLinhaDia=i;
+
+          // Linha exata: mesmo dia, mesma hora na col G, col B vazia
+          if(colG===horaAlvo&&!colB&&linhaExata<0){
+            linhaExata=i;
+          }
         }
 
-        // Buscar sheetId da aba para batchUpdate
-        const metaRes=await fetch(
-          `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`,
-          {headers:{Authorization:`Bearer ${sheetsToken}`}}
-        );
-        const meta=await metaRes.json();
-        const sheetIdNum:number=meta.sheets?.find((s:any)=>s.properties?.title===aba)?.properties?.sheetId??0;
+        if(linhaExata>=0){
+          // UPDATE: gravar B,C,D,E,F,H na linha que já tem a hora em G
+          const linhaNum=linhaExata+1;
+          const range=`${aba}!B${linhaNum}:H${linhaNum}`;
+          const horaOriginal=rows[linhaExata][6]||p.horario; // preservar G como está
+          await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?valueInputOption=USER_ENTERED`,
+            {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
+             body:JSON.stringify({range,values:[[
+               p.nome.toUpperCase(),
+               p.whatsapp,
+               p.servico.toUpperCase(),
+               FORM_URL,
+               `Sinal R$${sinal} pago - falta R$${restante}`,
+               horaOriginal,
+               `R$${p.valor}`
+             ]]})}
+          );
+          console.log('✅ Planilha UPDATE linha',linhaNum,'(dia',dInt2,'hora',horaAlvo,')');
+        } else if(ultimaLinhaDia>=0){
+          // INSERT: hora não existe como linha pré-criada — inserir nova no bloco do dia
+          const metaRes=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`,{headers:{Authorization:`Bearer ${sheetsToken}`}});
+          const meta=await metaRes.json();
+          const sheetIdNum:number=meta.sheets?.find((s:any)=>s.properties?.title===aba)?.properties?.sheetId??0;
+          const linhaInsert=ultimaLinhaDia+2; // 1-indexado, inserir após última linha do dia
 
-        const novaLinha=[String(dInt),p.nome.toUpperCase(),p.whatsapp,p.servico.toUpperCase(),FORM_URL,`Sinal R$${sinal} pago - falta R$${restante}`,p.horario,`R$${p.valor}`];
-
-        if(ultimaLinhaDia>=0){
-          const linhaInsert=ultimaLinhaDia+2; // 1-indexado + inserir após
-          console.log('Inserindo linha de massagem na posição',linhaInsert,'(último dia=',dInt,'em L',ultimaLinhaDia+1,')');
-
-          // Inserir linha vazia no bloco do dia
           await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,{
             method:'POST',
             headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
@@ -331,26 +324,27 @@ async function gravarAgendamento(req:Request,p:{
               inheritFromBefore:true
             }}]})
           });
-
-          // Escrever dados na nova linha
           const rangeNova=`${aba}!A${linhaInsert}:H${linhaInsert}`;
-          const putRes=await fetch(
+          await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${rangeNova}?valueInputOption=USER_ENTERED`,
             {method:'PUT',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-             body:JSON.stringify({range:rangeNova,values:[novaLinha]})}
+             body:JSON.stringify({range:rangeNova,values:[[
+               String(dInt2),p.nome.toUpperCase(),p.whatsapp,p.servico.toUpperCase(),
+               FORM_URL,`Sinal R$${sinal} pago - falta R$${restante}`,p.horario,`R$${p.valor}`
+             ]]})}
           );
-          console.log('✅ Planilha INSERT OK — linha',linhaInsert,'status',putRes.status);
-        }else{
-          // Dia não encontrado — append no final
-          console.log('⚠️ Dia',dInt,'não encontrado na aba',aba,'— append no final');
+          console.log('✅ Planilha INSERT linha',linhaInsert,'(dia',dInt2,'hora',p.horario,')');
+        } else {
+          // APPEND: dia não encontrado
           await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${aba}!A:H:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
             {method:'POST',headers:{Authorization:`Bearer ${sheetsToken}`,'Content-Type':'application/json'},
-             body:JSON.stringify({values:[novaLinha]})}
+             body:JSON.stringify({values:[[String(dInt2),p.nome.toUpperCase(),p.whatsapp,p.servico.toUpperCase(),FORM_URL,`Sinal R$${sinal}`,p.horario,`R$${p.valor}`]]})}
           );
+          console.log('⚠️ Dia não encontrado — append final');
         }
       }catch(se:any){console.error('Sheets erro:',se.message);}
-    }else{console.error('ERRO: sem sheetsToken');}
+    }
 
     // ── 2. GOOGLE CALENDAR ───────────────────────────────────────────────────
     if(calToken){
@@ -359,19 +353,17 @@ async function gravarAgendamento(req:Request,p:{
         :'Rua Tomé de Souza, 503, Sala 208 - Savassi, BH';
       const ini=new Date(`2026-${mStr}-${dStr}T${String(hh).padStart(2,'0')}:${String(mm||0).padStart(2,'0')}:00-03:00`);
       const fim=new Date(ini.getTime()+DUR*60000);
-      const calRes=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
-        method:'POST',
-        headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
+      await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+        method:'POST',headers:{Authorization:`Bearer ${calToken}`,'Content-Type':'application/json'},
         body:JSON.stringify({
           summary:`${p.nome} - ${p.servico}`,
           location:enderecoUnidade,
-          description:`WhatsApp: ${p.whatsapp}\nValor: R$${p.valor} (sinal R$${sinal} pago, falta R$${restante})`,
+          description:`WhatsApp: ${p.whatsapp}\nValor: R$${p.valor} (sinal R$${sinal}, falta R$${restante})`,
           start:{dateTime:ini.toISOString(),timeZone:'America/Sao_Paulo'},
           end:{dateTime:fim.toISOString(),timeZone:'America/Sao_Paulo'},
         })
-      });
-      console.log('Calendar status:',calRes.status);
-    }else{console.error('ERRO: sem calToken');}
+      }).then(r=>console.log('Calendar:',r.status)).catch(()=>{});
+    }
 
     // ── 3. TELEGRAM ───────────────────────────────────────────────────────────
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
@@ -395,8 +387,7 @@ async function gravarAgendamento(req:Request,p:{
 
     // ── 5. LEAD ───────────────────────────────────────────────────────────────
     try{
-      const authReq=makeAuthRequest(req);
-      const b=createClientFromRequest(authReq);
+      const b=createClientFromRequest(makeAuthRequest(req));
       await b.asServiceRole.entities.LeadConversa.create({
         nome:p.nome,whatsapp:p.whatsapp,canal_origem:'chat_web',etapa_funil:'confirmado',
         massagem_interesse:p.servico,unidade_interesse:p.unidade,converteu:true,
@@ -408,6 +399,7 @@ async function gravarAgendamento(req:Request,p:{
     return{ok:true};
   }catch(e:any){console.error('gravarAgendamento ERRO:',e.message);return{ok:false,erro:e.message};}
 }
+
 
 async function chamarIA(msgs:{role:string;content:string}[],ctx?:string):Promise<string>{
   const sys=ctx?SYSTEM+'\n\nCONTEXTO DO SISTEMA:\n'+ctx:SYSTEM;
@@ -640,20 +632,29 @@ Deno.serve(async(req:Request)=>{
 
   if(diaF&&mesF){
     try{
-      const{livres,ocupados,diaSemana,temAtendimento}=await buscarHorariosLivres(req,diaF,mesF,estado.unidade);
+      const{livres,ocupados,diaSemana}=await buscarHorariosLivres(req,diaF,mesF,estado.unidade);
       const{valorFinal,dias,comDesconto}=calcularDesconto(dataF,estado.valor);
 
-      if(!temAtendimento){
-        const u=estado.unidade||'a unidade';
-        ctx=`DATA: ${diaF}/${mesF} (${diaSemana})\nSEM ATENDIMENTO: ${u} não atende na ${diaSemana}.\n`;
-        if(estado.unidade?.toLowerCase().includes('betim')){
-          ctx+=`Betim atende apenas Terças (a partir das 14h) e Quintas (a partir das 16h). Peça nova data.`;
-        }else{
-          ctx+=`Savassi atende Quintas, Sextas, Sábados (18h+), Domingos e Segundas (19h+). Peça nova data.`;
-        }
-      }else{
-        ctx=`DATA: ${diaF}/${mesF} (${diaSemana})\nHORARIOS LIVRES (USE SOMENTE ESTES): ${livres.length>0?livres.join(', '):'NENHUM - sugira outro dia disponível'}\nOCUPADOS: ${Object.entries(ocupados).map(([h,n])=>`${h}(${n})`).join(', ')||'nenhum'}\nANTECEDENCIA: ${dias} dias a partir de hoje${comDesconto?' - DESCONTO 20% APLICÁVEL':' - SEM desconto (menos de 30 dias)'}\nVALOR: R$ ${valorFinal}${comDesconto?' (com 20% de desconto)':''}\nUNIDADE: ${estado.unidade||'aguardar'}`;
-      }
+      // Filtrar livres com hora válida e respeitar 4h de antecedência
+      const agora=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+      const mesStr2=String(mesF).padStart(2,'0');
+      const diaStr2=String(parseInt(diaF)).padStart(2,'0');
+      const livresValidos=livres.filter(l=>{
+        if(l.hora==='(sem hora)')return false;
+        const[hh2,mm2]=(l.hora+':00').split(':').map(Number);
+        const dtSlot=new Date(`2026-${mesStr2}-${diaStr2}T${String(hh2).padStart(2,'0')}:${String(mm2).padStart(2,'0')}:00-03:00`);
+        return dtSlot.getTime()-agora.getTime()>=4*3600000;
+      });
+
+      const horasLivres=livresValidos.map(l=>l.hora);
+      const horasOcupadas=ocupados.map(o=>`${o.hora}(${o.quem.slice(0,15)})`);
+
+      ctx=`DATA: ${diaF}/${mesF} (${diaSemana})
+HORARIOS LIVRES (USE SOMENTE ESTES): ${horasLivres.length>0?horasLivres.join(', '):'NENHUM — sugira outro dia'}
+OCUPADOS: ${horasOcupadas.join(', ')||'nenhum'}
+ANTECEDENCIA: ${dias} dias${comDesconto?' — DESCONTO 20% APLICÁVEL':''}
+VALOR: R$${valorFinal}
+UNIDADE: ${estado.unidade||'aguardar confirmação'}`;
     }catch(e:any){console.error(e.message);}
   }
 
