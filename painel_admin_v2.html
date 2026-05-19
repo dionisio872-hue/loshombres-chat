@@ -61,6 +61,8 @@ hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
 .auth-card h2{color:#b8a47a;font-size:1rem;margin-bottom:8px}
 .auth-card p{font-size:.75rem;color:#666;margin-bottom:20px}
 .auth-card input{width:100%;background:#0a0a0a;border:1px solid #333;border-radius:8px;padding:10px 12px;color:#e0e0e0;font-size:.85rem;outline:none;margin-bottom:12px;text-align:center;letter-spacing:.1em}
+.hlink{font-size:.72rem;color:#b8a47a;text-decoration:none;padding:4px 10px;border:1px solid #b8a47a44;border-radius:6px;white-space:nowrap;transition:all .2s}
+.hlink:hover{background:#b8a47a22;color:#cdb98a}
 </style>
 </head>
 <body>
@@ -78,7 +80,12 @@ hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
 
 <header>
   <h1>🏠 LOS HOMBRES · Admin v2</h1>
-  <span id="sg">aguardando auth...</span>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <a href="https://dionisio872-hue.github.io/loshombres-chat/" target="_blank" class="hlink">💬 Testar Chat Web</a>
+    <a href="https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente" target="_blank" class="hlink">🔗 Webhook chatCliente</a>
+    <a href="https://t.me/Atendimentoloshombresbot" target="_blank" class="hlink">🤖 Bot Telegram</a>
+    <span id="sg">aguardando auth...</span>
+  </div>
 </header>
 
 <div class="tabs">
