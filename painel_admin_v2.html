@@ -233,9 +233,15 @@ function apiCall(method, path, body) {
 }
 
 // Fallback: ler direto via endpoint público (sem auth — dados públicos do app)
+var _TK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NTgzNDM5OS02ODhlLTRiNjAtYmY3NS04MTBhNjYzMWI1MDkiLCJjbGllbnRfaWQiOiI4NTgzNDM5OS02ODhlLTRiNjAtYmY3NS04MTBhNjYzMWI1MDkiLCJhcHBfaWQiOiI2YTA0Y2MyMmJmN2EwZGNlYTg3ZTNjNDMiLCJhdWQiOiJiYXNlNDRfYXBpIiwic2NvcGUiOiJhcHAuYWNjZXNzIiwiZXhwIjoxNzc5MjIyNzc4LCJpYXQiOjE3NzkyMTkxNzh9.6uzQ1oqtqWvZ5izV4hBbJIa7mVmIf5GA5AGutnrbMEc';
 function readEntity(entity, extra) {
   var url = BACKEND + '/' + entity + '?limit=200' + (extra || '');
-  return fetch(url, { headers: { 'Content-Type': 'application/json' } }).then(function(r) { return r.json(); });
+  return fetch(url, { headers: { 'Authorization': 'Bearer ' + _TK } }).then(function(r) {
+    return r.json();
+  }).then(function(d) {
+    if (Array.isArray(d)) return { records: d };
+    return d;
+  });
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────
@@ -462,15 +468,14 @@ function rC(it, cid) {
 function patchEntity(entity, id, data) {
   return fetch(BACKEND + '/' + entity + '/' + id, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer public' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _TK },
     body: JSON.stringify(data)
   }).then(function(r) { return r.json(); });
 }
-
 function postEntity(entity, data) {
   return fetch(BACKEND + '/' + entity, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer public' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _TK },
     body: JSON.stringify(data)
   }).then(function(r) { return r.json(); });
 }
