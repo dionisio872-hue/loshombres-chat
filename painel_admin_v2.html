@@ -257,25 +257,31 @@ function doAuth() {
 
 // ── API ─────────────────────────────────────────────────────
 // Como não temos backend function ativa, usamos o proxy do chatCliente
-var PROXY = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente';
+var PROXY = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/adminProxy';
 
 function apiCall(method, path, body) {
   var opts = {
     method: method,
-    headers: { 'Content-Type': 'application/json', 'x-admin-action': 'true', 'x-admin-key': 'loshombres2026' }
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': 'loshombres2026' }
   };
   if (body) opts.body = JSON.stringify(body);
-  return fetch(PROXY + '?admin=1&path=' + encodeURIComponent(path), opts).then(function(r) { return r.json(); });
+  // adminProxy: GET lista, POST cria, PUT/DELETE por id
+  var url = PROXY + '?path=' + encodeURIComponent('/entities' + path);
+  return fetch(url, opts).then(function(r) { return r.json(); }).then(function(d) {
+    // Normalizar resposta: adminProxy retorna {items:[]} ou objeto direto
+    return d;
+  });
 }
 
 // Fallback: ler direto via endpoint público (sem auth — dados públicos do app)
 var _TK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NTgzNDM5OS02ODhlLTRiNjAtYmY3NS04MTBhNjYzMWI1MDkiLCJjbGllbnRfaWQiOiI4NTgzNDM5OS02ODhlLTRiNjAtYmY3NS04MTBhNjYzMWI1MDkiLCJhcHBfaWQiOiI2YTA0Y2MyMmJmN2EwZGNlYTg3ZTNjNDMiLCJhdWQiOiJiYXNlNDRfYXBpIiwic2NvcGUiOiJhcHAuYWNjZXNzIiwiZXhwIjoxNzc5MjMxMTQyLCJpYXQiOjE3NzkyMjc1NDJ9.csS3McNUT6DXE-k7FMPFAFPMqw9IDT6BrdS_ZFSwck8';
 function readEntity(entity, extra) {
-  var url = BACKEND + '/' + entity + '?limit=200' + (extra || '');
-  return fetch(url, { headers: { 'Authorization': 'Bearer ' + _TK } }).then(function(r) {
+  var url = PROXY + '?path=' + encodeURIComponent('/entities/' + entity);
+  return fetch(url, { headers: { 'Content-Type': 'application/json', 'x-admin-key': 'loshombres2026' } }).then(function(r) {
     return r.json();
   }).then(function(d) {
     if (Array.isArray(d)) return { records: d };
+    if (d && d.items) return { records: d.items };
     return d;
   });
 }
@@ -503,16 +509,18 @@ function rC(it, cid) {
 
 // ── AÇÕES ───────────────────────────────────────────────────
 function patchEntity(entity, id, data) {
-  return fetch(BACKEND + '/' + entity + '/' + id, {
+  var url = PROXY + '?path=' + encodeURIComponent('/entities/' + entity + '/' + id);
+  return fetch(url, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _TK },
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': 'loshombres2026' },
     body: JSON.stringify(data)
   }).then(function(r) { return r.json(); });
 }
 function postEntity(entity, data) {
-  return fetch(BACKEND + '/' + entity, {
+  var url = PROXY + '?path=' + encodeURIComponent('/entities/' + entity);
+  return fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _TK },
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': 'loshombres2026' },
     body: JSON.stringify(data)
   }).then(function(r) { return r.json(); });
 }
