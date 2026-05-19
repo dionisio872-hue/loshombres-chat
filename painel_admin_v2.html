@@ -235,11 +235,6 @@ var C = {};
 
 // ── AUTO-INIT ────────────────────────────────────────────────
 function doAuth() { /* mantido por compatibilidade */ }
-// Iniciar automaticamente ao carregar
-window.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('sg').textContent = '⏳ carregando...';
-  lId(); C.id = 1;
-});
 
 // ── API ─────────────────────────────────────────────────────
 // Como não temos backend function ativa, usamos o proxy do chatCliente
@@ -608,6 +603,13 @@ function saveCfJ(s, taId, stId) {
   }).catch(function(){if(st)st.innerHTML='<span style="color:#e57373;font-size:.7rem">❌ Erro</span>';});
 }
 // ── FIM CONFIG ──────────────────────────────────────────────
+
+
+// ── INICIALIZAÇÃO AUTOMÁTICA (depois de todas as funções) ───
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('sg').textContent = '⏳ carregando...';
+  lId(); C.id = 1;
+});
 
 </script>
 </body>
