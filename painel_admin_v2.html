@@ -94,6 +94,7 @@ hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
   <div class="tab" onclick="go('po')">📣 Postagem</div>
   <div class="tab" onclick="go('rg')">📋 Regras</div>
   <div class="tab" onclick="go('in')">📊 Insights</div>
+  <div class="tab" onclick="go('cf')">⚙️ Config</div>
 </div>
 
 <!-- ABA IDENTIDADE -->
@@ -206,11 +207,39 @@ hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
   <div id="ins"><div class="empty"><span class="ld"></span> Carregando...</div></div>
 </div>
 
+<!-- ABA CONFIG -->
+<div class="pane" id="pane-cf">
+  <div class="info">⚙️ <strong>Configurações do Sistema</strong> — preços, horários, sinal, desconto e antecedência. Salve aqui — sem nenhum deploy. Cache ≤30 min.</div>
+  <div class="card">
+    <div class="ct">🔢 Parâmetros Gerais</div>
+    <div class="cs">Salve individualmente. Entra em vigor em até 30 min.</div>
+    <div id="cfN"><div class="empty"><span class="ld"></span></div></div>
+  </div>
+  <div class="card">
+    <div class="ct">🕐 Horários Betim <span style="font-size:.65rem;color:#555;font-weight:400">(Ter+Qui)</span></div>
+    <div class="cs">JSON — chave: dia semana (2=Ter, 4=Qui). Valor: array "HH:MM".</div>
+    <textarea id="cfHorB" rows="7" placeholder="Carregando..."></textarea>
+    <div class="row"><button class="btn bg bs" onclick="saveCfJ('horarios_betim','cfHorB','cfHorBSt')">💾 Salvar</button><span id="cfHorBSt"></span></div>
+  </div>
+  <div class="card">
+    <div class="ct">🕐 Horários Savassi <span style="font-size:.65rem;color:#555;font-weight:400">(Seg+Qui+Sex+Sáb)</span></div>
+    <div class="cs">JSON — chave: dia (1=Seg,4=Qui,5=Sex,6=Sáb). Valor: array "HH:MM".</div>
+    <textarea id="cfHorS" rows="9" placeholder="Carregando..."></textarea>
+    <div class="row"><button class="btn bg bs" onclick="saveCfJ('horarios_savassi','cfHorS','cfHorSSt')">💾 Salvar</button><span id="cfHorSSt"></span></div>
+  </div>
+  <div class="card">
+    <div class="ct">💰 Tabela de Preços</div>
+    <div class="cs">JSON — chave: nome normalizado (sem acento, minúsculo). Valor: preço inteiro R$.</div>
+    <textarea id="cfPrecos" rows="22" placeholder="Carregando..."></textarea>
+    <div class="row"><button class="btn bg bs" onclick="saveCfJ('precos_massagens','cfPrecos','cfPrecosSt')">💾 Salvar</button><span id="cfPrecosSt"></span></div>
+  </div>
+</div>
+
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 var BACKEND = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/entities';
 var SVC_KEY = '';
-var AM = {id:0,ag:1,po:2,rg:3,in:4};
+var AM = {id:0,ag:1,po:2,rg:3,in:4,cf:5};
 var C = {};
 
 // ── AUTH ────────────────────────────────────────────────────
@@ -240,7 +269,7 @@ function apiCall(method, path, body) {
 }
 
 // Fallback: ler direto via endpoint público (sem auth — dados públicos do app)
-var _TK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NTgzNDM5OS02ODhlLTRiNjAtYmY3NS04MTBhNjYzMWI1MDkiLCJjbGllbnRfaWQiOiI4NTgzNDM5OS02ODhlLTRiNjAtYmY3NS04MTBhNjYzMWI1MDkiLCJhcHBfaWQiOiI2YTA0Y2MyMmJmN2EwZGNlYTg3ZTNjNDMiLCJhdWQiOiJiYXNlNDRfYXBpIiwic2NvcGUiOiJhcHAuYWNjZXNzIiwiZXhwIjoxNzc5MjIyNzc4LCJpYXQiOjE3NzkyMTkxNzh9.6uzQ1oqtqWvZ5izV4hBbJIa7mVmIf5GA5AGutnrbMEc';
+var _TK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NTgzNDM5OS02ODhlLTRiNjAtYmY3NS04MTBhNjYzMWI1MDkiLCJjbGllbnRfaWQiOiI4NTgzNDM5OS02ODhlLTRiNjAtYmY3NS04MTBhNjYzMWI1MDkiLCJhcHBfaWQiOiI2YTA0Y2MyMmJmN2EwZGNlYTg3ZTNjNDMiLCJhdWQiOiJiYXNlNDRfYXBpIiwic2NvcGUiOiJhcHAuYWNjZXNzIiwiZXhwIjoxNzc5MjMxMTQyLCJpYXQiOjE3NzkyMjc1NDJ9.csS3McNUT6DXE-k7FMPFAFPMqw9IDT6BrdS_ZFSwck8';
 function readEntity(entity, extra) {
   var url = BACKEND + '/' + entity + '?limit=200' + (extra || '');
   return fetch(url, { headers: { 'Authorization': 'Bearer ' + _TK } }).then(function(r) {
@@ -264,6 +293,7 @@ function ld(id) {
   if (id==='po') lPo();
   if (id==='rg') loadRg();
   if (id==='in') lIns();
+  if (id==='cf') lCf();
 }
 
 // ── HELPERS ─────────────────────────────────────────────────
@@ -519,6 +549,72 @@ function addR(fluxo, tid, sid) {
     else loadRg();
   }).catch(function() { fl(sid, false, '❌ Erro ao salvar'); });
 }
+// ── ABA CONFIG ─────────────────────────────────────────────
+var _cf = {};
+function lCf() {
+  readEntity('ConfiguracaoAgente').then(function(d) {
+    var ag = (d.records||[]).filter(function(x){return x.chave_fluxo==='agendamento';});
+    ag.forEach(function(x){ _cf[x.sub_categoria]=x; });
+    renderCfN(ag);
+    var hb=ag.find(function(x){return x.sub_categoria==='horarios_betim';}),
+        hs=ag.find(function(x){return x.sub_categoria==='horarios_savassi';}),
+        pr=ag.find(function(x){return x.sub_categoria==='precos_massagens';});
+    if(hb){try{document.getElementById('cfHorB').value=JSON.stringify(JSON.parse(hb.valor),null,2);}catch(_){document.getElementById('cfHorB').value=hb.valor;}}
+    if(hs){try{document.getElementById('cfHorS').value=JSON.stringify(JSON.parse(hs.valor),null,2);}catch(_){document.getElementById('cfHorS').value=hs.valor;}}
+    if(pr){try{document.getElementById('cfPrecos').value=JSON.stringify(JSON.parse(pr.valor),null,2);}catch(_){document.getElementById('cfPrecos').value=pr.valor;}}
+  }).catch(function(e){document.getElementById('cfN').innerHTML='<div class="empty">Erro: '+e.message+'</div>';});
+}
+function renderCfN(ag) {
+  var CAMPOS = [
+    {s:'antecedencia_minima_horas',l:'⏱ Antecedência mínima (horas)',h:'Mín de horas para aceitar agendamento no mesmo dia'},
+    {s:'desconto_antecipado_dias', l:'📅 Desconto antecipado (dias)', h:'Dias de antecedência para aplicar o desconto'},
+    {s:'desconto_antecipado_pct',  l:'🏷 Desconto (%)',               h:'Percentual de desconto para agendamentos antecipados'},
+    {s:'sinal_valor',              l:'💳 Sinal PIX (R$)',             h:'Valor do sinal cobrado para confirmar o agendamento'},
+    {s:'duracao_sessao_min',       l:'🕐 Duração da sessão (min)',    h:'Duração padrão usada no Google Calendar'},
+  ];
+  var h = '';
+  CAMPOS.forEach(function(c) {
+    var rec = ag.find(function(x){return x.sub_categoria===c.s;});
+    var val = rec ? esc(rec.valor) : '';
+    h += '<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1a1a1a">';
+    h += '<label style="font-size:.78rem;color:#b8a47a;display:block;margin-bottom:3px">'+c.l+'</label>';
+    h += '<div style="font-size:.68rem;color:#555;margin-bottom:7px">'+c.h+'</div>';
+    h += '<div style="display:flex;gap:8px;align-items:center">';
+    h += '<input type="number" id="cfN_'+c.s+'" value="'+val+'" style="width:110px;background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:7px 11px;color:#e0e0e0;font-size:.82rem;outline:none">';
+    h += '<button class="btn bg bs" onclick="saveCfN(''+c.s+'')">💾 Salvar</button>';
+    h += '<span id="cfNst_'+c.s+'"></span></div></div>';
+  });
+  document.getElementById('cfN').innerHTML = h || '<div class="empty">Nenhuma config encontrada.</div>';
+}
+function saveCfN(s) {
+  var inp = document.getElementById('cfN_'+s);
+  var st  = document.getElementById('cfNst_'+s);
+  var rec = _cf[s];
+  if (!rec||!rec.id) { if(st)st.innerHTML='<span style="color:#e57373;font-size:.7rem">Recarregue a aba</span>'; return; }
+  if(st)st.innerHTML='<span style="color:#888;font-size:.7rem">salvando...</span>';
+  patchEntity('ConfiguracaoAgente', rec.id, {valor: String(inp.value)}).then(function() {
+    if(st){st.innerHTML='<span style="color:#66bb6a;font-size:.7rem">✅ Salvo!</span>';setTimeout(function(){st.innerHTML='';},3000);}
+    _cf[s].valor = inp.value;
+  }).catch(function(){if(st)st.innerHTML='<span style="color:#e57373;font-size:.7rem">❌ Erro</span>';});
+}
+function saveCfJ(s, taId, stId) {
+  var ta  = document.getElementById(taId);
+  var st  = document.getElementById(stId);
+  var rec = _cf[s];
+  if (!rec||!rec.id) { if(st)st.innerHTML='<span style="color:#e57373;font-size:.7rem">Recarregue a aba</span>'; return; }
+  var parsed;
+  try { parsed = JSON.parse(ta.value); }
+  catch(e) { if(st)st.innerHTML='<span style="color:#e57373;font-size:.7rem">❌ JSON inválido: '+e.message+'</span>'; return; }
+  if(st)st.innerHTML='<span style="color:#888;font-size:.7rem">salvando...</span>';
+  var v = JSON.stringify(parsed);
+  patchEntity('ConfiguracaoAgente', rec.id, {valor: v}).then(function() {
+    if(st){st.innerHTML='<span style="color:#66bb6a;font-size:.7rem">✅ Salvo! Cache ≤30 min.</span>';setTimeout(function(){st.innerHTML='';},4000);}
+    _cf[s].valor = v;
+    ta.value = JSON.stringify(parsed, null, 2);
+  }).catch(function(){if(st)st.innerHTML='<span style="color:#e57373;font-size:.7rem">❌ Erro</span>';});
+}
+// ── FIM CONFIG ──────────────────────────────────────────────
+
 </script>
 </body>
 </html>
