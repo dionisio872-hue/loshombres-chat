@@ -67,16 +67,7 @@ hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
 </head>
 <body>
 
-<!-- AUTH GATE -->
-<div class="auth-box" id="authBox">
-  <div class="auth-card">
-    <h2>🏠 Los Hombres · Admin</h2>
-    <p>Digite a senha de acesso para continuar</p>
-    <input type="password" id="authPwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
-    <button class="btn bg" style="width:100%" onclick="doAuth()">Entrar</button>
-    <div id="authErr" style="font-size:.72rem;color:#e57373;margin-top:10px;min-height:16px"></div>
-  </div>
-</div>
+
 
 <header>
   <h1>🏠 LOS HOMBRES · Admin v2</h1>
@@ -238,22 +229,17 @@ hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 var BACKEND = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/entities';
-var SVC_KEY = '';
+var SVC_KEY = 'loshombres2026';
 var AM = {id:0,ag:1,po:2,rg:3,in:4,cf:5};
 var C = {};
 
-// ── AUTH ────────────────────────────────────────────────────
-function doAuth() {
-  var pwd = document.getElementById('authPwd').value.trim();
-  if (pwd === 'loshombres2026') {
-    SVC_KEY = pwd; // não é o token real — vamos usar proxy via chatCliente
-    document.getElementById('authBox').style.display = 'none';
-    document.getElementById('sg').textContent = '⏳ carregando...';
-    lId(); C.id = 1;
-  } else {
-    document.getElementById('authErr').textContent = 'Senha incorreta.';
-  }
-}
+// ── AUTO-INIT ────────────────────────────────────────────────
+function doAuth() { /* mantido por compatibilidade */ }
+// Iniciar automaticamente ao carregar
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('sg').textContent = '⏳ carregando...';
+  lId(); C.id = 1;
+});
 
 // ── API ─────────────────────────────────────────────────────
 // Como não temos backend function ativa, usamos o proxy do chatCliente
