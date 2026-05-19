@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Los Hombres · Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e0e0e0;min-height:100vh}
+header{background:#141414;border-bottom:1px solid #222;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px}
+header h1{font-size:.9rem;color:#b8a47a;letter-spacing:.08em;font-weight:700}
+#sg{font-size:.7rem;color:#888}
+.tabs{display:flex;border-bottom:1px solid #1e1e1e;background:#0d0d0d;padding:0 16px;overflow-x:auto;position:sticky;top:53px;z-index:99}
+.tab{padding:12px 16px;font-size:.78rem;color:#555;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.tab.active{color:#b8a47a;border-bottom-color:#b8a47a}.tab:hover{color:#ccc}
+.pane{display:none;padding:20px;max-width:940px;margin:0 auto}.pane.active{display:block}
+.card{background:#141414;border:1px solid #1e1e1e;border-radius:10px;padding:18px;margin-bottom:14px}
+.card-title{font-size:.82rem;color:#b8a47a;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-sub{font-size:.7rem;color:#555;margin-bottom:12px;line-height:1.4}
+.etapa{background:#0f0f0f;border:1px solid #1e1e1e;border-left:3px solid #2d5a2d;border-radius:8px;padding:14px;margin-bottom:10px}
+.etapa-num{font-size:.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.etapa-titulo{font-size:.82rem;color:#ccc;font-weight:600;margin-bottom:4px}
+.etapa-desc{font-size:.75rem;color:#777;line-height:1.5}
+textarea{width:100%;background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:10px 12px;color:#e0e0e0;font-size:.78rem;line-height:1.5;resize:vertical;min-height:80px;font-family:monospace;outline:none;transition:border .2s}
+textarea:focus{border-color:#b8a47a55}
+input[type=text]{width:100%;background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:8px 12px;color:#e0e0e0;font-size:.78rem;outline:none}
+select{background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:7px 10px;color:#e0e0e0;font-size:.78rem;outline:none}
+.btn{padding:7px 14px;border-radius:7px;border:none;cursor:pointer;font-size:.76rem;font-weight:600;transition:all .2s}
+.btn-gold{background:#b8a47a;color:#0a0a0a}.btn-gold:hover{background:#cdb98a}
+.btn-outline{background:transparent;border:1px solid #2a2a2a;color:#888}.btn-outline:hover{border-color:#555;color:#ccc}
+.btn-sm{padding:5px 11px;font-size:.72rem}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.badge{font-size:.62rem;padding:2px 8px;border-radius:8px;font-weight:700}
+.b-perm{background:#1a2a1a;color:#66bb6a;border:1px solid #2d4a2d}
+.b-on{background:#1a2a1a;color:#66bb6a}.b-off{background:#1a1a1a;color:#555;border:1px solid #222}
+.b-agend{background:#1a2020;color:#4db6ac}.b-post{background:#2a1a2a;color:#ce93d8}
+.b-atend{background:#1a2030;color:#64b5f6}.b-geral{background:#1a1a1a;color:#888;border:1px solid #2a2a2a}
+.regra-item{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px}
+.regra-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.regra-txt{font-size:.78rem;color:#bbb;line-height:1.5;margin-bottom:4px}
+.regra-motivo{font-size:.7rem;color:#555;font-style:italic}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#0f0f0f;border:1px solid #1e1e1e;border-radius:8px;padding:14px;text-align:center}
+.kpi-val{font-size:1.6rem;font-weight:700;color:#b8a47a}
+.kpi-label{font-size:.68rem;color:#666;margin-top:4px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bar{height:8px;background:#b8a47a;border-radius:4px;min-width:4px}
+.bar-label{color:#aaa;min-width:140px;font-size:.74rem}
+.bar-val{color:#777;font-size:.7rem}
+.info{background:#161620;border:1px solid #22223a;border-radius:8px;padding:12px 14px;font-size:.76rem;color:#8888bb;line-height:1.6;margin-bottom:16px}
+.funil-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:.76rem}
+.funil-row:last-child{border-bottom:none}
+.flash{padding:5px 12px;border-radius:6px;font-size:.74rem;font-weight:600;animation:fadeout 3s forwards}
+.flash.ok{background:#1a2a1a;color:#66bb6a}.flash.err{background:#2a0a0a;color:#e57373}
+@keyframes fadeout{0%,70%{opacity:1}100%{opacity:0}}
+.loader{display:inline-block;width:12px;height:12px;border:2px solid #333;border-top-color:#b8a47a;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{color:#444;font-size:.8rem;text-align:center;padding:24px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lbl{font-size:.7rem;color:#777;margin-bottom:5px;display:block}
+hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏠 LOS HOMBRES · Admin v2</h1>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <a href="https://dionisio872-hue.github.io/loshombres-chat/" target="_blank" class="btn btn-outline btn-sm">💬 Chat Web</a>
+    <a href="https://t.me/Atendimentoloshombresbot" target="_blank" class="btn btn-outline btn-sm">🤖 Telegram</a>
+    <span id="sg">⏳ carregando…</span>
+  </div>
+</header>
+<div class="tabs">
+  <div class="tab active" onclick="go('id')">🧠 Identidade</div>
+  <div class="tab" onclick="go('ag')">📅 Agendamento</div>
+  <div class="tab" onclick="go('po')">📣 Postagem</div>
+  <div class="tab" onclick="go('rg')">📋 Regras</div>
+  <div class="tab" onclick="go('in')">📊 Insights</div>
+</div>
+
+<div class="pane active" id="pane-id">
+  <div class="info">💡 O <b>Prompt Base</b> define personalidade e tom. Mudanças entram em vigor imediatamente — sem deploy.</div>
+  <div class="card">
+    <div class="card-title">📝 Prompt Base <span class="badge b-perm">Permanente</span></div>
+    <div class="card-sub">Personalidade, tom de voz, proibições e fluxo geral.</div>
+    <textarea id="promptBase" rows="18" placeholder="Carregando…"></textarea>
+    <div class="row"><button class="btn btn-gold" onclick="salvarPromptBase()">💾 Salvar Prompt</button><span id="stPrompt"></span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔒 Regras Permanentes de Comportamento</div>
+    <div class="card-sub">Carregadas junto ao prompt. Nunca apagadas por deploy.</div>
+    <div id="listaPerm"><div class="loader"></div></div>
+  </div>
+</div>
+
+<div class="pane" id="pane-ag">
+  <div class="info">📅 Configurações do fluxo de agendamento lidas em tempo real pelo chatCliente.</div>
+  <div class="etapa"><div class="etapa-num">Etapa 1</div><div class="etapa-titulo">Identificação do interesse</div><div class="etapa-desc">Pergunta o que o cliente busca. Tom direto e acolhedor.</div></div>
+  <div class="etapa"><div class="etapa-num">Etapa 2</div><div class="etapa-titulo">Sugestão de massagem</div><div class="etapa-desc">Sugere UMA massagem + envia áudio e vídeo uma vez por sessão.</div></div>
+  <div class="etapa"><div class="etapa-num">Etapa 3</div><div class="etapa-titulo">Data, horário e unidade</div><div class="etapa-desc">Betim: ter/qui | Savassi: seg/qui/sex/sab. Cruza planilha + Calendar em tempo real.</div></div>
+  <div class="etapa"><div class="etapa-num">Etapa 4</div><div class="etapa-titulo">Sinal via PIX</div><div class="etapa-desc">QR Code + linha digitável. Validação via OpenAI Vision.</div></div>
+  <div class="etapa"><div class="etapa-num">Etapa 5</div><div class="etapa-titulo">Gravação e confirmação</div><div class="etapa-desc">Planilha + Google Calendar + Gmail + Telegram + LeadConversa.</div></div>
+  <hr>
+  <div class="card">
+    <div class="card-title">⚙️ Parâmetros de Agendamento</div>
+    <div class="card-sub">Salvos automaticamente ao sair do campo.</div>
+    <div id="configsAg"><div class="loader"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Regras de Agendamento Aprendidas</div>
+    <div id="regrasAgList"><div class="loader"></div></div>
+  </div>
+</div>
+
+<div class="pane" id="pane-po">
+  <div class="info">📣 Regras para postagens no Instagram, Twitter e Canal Telegram.</div>
+  <div class="card">
+    <div class="card-title">📋 Regras de Postagem Aprendidas</div>
+    <div id="regrasPoList"><div class="loader"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🖼️ Mídias Postadas</div>
+    <div class="card-sub">Cada mídia pode ser usada em até 3 canais. Após os 3, nunca mais.</div>
+    <div id="midiasList"><div class="loader"></div></div>
+  </div>
+</div>
+
+<div class="pane" id="pane-rg">
+  <div class="info">📋 Todas as regras aprendidas. Ativas são injetadas no prompt em tempo real.</div>
+  <div class="card">
+    <div class="card-title">➕ Nova Regra Manual</div>
+    <div class="grid2" style="margin-bottom:10px">
+      <div><span class="lbl">Contexto</span>
+        <select id="novaFluxo"><option value="geral">Geral</option><option value="agendamento">Agendamento</option><option value="postagem">Postagem</option><option value="atendimento">Atendimento</option></select>
+      </div>
+      <div><span class="lbl">Motivo</span><input type="text" id="novaMotivo" placeholder="Ex: cliente reclamou de X"></div>
+    </div>
+    <span class="lbl">Diretriz</span>
+    <textarea id="novaDiretriz" rows="3" placeholder="Ex: Sempre confirmar o nome antes de sugerir horários."></textarea>
+    <div class="row"><button class="btn btn-gold" onclick="salvarNovaRegra()">➕ Adicionar</button><span id="stNovaRegra"></span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Todas as Regras <span id="totalRegras" style="color:#555;font-weight:400;font-size:.75rem"></span></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('')">Todas</button>
+      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('agendamento')">Agendamento</button>
+      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('postagem')">Postagem</button>
+      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('atendimento')">Atendimento</button>
+      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('geral')">Geral</button>
+    </div>
+    <div id="todasRegras"><div class="loader"></div></div>
+  </div>
+</div>
+
+<div class="pane" id="pane-in">
+  <div class="info">📊 Dados de leads, conversões e funil de agendamento em tempo real.</div>
+  <div class="kpi-grid" id="kpiGrid"><div class="loader"></div></div>
+  <div class="card"><div class="card-title">🔄 Funil de Leads</div><div id="funil"><div class="loader"></div></div></div>
+  <div class="card"><div class="card-title">📈 Massagens Mais Solicitadas</div><div id="topMassagens"><div class="loader"></div></div></div>
+</div>
+
+<script>
+var BASE = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/painelAdmin';
+var _configs = [], _regras = [];
+
+function go(id) {
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
+  var order=['id','ag','po','rg','in'];
+  var idx=order.indexOf(id);
+  if(idx>=0) document.querySelectorAll('.tab')[idx].classList.add('active');
+  document.getElementById('pane-'+id).classList.add('active');
+  if(id==='ag') carregarAg();
+  if(id==='po') carregarPo();
+  if(id==='rg') carregarRegras();
+  if(id==='in') carregarInsights();
+}
+
+function api(tipo,extra){return fetch(BASE+'?tipo='+tipo+(extra||'')).then(function(r){return r.json();});}
+function action(body){return fetch(BASE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();});}
+function flash(id,ok,msg){var el=document.getElementById(id);if(!el)return;el.className='flash '+(ok?'ok':'err');el.textContent=msg;setTimeout(function(){el.textContent='';el.className='';},3500);}
+function bFluxo(f){var m={agendamento:'b-agend',postagem:'b-post',atendimento:'b-atend',geral:'b-geral'};return '<span class="badge '+(m[f]||'b-geral')+'">'+f+'</span>';}
+
+function carregarIdentidade(){
+  document.getElementById('sg').textContent='carregando…';
+  api('configs').then(function(d){
+    var items=d.items||[];_configs=items;
+    var pb=items.find(function(x){return x.sub_categoria==='prompt_base';});
+    if(pb){document.getElementById('promptBase').value=pb.valor||'';document.getElementById('promptBase').dataset.id=pb.id;}
+    var perms=items.filter(function(x){return x.chave_fluxo==='atendimento_cliente'&&x.sub_categoria!=='prompt_base'&&x.sub_categoria!=='links_uteis';});
+    var el=document.getElementById('listaPerm');
+    el.innerHTML=perms.length?perms.map(function(r){var v=typeof r.valor==='string'?r.valor:JSON.stringify(r.valor,null,2);return '<div class="regra-item"><div class="regra-header"><span class="badge b-perm">Permanente</span><span style="color:#aaa;font-size:.78rem">'+r.sub_categoria+'</span></div><div class="regra-txt">'+v+'</div></div>';}).join(''):'<div class="empty">Nenhuma regra permanente</div>';
+    document.getElementById('sg').textContent='✅ '+items.length+' configs · v2';
+  }).catch(function(e){document.getElementById('sg').textContent='❌ '+e.message;});
+}
+
+function salvarPromptBase(){
+  var ta=document.getElementById('promptBase');var id=ta.dataset.id;
+  if(!id){flash('stPrompt',false,'ID não encontrado');return;}
+  action({acao:'patch_config',id:id,data:{valor:ta.value}}).then(function(){flash('stPrompt',true,'✅ Salvo!');}).catch(function(e){flash('stPrompt',false,'❌ '+e.message);});
+}
+
+function carregarAg(){
+  var cfgs=_configs.filter(function(x){return x.chave_fluxo==='agendamento';});
+  var el=document.getElementById('configsAg');
+  el.innerHTML=cfgs.length?cfgs.map(function(c){var val=typeof c.valor==='object'?JSON.stringify(c.valor,null,2):String(c.valor);var rows=Math.min(val.split('\n').length+1,8);return '<div class="regra-item"><div class="regra-header"><span style="color:#b8a47a;font-size:.78rem;font-weight:600">'+c.sub_categoria+'</span></div><textarea rows="'+rows+'" data-id="'+c.id+'" onchange="salvarConfig(this)">'+val+'</textarea></div>';}).join(''):'<div class="empty">Nenhuma config</div>';
+  renderRegrasLista(_regras.filter(function(x){return x.fluxo==='agendamento';}),'regrasAgList');
+}
+function salvarConfig(ta){var id=ta.dataset.id;var val=ta.value;var parsed;try{parsed=JSON.parse(val);}catch(e){parsed=val;}action({acao:'patch_config',id:id,data:{valor:parsed}}).then(function(){ta.style.borderColor='#2d5a2d';setTimeout(function(){ta.style.borderColor='';},1500);});}
+
+function carregarPo(){
+  renderRegrasLista(_regras.filter(function(x){return x.fluxo==='postagem';}),'regrasPoList');
+  var mEl=document.getElementById('midiasList');
+  api('midias').then(function(d){var items=d.items||[];mEl.innerHTML=items.length?items.map(function(m){var usados=(m.canais_postados||[]).join(', ')||'nenhum';var st=m.todos_canais_usados?'<span class="badge" style="background:#2a0a0a;color:#e57373">ESGOTADA</span>':'<span class="badge b-on">Disponível</span>';return '<div class="regra-item"><div class="regra-header">'+st+'<span style="font-size:.78rem;color:#aaa">'+m.midia_id+'</span></div><div class="regra-txt">'+(m.descricao||'')+'</div><div class="regra-motivo">Canais: '+usados+'</div></div>';}).join(''):'<div class="empty">Nenhuma mídia</div>';}).catch(function(e){mEl.innerHTML='<div class="empty">Erro: '+e.message+'</div>';});
+}
+
+function carregarRegras(){
+  api('regras').then(function(d){_regras=d.items||[];document.getElementById('totalRegras').textContent='('+_regras.length+' total)';renderTodasRegras(_regras);renderRegrasLista(_regras.filter(function(x){return x.fluxo==='agendamento';}),'regrasAgList');renderRegrasLista(_regras.filter(function(x){return x.fluxo==='postagem';}),'regrasPoList');});
+}
+function filtrarRegras(fluxo){var lista=fluxo?_regras.filter(function(x){return x.fluxo===fluxo;}):_regras;renderTodasRegras(lista);}
+function renderTodasRegras(lista){
+  var el=document.getElementById('todasRegras');
+  el.innerHTML=lista.length?lista.map(function(r){var ativo=r.status===true||r.status==='true';return '<div class="regra-item"><div class="regra-header"><span class="badge '+(ativo?'b-on':'b-off')+'">'+(ativo?'Ativa':'Inativa')+'</span>'+bFluxo(r.fluxo||'geral')+'<span style="font-size:.7rem;color:#555">'+(r.data_geracao||'').substring(0,10)+'</span></div><div class="regra-txt">'+r.diretriz+'</div><div class="regra-motivo">'+r.motivo+'</div><div class="row"><button class="btn btn-outline btn-sm" onclick="toggleRegra(\''+r.id+'\','+ativo+')">'+( ativo?'⏸ Desativar':'▶ Ativar')+'</button></div></div>';}).join(''):'<div class="empty">Nenhuma regra</div>';
+}
+function renderRegrasLista(lista,elId){var el=document.getElementById(elId);if(!el)return;el.innerHTML=lista.length?lista.map(function(r){var ativo=r.status===true||r.status==='true';return '<div class="regra-item"><div class="regra-header"><span class="badge '+(ativo?'b-on':'b-off')+'">'+(ativo?'✅':'⏸')+'</span><span style="font-size:.78rem;color:#bbb">'+r.diretriz.substring(0,80)+(r.diretriz.length>80?'…':'')+'</span></div><div class="regra-motivo">'+r.motivo+'</div></div>';}).join(''):'<div class="empty">Nenhuma regra</div>';}
+function toggleRegra(id,eraAtivo){action({acao:'patch_regra',id:id,data:{status:!eraAtivo}}).then(function(){carregarRegras();});}
+function salvarNovaRegra(){
+  var d=document.getElementById('novaDiretriz').value.trim();var m=document.getElementById('novaMotivo').value.trim();var f=document.getElementById('novaFluxo').value;
+  if(!d){flash('stNovaRegra',false,'Diretriz obrigatória');return;}
+  action({acao:'nova_regra',data:{diretriz:d,motivo:m||'Manual',fluxo:f}}).then(function(){flash('stNovaRegra',true,'✅ Adicionada!');document.getElementById('novaDiretriz').value='';document.getElementById('novaMotivo').value='';carregarRegras();}).catch(function(e){flash('stNovaRegra',false,'❌ '+e.message);});
+}
+
+function carregarInsights(){
+  var kg=document.getElementById('kpiGrid');kg.innerHTML='<div class="loader"></div>';
+  api('insights').then(function(d){
+    var leads=(d.leads&&d.leads.items)||[];var agends=(d.agendamentos&&d.agendamentos.items)||[];
+    var conv=leads.filter(function(l){return l.converteu;}).length;
+    var pct=leads.length?Math.round(conv/leads.length*100):0;
+    var agConf=agends.filter(function(a){return a.status==='confirmado';}).length;
+    kg.innerHTML=[kpi(leads.length,'Total Leads'),kpi(conv,'Converteram'),kpi(pct+'%','Conversão'),kpi(agends.length,'Agendamentos'),kpi(agConf,'Confirmados')].join('');
+    var etapas={};leads.forEach(function(l){var e=l.etapa_funil||'—';etapas[e]=(etapas[e]||0)+1;});
+    document.getElementById('funil').innerHTML=Object.entries(etapas).sort(function(a,b){return b[1]-a[1];}).map(function(e){return '<div class="funil-row"><span style="color:#aaa">'+e[0]+'</span><span style="color:#b8a47a;font-weight:700">'+e[1]+'</span></div>';}).join('')||'<div class="empty">Sem dados</div>';
+    var mas={};leads.forEach(function(l){if(l.massagem_interesse)mas[l.massagem_interesse]=(mas[l.massagem_interesse]||0)+1;});
+    var sorted=Object.entries(mas).sort(function(a,b){return b[1]-a[1];}).slice(0,8);var maxV=sorted.length?sorted[0][1]:1;
+    document.getElementById('topMassagens').innerHTML=sorted.map(function(e){return '<div class="bar-row"><span class="bar-label">'+e[0]+'</span><div class="bar" style="width:'+Math.round(e[1]/maxV*180)+'px"></div><span class="bar-val">'+e[1]+'</span></div>';}).join('')||'<div class="empty">Sem dados</div>';
+  }).catch(function(e){kg.innerHTML='<div class="empty">Erro: '+e.message+'</div>';});
+}
+function kpi(v,l){return '<div class="kpi"><div class="kpi-val">'+v+'</div><div class="kpi-label">'+l+'</div></div>';}
+
+carregarIdentidade();
+api('regras').then(function(d){_regras=d.items||[];});
+</script>
+</body>
+</html>
