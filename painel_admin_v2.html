@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Los Hombres · Admin v2</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0a0a;color:#e0e0e0;min-height:100vh}
+header{background:#141414;border-bottom:1px solid #222;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+header h1{font-size:.95rem;color:#b8a47a;font-weight:700}
+#sg{font-size:.7rem;color:#555}
+.tabs{display:flex;border-bottom:1px solid #1e1e1e;background:#0d0d0d;padding:0 16px;overflow-x:auto;position:sticky;top:53px;z-index:99}
+.tab{padding:12px 16px;font-size:.78rem;color:#555;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
+.tab.active{color:#b8a47a;border-bottom-color:#b8a47a}
+.tab:hover{color:#ccc}
+.pane{display:none;padding:20px;max-width:940px;margin:0 auto}.pane.active{display:block}
+.card{background:#141414;border:1px solid #1e1e1e;border-radius:10px;padding:18px;margin-bottom:14px}
+.ct{font-size:.82rem;color:#b8a47a;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cs{font-size:.7rem;color:#555;margin-bottom:12px}
+.etapa{background:#0f0f0f;border:1px solid #1e1e1e;border-left:3px solid #2d5a2d;border-radius:8px;padding:14px;margin-bottom:10px}
+.en{font-size:.65rem;color:#555;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.et{font-size:.82rem;color:#ccc;font-weight:600;margin-bottom:6px}
+.ed{font-size:.75rem;color:#777;line-height:1.5;margin-bottom:8px}
+textarea{width:100%;background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:10px 12px;color:#e0e0e0;font-size:.78rem;line-height:1.5;resize:vertical;min-height:100px;font-family:monospace;outline:none}
+textarea:focus{border-color:#b8a47a44}
+input[type=text]{width:100%;background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:8px 12px;color:#e0e0e0;font-size:.78rem;outline:none}
+select{background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:7px 10px;color:#e0e0e0;font-size:.78rem;outline:none}
+.btn{padding:7px 14px;border-radius:7px;border:none;cursor:pointer;font-size:.76rem;font-weight:600;transition:all .2s}
+.bg{background:#b8a47a;color:#0a0a0a}.bg:hover{background:#cdb98a}
+.bo{background:transparent;border:1px solid #2a2a2a;color:#888}.bo:hover{border-color:#555;color:#ccc}
+.bs{padding:5px 11px;font-size:.72rem}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.badge{font-size:.62rem;padding:2px 8px;border-radius:8px;font-weight:700}
+.bon{background:#1a2a1a;color:#66bb6a}.bof{background:#1a1a1a;color:#555;border:1px solid #222}
+.bag{background:#1a2020;color:#4db6ac}.bpo{background:#2a1a2a;color:#ce93d8}
+.bat{background:#1a2030;color:#64b5f6}.bge{background:#1a1a1a;color:#888;border:1px solid #2a2a2a}
+.bpm{background:#1a2a1a;color:#66bb6a;border:1px solid #2d4a2d}
+.ri{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px}
+.rh{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.rtx{font-size:.78rem;color:#bbb;line-height:1.5;margin-bottom:4px}
+.rmo{font-size:.7rem;color:#555;font-style:italic}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#0f0f0f;border:1px solid #1e1e1e;border-radius:8px;padding:14px;text-align:center}
+.kv{font-size:1.6rem;font-weight:700;color:#b8a47a}.kl{font-size:.68rem;color:#666;margin-top:4px}
+.brow{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bar{height:8px;background:#b8a47a;border-radius:4px;min-width:4px}
+.blb{color:#aaa;min-width:140px;font-size:.74rem}.bvl{color:#777;font-size:.7rem}
+.info{background:#161620;border:1px solid #22223a;border-radius:8px;padding:12px 14px;font-size:.76rem;color:#8888bb;line-height:1.6;margin-bottom:16px}
+.fr{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:.76rem}
+.fr:last-child{border-bottom:none}
+.flash{padding:5px 12px;border-radius:6px;font-size:.74rem;font-weight:600;display:inline-block}
+.fok{background:#1a2a1a;color:#66bb6a}.fer{background:#2a0a0a;color:#e57373}
+.ld{display:inline-block;width:12px;height:12px;border:2px solid #333;border-top-color:#b8a47a;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{color:#444;font-size:.8rem;text-align:center;padding:24px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.lbl{font-size:.7rem;color:#777;margin-bottom:5px;display:block}
+hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
+.auth-box{position:fixed;inset:0;background:#0a0a0aee;display:flex;align-items:center;justify-content:center;z-index:999}
+.auth-card{background:#141414;border:1px solid #b8a47a44;border-radius:12px;padding:32px;width:320px;text-align:center}
+.auth-card h2{color:#b8a47a;font-size:1rem;margin-bottom:8px}
+.auth-card p{font-size:.75rem;color:#666;margin-bottom:20px}
+.auth-card input{width:100%;background:#0a0a0a;border:1px solid #333;border-radius:8px;padding:10px 12px;color:#e0e0e0;font-size:.85rem;outline:none;margin-bottom:12px;text-align:center;letter-spacing:.1em}
+</style>
+</head>
+<body>
+
+<!-- AUTH GATE -->
+<div class="auth-box" id="authBox">
+  <div class="auth-card">
+    <h2>🏠 Los Hombres · Admin</h2>
+    <p>Digite a senha de acesso para continuar</p>
+    <input type="password" id="authPwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
+    <button class="btn bg" style="width:100%" onclick="doAuth()">Entrar</button>
+    <div id="authErr" style="font-size:.72rem;color:#e57373;margin-top:10px;min-height:16px"></div>
+  </div>
+</div>
+
+<header>
+  <h1>🏠 LOS HOMBRES · Admin v2</h1>
+  <span id="sg">aguardando auth...</span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="go('id')">🧠 Identidade</div>
+  <div class="tab" onclick="go('ag')">📅 Agendamento</div>
+  <div class="tab" onclick="go('po')">📣 Postagem</div>
+  <div class="tab" onclick="go('rg')">📋 Regras</div>
+  <div class="tab" onclick="go('in')">📊 Insights</div>
+</div>
+
+<!-- ABA IDENTIDADE -->
+<div class="pane active" id="pane-id">
+  <div class="info">💡 <strong>Prompt Base</strong> define personalidade e tom do agente. Mudanças entram em vigor imediatamente — sem deploy.</div>
+  <div class="card">
+    <div class="ct">📝 Prompt Base <span class="badge bpm">Permanente</span></div>
+    <div class="cs">Personalidade, tom de voz, proibições e fluxo geral. Editável aqui.</div>
+    <textarea id="promptBase" rows="20" placeholder="Carregando..."></textarea>
+    <div class="row"><button class="btn bg" onclick="salvarPrompt()">💾 Salvar</button><span id="stp"></span></div>
+  </div>
+  <div class="card">
+    <div class="ct">🔒 Regras Permanentes de Comportamento</div>
+    <div class="cs">Nunca apagadas por deploy. Carregadas junto ao prompt.</div>
+    <div id="lbeh"><div class="empty"><span class="ld"></span></div></div>
+  </div>
+</div>
+
+<!-- ABA AGENDAMENTO -->
+<div class="pane" id="pane-ag">
+  <div class="info">💡 Funil completo executado pelo chatCliente em tempo real. Etapas 1–9 do fluxo de agendamento.</div>
+  <div class="card">
+    <div class="ct">🗺️ Etapas do Funil</div>
+    <div class="etapa"><div class="en">Etapa 1</div><div class="et">🛎️ Recepção e Identificação</div><div class="ed">IA detecta intenção e responde em 2-3 frases. Pergunta o que busca antes de sugerir massagem.</div><div class="g2"><div><span class="lbl">Antecedência mínima (h)</span><input type="text" value="2" readonly></div><div><span class="lbl">Desconto antecipado (dias)</span><input type="text" value="30" readonly></div></div></div>
+    <div class="etapa"><div class="en">Etapa 2</div><div class="et">📍 Unidade e Data</div><div class="ed">Bloqueia dias inválidos automaticamente por unidade antes de mostrar horários.</div><div class="g2"><div><span class="lbl">Dias Savassi</span><input type="text" value="Seg · Qui · Sex · Sáb" readonly></div><div><span class="lbl">Dias Betim</span><input type="text" value="Ter · Qui" readonly></div></div></div>
+    <div class="etapa"><div class="en">Etapa 3</div><div class="et">🕐 Horários Livres em Tempo Real</div><div class="ed">Cruza planilha + Calendar. Filtra slots com menos de 2h de antecedência no mesmo dia.</div></div>
+    <div class="etapa"><div class="en">Etapa 4</div><div class="et">👤 Nome e WhatsApp</div><div class="ed">Solicita após confirmar horário. Modal PIX abre automaticamente em seguida.</div></div>
+    <div class="etapa"><div class="en">Etapa 5</div><div class="et">💳 Modal PIX</div><div class="ed">QR Code + linha digitável. Sinal R$30. Cliente envia comprovante como imagem no chat.</div><div class="g2"><div><span class="lbl">Valor sinal</span><input type="text" value="R$ 30,00" readonly></div><div><span class="lbl">Chave PIX (CNPJ)</span><input type="text" value="17342740000109" readonly></div></div></div>
+    <div class="etapa"><div class="en">Etapa 6</div><div class="et">🔍 Análise GPT-4o Vision</div><div class="ed">Valida: destinatário correto (JG Espaço Multserviços), status Efetuado/Concluído, e que é comprovante PIX real.</div></div>
+    <div class="etapa"><div class="en">Etapa 7</div><div class="et">📝 Gravação Simultânea</div><div class="ed">Planilha cols B–J + Google Calendar + LeadConversa no banco + Email de confirmação.</div></div>
+    <div class="etapa"><div class="en">Etapa 8</div><div class="et">📲 Telegram — Gestão JG</div><div class="ed">Alerta com nome, serviço, data/hora, valor e botões ✅ Confirmar / ❌ Cancelar. Urgente se mesmo dia.</div><div class="g2"><div><span class="lbl">Grupo</span><input type="text" value="-1003866193031" readonly></div><div><span class="lbl">Botões</span><input type="text" value="✅ Confirmar | ❌ Cancelar" readonly></div></div></div>
+    <div class="etapa"><div class="en">Etapa 9</div><div class="et">✅ Retorno ao Cliente</div><div class="ed">Confirmação: chat web + email + WhatsApp automático.</div></div>
+  </div>
+  <div class="card">
+    <div class="ct">📋 Regras — Fluxo Agendamento</div>
+    <div class="cs">Instruções específicas para a IA dentro do funil.</div>
+    <div id="ragend"><div class="empty"><span class="ld"></span></div></div>
+    <hr>
+    <textarea id="trag" style="min-height:70px;margin-bottom:8px" placeholder="Ex: Quando cliente pedir Savassi num domingo, sugerir o próximo sábado disponível."></textarea>
+    <div class="row"><button class="btn bg bs" onclick="addR('agendamento','trag','strag')">➕ Adicionar Regra</button><span id="strag"></span></div>
+  </div>
+</div>
+
+<!-- ABA POSTAGEM -->
+<div class="pane" id="pane-po">
+  <div class="info">💡 Configurações de postagem nos canais. Mídias rastreadas em MidiaPostada — cada uma usa até 3 canais.</div>
+  <div class="card">
+    <div class="ct">📣 Canais Ativos</div>
+    <div class="etapa"><div class="et">📸 Instagram — @loshombresestudiospa1</div></div>
+    <div class="etapa"><div class="et">🐦 Twitter/X — @loshombresspa</div></div>
+    <div class="etapa"><div class="et">✈️ Canal Telegram — @jontattomassocanal1 (ID: -1002293107186)</div></div>
+  </div>
+  <div class="card">
+    <div class="ct">🔗 Âncoras Obrigatórias</div>
+    <div class="etapa"><div class="et">Acesse grátis</div><div><span class="lbl">Drive Nível C</span><input type="text" value="1Kzf2-X9_SMwRu9DdXmdK4Rb1bz5Avkp3" readonly></div></div>
+    <div class="etapa"><div class="et">Acesse sem censura</div><div><span class="lbl">Drive Nível B</span><input type="text" value="1KlL4nu_Bgm8tr3BPaJFduZO-BFhYaBYc" readonly></div></div>
+    <div class="etapa"><div class="et">Fale comigo</div><div><span class="lbl">WhatsApp</span><input type="text" value="https://wa.me/5531983244713" readonly></div></div>
+  </div>
+  <div class="card">
+    <div class="ct">🎬 Status de Mídias</div>
+    <div class="cs">Cada mídia usa até 3 canais. Após isso, bloqueada automaticamente.</div>
+    <div id="lmid"><div class="empty"><span class="ld"></span></div></div>
+  </div>
+  <div class="card">
+    <div class="ct">📋 Regras — Fluxo Postagem</div>
+    <div class="cs">Instruções específicas para curadoria e comportamento de postagens.</div>
+    <div id="rpost"><div class="empty"><span class="ld"></span></div></div>
+    <hr>
+    <textarea id="trpo" style="min-height:70px;margin-bottom:8px" placeholder="Ex: Posts no Instagram sempre entre 19h–21h para maior alcance."></textarea>
+    <div class="row"><button class="btn bg bs" onclick="addR('postagem','trpo','strpo')">➕ Adicionar Regra</button><span id="strpo"></span></div>
+  </div>
+</div>
+
+<!-- ABA REGRAS -->
+<div class="pane" id="pane-rg">
+  <div class="info">💡 Memória cumulativa do agente. Geradas automaticamente às 19h ou manualmente. Desativar não apaga — fica salva mas invisível para a IA.</div>
+  <div class="row" style="margin-bottom:14px">
+    <span style="font-size:.75rem;color:#777">Filtrar:</span>
+    <select id="ffl" onchange="loadRg()">
+      <option value="">Todos os fluxos</option>
+      <option value="agendamento">📅 Agendamento</option>
+      <option value="postagem">📣 Postagem</option>
+      <option value="atendimento">🤖 Atendimento</option>
+      <option value="geral">🌐 Geral</option>
+    </select>
+    <span id="stfl" style="font-size:.7rem;color:#555"></span>
+  </div>
+  <div id="lrg"><div class="empty"><span class="ld"></span></div></div>
+  <hr>
+  <div class="card">
+    <div class="ct">➕ Nova Regra</div>
+    <textarea id="trgeral" style="min-height:80px;margin-bottom:8px" placeholder="Instrução que entra em vigor imediatamente após salvar..."></textarea>
+    <div class="row">
+      <span style="font-size:.75rem;color:#777">Fluxo:</span>
+      <select id="nrfl">
+        <option value="geral">🌐 Geral</option>
+        <option value="agendamento">📅 Agendamento</option>
+        <option value="postagem">📣 Postagem</option>
+        <option value="atendimento">🤖 Atendimento</option>
+      </select>
+      <button class="btn bg bs" id="btnAddGeral" onclick="addGeralRg()">✅ Adicionar</button>
+      <span id="strgeral"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ABA INSIGHTS -->
+<div class="pane" id="pane-in">
+  <div class="info">💡 Dados reais de conversas e agendamentos. Atualizado em tempo real do banco de dados.</div>
+  <div id="ins"><div class="empty"><span class="ld"></span> Carregando...</div></div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────
+var BACKEND = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/entities';
+var SVC_KEY = '';
+var AM = {id:0,ag:1,po:2,rg:3,in:4};
+var C = {};
+
+// ── AUTH ────────────────────────────────────────────────────
+function doAuth() {
+  var pwd = document.getElementById('authPwd').value.trim();
+  if (pwd === 'loshombres2026') {
+    SVC_KEY = pwd; // não é o token real — vamos usar proxy via chatCliente
+    document.getElementById('authBox').style.display = 'none';
+    document.getElementById('sg').textContent = '⏳ carregando...';
+    lId(); C.id = 1;
+  } else {
+    document.getElementById('authErr').textContent = 'Senha incorreta.';
+  }
+}
+
+// ── API ─────────────────────────────────────────────────────
+// Como não temos backend function ativa, usamos o proxy do chatCliente
+var PROXY = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente';
+
+function apiCall(method, path, body) {
+  var opts = {
+    method: method,
+    headers: { 'Content-Type': 'application/json', 'x-admin-action': 'true', 'x-admin-key': 'loshombres2026' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(PROXY + '?admin=1&path=' + encodeURIComponent(path), opts).then(function(r) { return r.json(); });
+}
+
+// Fallback: ler direto via endpoint público (sem auth — dados públicos do app)
+function readEntity(entity, extra) {
+  var url = BACKEND + '/' + entity + '?limit=200' + (extra || '');
+  return fetch(url, { headers: { 'Content-Type': 'application/json' } }).then(function(r) { return r.json(); });
+}
+
+// ── NAVEGAÇÃO ───────────────────────────────────────────────
+function go(id) {
+  document.querySelectorAll('.tab').forEach(function(t,i) { t.classList.toggle('active', i === AM[id]); });
+  document.querySelectorAll('.pane').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('pane-'+id).classList.add('active');
+  if (!C[id]) { C[id] = 1; ld(id); }
+}
+function ld(id) {
+  if (id==='id') lId();
+  if (id==='ag') lAg();
+  if (id==='po') lPo();
+  if (id==='rg') loadRg();
+  if (id==='in') lIns();
+}
+
+// ── HELPERS ─────────────────────────────────────────────────
+function fl(id, ok, msg) {
+  var e = document.getElementById(id); if (!e) return;
+  e.className = 'flash ' + (ok ? 'fok' : 'fer'); e.textContent = msg;
+  setTimeout(function() { e.textContent = ''; e.className = ''; }, 3500);
+}
+function bfl(f) {
+  var m = { agendamento: ['bag','📅 Agendamento'], postagem: ['bpo','📣 Postagem'], atendimento: ['bat','🤖 Atendimento'], geral: ['bge','🌐 Geral'] };
+  var v = m[f] || m.geral;
+  return '<span class="badge ' + v[0] + '">' + v[1] + '</span>';
+}
+function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+function fd(s) { if (!s) return ''; try { return new Date(s).toLocaleDateString('pt-BR'); } catch(e) { return s; } }
+
+// ── ABA 1 — IDENTIDADE ──────────────────────────────────────
+function lId() {
+  readEntity('ConfiguracaoAgente').then(function(d) {
+    var it = d.records || [];
+    var pb = it.find(function(x) { return x.sub_categoria === 'prompt_base'; });
+    if (pb) {
+      document.getElementById('promptBase').value = pb.valor;
+      document.getElementById('promptBase').dataset.id = pb.id;
+    }
+    var beh = it.filter(function(x) { return x.chave_fluxo === 'atendimento_cliente' && x.sub_categoria !== 'prompt_base' && x.sub_categoria !== 'links_uteis'; });
+    rBeh(beh);
+    document.getElementById('sg').textContent = '✅ ' + it.length + ' configs · v2';
+  }).catch(function(e) { document.getElementById('sg').textContent = 'erro: ' + e.message; });
+}
+
+function rBeh(it) {
+  var e = document.getElementById('lbeh');
+  if (!it.length) { e.innerHTML = '<div class="empty">Nenhuma regra de comportamento cadastrada.</div>'; return; }
+  e.innerHTML = it.map(function(r) {
+    return '<div class="ri"><div class="rh"><span class="badge ' + (r.ativo ? 'bon' : 'bof') + '">' + (r.ativo ? '● ativa' : '○ inativa') + '</span>' +
+      '<span style="font-size:.7rem;color:#555">' + esc(r.sub_categoria) + '</span></div>' +
+      '<div class="rtx">' + esc(r.valor) + '</div>' +
+      '<div class="row"><button class="btn bo bs" onclick="togC(\'' + r.id + '\',' + r.ativo + ')">' + (r.ativo ? '⏸ Desativar' : '▶ Ativar') + '</button></div></div>';
+  }).join('');
+}
+
+function salvarPrompt() {
+  var ta = document.getElementById('promptBase');
+  var id = ta.dataset.id;
+  if (!id) { fl('stp', false, 'ID não encontrado'); return; }
+  patchEntity('ConfiguracaoAgente', id, { valor: ta.value })
+    .then(function() { fl('stp', true, '✅ Salvo!'); })
+    .catch(function() { fl('stp', false, '❌ Erro ao salvar'); });
+}
+
+function togC(id, ativo) {
+  patchEntity('ConfiguracaoAgente', id, { ativo: !ativo })
+    .then(function() { C.id = 0; lId(); });
+}
+
+// ── ABA 2 — AGENDAMENTO ─────────────────────────────────────
+function lAg() {
+  readEntity('RegraAprendizado', '&fluxo=agendamento').then(function(d) {
+    rS(d.records || [], 'ragend');
+  });
+}
+
+// ── ABA 3 — POSTAGEM ────────────────────────────────────────
+function lPo() {
+  readEntity('RegraAprendizado', '&fluxo=postagem').then(function(d) {
+    rS(d.records || [], 'rpost');
+  });
+  readEntity('MidiaPostada').then(function(d) {
+    rMid(d.records || []);
+  }).catch(function() {
+    document.getElementById('lmid').innerHTML = '<div class="empty">Sem dados de mídia.</div>';
+  });
+}
+
+function rMid(m) {
+  var e = document.getElementById('lmid');
+  if (!m.length) { e.innerHTML = '<div class="empty">Nenhuma mídia registrada ainda.</div>'; return; }
+  var av = m.filter(function(x) { return !x.todos_canais_usados; });
+  var es = m.filter(function(x) { return x.todos_canais_usados; });
+  var C3 = ['instagram', 'twitter', 'telegram_canal'];
+  var h = '<div style="font-size:.75rem;color:#888;margin-bottom:10px">' + m.length + ' mídias — ' + av.length + ' disponíveis · ' + es.length + ' esgotadas</div>';
+  h += av.map(function(x) {
+    var f = C3.filter(function(c) { return !(x.canais_postados || []).includes(c); });
+    return '<div class="ri"><div class="rh"><span class="badge bon">✅ disponível</span><span style="font-size:.7rem;color:#777">' + esc(x.midia_id) + '</span></div>' +
+      '<div class="rmo">Falta postar em: ' + f.join(', ') + '</div></div>';
+  }).join('');
+  if (es.length) {
+    h += '<div style="font-size:.72rem;color:#555;margin:10px 0 4px">ESGOTADAS (3/3 canais)</div>';
+    h += es.map(function(x) {
+      return '<div class="ri" style="opacity:.4"><div class="rh"><span class="badge bof">❌ esgotada</span><span style="font-size:.7rem;color:#555">' + esc(x.midia_id) + '</span></div></div>';
+    }).join('');
+  }
+  e.innerHTML = h;
+}
+
+// ── ABA 4 — REGRAS ──────────────────────────────────────────
+function loadRg() {
+  var fv = document.getElementById('ffl').value;
+  document.getElementById('lrg').innerHTML = '<div class="empty"><span class="ld"></span></div>';
+  readEntity('RegraAprendizado', fv ? '&fluxo=' + fv : '').then(function(d) {
+    var it = d.records || [];
+    document.getElementById('stfl').textContent = it.length + ' regras';
+    rC(it, 'lrg');
+  });
+}
+
+function addGeralRg() {
+  var fluxo = document.getElementById('nrfl').value;
+  addR(fluxo, 'trgeral', 'strgeral');
+}
+
+// ── ABA 5 — INSIGHTS ────────────────────────────────────────
+function lIns() {
+  Promise.all([
+    readEntity('LeadConversa'),
+    readEntity('Agendamento')
+  ]).then(function(res) {
+    rIns(res[0].records || [], res[1].records || []);
+  }).catch(function() {
+    document.getElementById('ins').innerHTML = '<div class="empty">Erro ao carregar dados.</div>';
+  });
+}
+
+function rIns(leads, ags) {
+  var e = document.getElementById('ins');
+  var tot = leads.length;
+  var conv = leads.filter(function(l) { return l.converteu; }).length;
+  var taxa = tot > 0 ? Math.round(conv / tot * 100) : 0;
+  var ma = {};
+  leads.forEach(function(l) { if (l.massagem_interesse) ma[l.massagem_interesse] = (ma[l.massagem_interesse] || 0) + 1; });
+  var maO = Object.entries(ma).sort(function(a,b) { return b[1]-a[1]; }).slice(0,6);
+  var maX = maO.length ? maO[0][1] : 1;
+  var ca = {};
+  leads.forEach(function(l) { if (l.canal_origem) ca[l.canal_origem] = (ca[l.canal_origem] || 0) + 1; });
+
+  var h = '<div class="kgrid">';
+  h += '<div class="kpi"><div class="kv">' + tot + '</div><div class="kl">Total Leads</div></div>';
+  h += '<div class="kpi"><div class="kv">' + conv + '</div><div class="kl">Convertidos</div></div>';
+  h += '<div class="kpi"><div class="kv">' + taxa + '%</div><div class="kl">Taxa Conversão</div></div>';
+  h += '<div class="kpi"><div class="kv">' + (tot-conv) + '</div><div class="kl">Não conv.</div></div>';
+  h += '<div class="kpi"><div class="kv">' + ags.length + '</div><div class="kl">Agendamentos</div></div>';
+  h += '</div>';
+
+  h += '<div class="card"><div class="ct">💆 Massagens Mais Pedidas</div>';
+  maO.forEach(function(kv) {
+    var w = Math.round(kv[1]/maX*200);
+    h += '<div class="brow"><span class="blb">' + esc(kv[0]) + '</span><div class="bar" style="width:' + w + 'px"></div><span class="bvl">' + kv[1] + 'x</span></div>';
+  });
+  if (!maO.length) h += '<div class="empty">Sem dados suficientes.</div>';
+  h += '</div>';
+
+  h += '<div class="card"><div class="ct">📡 Canais de Origem</div>';
+  Object.entries(ca).sort(function(a,b){return b[1]-a[1];}).forEach(function(kv) {
+    h += '<div class="fr"><span style="color:#aaa">' + esc(kv[0]) + '</span><span style="color:#b8a47a;font-weight:700">' + kv[1] + '</span></div>';
+  });
+  if (!Object.keys(ca).length) h += '<div class="empty">Sem dados de canal.</div>';
+  h += '</div>';
+
+  h += '<div class="card"><div class="ct">🕐 Leads Recentes</div>';
+  leads.slice(0,10).forEach(function(l) {
+    h += '<div class="fr">' +
+      '<span style="color:#ccc">' + esc(l.nome || '?') + '</span>' +
+      '<span style="color:#777;font-size:.7rem">' + esc(l.massagem_interesse || '—') + '</span>' +
+      '<span class="badge ' + (l.converteu ? 'bon' : 'bof') + '">' + (l.converteu ? '✅ converteu' : 'pendente') + '</span>' +
+      '</div>';
+  });
+  h += '</div>';
+  e.innerHTML = h;
+}
+
+// ── RENDERERS ───────────────────────────────────────────────
+function rS(it, cid) {
+  var e = document.getElementById(cid);
+  if (!it.length) { e.innerHTML = '<div class="empty">Nenhuma regra para este fluxo ainda.</div>'; return; }
+  e.innerHTML = it.map(function(r) {
+    return '<div class="ri"><div class="rh"><span class="badge ' + (r.status ? 'bon' : 'bof') + '">' + (r.status ? '● ativa' : '○ inativa') + '</span></div>' +
+      '<div class="rtx">' + esc(r.diretriz) + '</div>' +
+      '<div class="rmo">' + esc(r.motivo || '') + '</div>' +
+      '<div class="row" style="margin-top:8px">' +
+      '<button class="btn bo bs" onclick="togR(\'' + r.id + '\',' + r.status + ',\'' + cid + '\')">' + (r.status ? '⏸ Desativar' : '▶ Ativar') + '</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+function rC(it, cid) {
+  var e = document.getElementById(cid);
+  if (!it.length) { e.innerHTML = '<div class="empty">Nenhuma regra encontrada.</div>'; return; }
+  e.innerHTML = it.map(function(r) {
+    return '<div class="ri"><div class="rh">' +
+      '<span class="badge ' + (r.status ? 'bon' : 'bof') + '">' + (r.status ? '● ativa' : '○ inativa') + '</span>' +
+      bfl(r.fluxo) +
+      '<span style="font-size:.68rem;color:#444;margin-left:auto">' + fd(r.data_geracao) + '</span></div>' +
+      '<div class="rtx">' + esc(r.diretriz) + '</div>' +
+      '<div class="rmo">' + esc(r.motivo || '') + '</div>' +
+      '<div class="row" style="margin-top:8px">' +
+      '<button class="btn bo bs" onclick="togR(\'' + r.id + '\',' + r.status + ',\'' + cid + '\')">' + (r.status ? '⏸ Desativar' : '▶ Ativar') + '</button>' +
+      '<select onchange="mF(\'' + r.id + '\',this.value)" style="font-size:.7rem;padding:4px 8px">' +
+        '<option value="geral"' + (r.fluxo==='geral'?' selected':'') + '>🌐 Geral</option>' +
+        '<option value="agendamento"' + (r.fluxo==='agendamento'?' selected':'') + '>📅 Agendamento</option>' +
+        '<option value="postagem"' + (r.fluxo==='postagem'?' selected':'') + '>📣 Postagem</option>' +
+        '<option value="atendimento"' + (r.fluxo==='atendimento'?' selected':'') + '>🤖 Atendimento</option>' +
+      '</select>' +
+      '</div></div>';
+  }).join('');
+}
+
+// ── AÇÕES ───────────────────────────────────────────────────
+function patchEntity(entity, id, data) {
+  return fetch(BACKEND + '/' + entity + '/' + id, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer public' },
+    body: JSON.stringify(data)
+  }).then(function(r) { return r.json(); });
+}
+
+function postEntity(entity, data) {
+  return fetch(BACKEND + '/' + entity, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer public' },
+    body: JSON.stringify(data)
+  }).then(function(r) { return r.json(); });
+}
+
+function togR(id, ativo, cid) {
+  patchEntity('RegraAprendizado', id, { status: !ativo }).then(function() {
+    if (cid === 'ragend') { C.ag = 0; lAg(); }
+    else if (cid === 'rpost') { C.po = 0; lPo(); }
+    else loadRg();
+  });
+}
+
+function mF(id, fluxo) {
+  patchEntity('RegraAprendizado', id, { fluxo: fluxo }).then(function() {
+    setTimeout(loadRg, 400);
+  });
+}
+
+function addR(fluxo, tid, sid) {
+  var t = document.getElementById(tid).value.trim();
+  if (!t) { fl(sid, false, '⚠️ Escreva a instrução'); return; }
+  postEntity('RegraAprendizado', {
+    diretriz: t,
+    motivo: 'Adicionado manualmente',
+    origem: 'admin_manual',
+    status: true,
+    fluxo: fluxo,
+    data_geracao: new Date().toISOString()
+  }).then(function() {
+    fl(sid, true, '✅ Adicionada!');
+    document.getElementById(tid).value = '';
+    if (fluxo === 'agendamento') { C.ag = 0; lAg(); }
+    else if (fluxo === 'postagem') { C.po = 0; lPo(); }
+    else loadRg();
+  }).catch(function() { fl(sid, false, '❌ Erro ao salvar'); });
+}
+</script>
+</body>
+</html>
