@@ -605,11 +605,19 @@ function saveCfJ(s, taId, stId) {
 // ── FIM CONFIG ──────────────────────────────────────────────
 
 
-// ── INICIALIZAÇÃO AUTOMÁTICA (depois de todas as funções) ───
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('sg').textContent = '⏳ carregando...';
-  lId(); C.id = 1;
-});
+// ── INICIALIZAÇÃO AUTOMÁTICA ───
+(function() {
+  function init() {
+    document.getElementById('sg').textContent = '⏳ carregando...';
+    lId(); C.id = 1;
+  }
+  // Se o DOM já estiver pronto (script inline), chama direto; senão aguarda o evento
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
 
 </script>
 </body>
