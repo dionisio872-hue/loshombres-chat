@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Los Hombres Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#071a1a;--surface:#0d2626;--surface2:#112e2e;--surface3:#163636;
+  --border:#1e4040;--border2:#245050;
+  --teal:#2dd4bf;--teal2:#14b8a6;--teal3:#0f766e;
+  --gold:#c9a84c;--gold2:#a07830;
+  --text:#e8f5f5;--muted:#6b9e9e;--muted2:#4a7a7a;
+  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;
+  --bot-color:#2dd4bf;--web-color:#c9a84c;
+  --radius:10px;--radius2:6px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}
+
+/* ── LAYOUT ── */
+.shell{display:flex;height:100vh}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.sb-logo .brand{font-size:11px;letter-spacing:4px;color:var(--teal);text-transform:uppercase;font-weight:800}
+.sb-logo .version{font-size:10px;color:var(--muted2);margin-top:2px}
+.sb-section{padding:12px 12px 4px;font-size:10px;letter-spacing:2px;color:var(--muted2);text-transform:uppercase;font-weight:700}
+.agent-card{margin:4px 8px;border-radius:var(--radius2);padding:10px 12px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.agent-card:hover{background:var(--surface2)}
+.agent-card.active{background:var(--surface3);border-color:var(--border2)}
+.agent-card .a-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.agent-card .a-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.agent-card .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-bot{background:var(--bot-color)}
+.dot-web{background:var(--web-color)}
+.dot-global{background:var(--green)}
+.sb-nav{margin-top:8px;flex:1;overflow-y:auto}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:var(--border2)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .12s;border-left:3px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--teal);border-left-color:var(--teal);background:var(--surface2)}
+.nav-item .ni-icon{font-size:15px;width:18px;text-align:center}
+.nav-item .ni-badge{margin-left:auto;background:var(--teal3);color:var(--teal);font-size:10px;padding:1px 6px;border-radius:20px;font-weight:700}
+.sb-bottom{padding:12px;border-top:1px solid var(--border)}
+.credits-bar{margin-bottom:6px}
+.credits-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);margin-bottom:3px}
+.bar-track{background:var(--surface3);border-radius:10px;height:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:10px;transition:width .5s}
+.bar-msg{background:linear-gradient(90deg,var(--teal3),var(--teal))}
+.bar-int{background:linear-gradient(90deg,var(--gold2),var(--gold))}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.topbar h1{font-size:15px;font-weight:700;color:var(--text)}
+.topbar .tb-sub{font-size:12px;color:var(--muted)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn{padding:7px 14px;border-radius:var(--radius2);border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-teal{background:var(--teal3);color:var(--teal)}
+.btn-teal:hover{background:var(--teal2);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-gold{background:var(--gold2);color:var(--gold)}
+.btn-red{background:#450a0a;color:var(--red)}
+.btn-green{background:#052e16;color:var(--green)}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:20px}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:2px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{padding:12px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+
+/* ── CARDS / GRID ── */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}
+.card-value{font-size:28px;font-weight:800;color:var(--text)}
+.card-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.card-value.teal{color:var(--teal)}
+.card-value.gold{color:var(--gold)}
+.card-value.green{color:var(--green)}
+.card-value.red{color:var(--red)}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-hdr h2{font-size:14px;font-weight:700;color:var(--text)}
+.sec-hdr .sec-sub{font-size:12px;color:var(--muted)}
+
+/* ── TABLE ── */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{background:var(--surface2);padding:10px 14px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;white-space:nowrap}
+td{padding:10px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--surface2)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-teal{background:#0f3030;color:var(--teal)}
+.badge-gold{background:#2a1f00;color:var(--gold)}
+.badge-green{background:#052e16;color:var(--green)}
+.badge-red{background:#450a0a;color:var(--red)}
+.badge-blue{background:#0c1a3a;color:var(--blue)}
+.badge-gray{background:var(--surface3);color:var(--muted)}
+
+/* ── TOGGLE ── */
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--surface3);border-radius:20px;cursor:pointer;transition:.2s}
+.slider:before{position:absolute;content:'';height:14px;width:14px;left:3px;bottom:3px;background:var(--muted);border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--teal3)}
+input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
+
+/* ── FLUXO EDITOR ── */
+.fluxo-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.fluxo-header{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid transparent;transition:.15s}
+.fluxo-header:hover{background:var(--surface2)}
+.fluxo-header.open{border-bottom-color:var(--border)}
+.fluxo-title{font-size:13px;font-weight:700;flex:1}
+.fluxo-body{padding:16px;display:none}
+.fluxo-body.open{display:block}
+.fluxo-field{margin-bottom:14px}
+.fluxo-field label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600}
+.fluxo-field textarea,.fluxo-field input[type=text]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px 12px;font-size:13px;color:var(--text);font-family:inherit;line-height:1.5;resize:vertical;min-height:80px;transition:border-color .15s;outline:none}
+.fluxo-field textarea:focus,.fluxo-field input[type=text]:focus{border-color:var(--teal3)}
+.fluxo-actions{display:flex;gap:8px;margin-top:12px}
+
+/* ── CONVERSA ── */
+.conv-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.conv-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.conv-item:hover{background:var(--surface2)}
+.conv-item:last-child{border-bottom:none}
+.conv-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.conv-av-bot{background:var(--teal3);color:var(--teal)}
+.conv-av-web{background:var(--gold2);color:var(--gold)}
+.conv-info{flex:1;min-width:0}
+.conv-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-last{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.conv-meta{text-align:right;flex-shrink:0}
+.conv-time{font-size:10px;color:var(--muted2)}
+.conv-canal{font-size:10px;margin-top:3px}
+
+/* ── INSIGHT CHART (barras simples) ── */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.chart-title{font-size:12px;color:var(--muted);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:80px}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chart-bar{width:100%;border-radius:4px 4px 0 0;min-height:4px;transition:height .4s}
+.chart-bar-label{font-size:9px;color:var(--muted2)}
+.chart-bar-val{font-size:10px;color:var(--text);font-weight:700}
+.funnel-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.funnel-label{width:120px;font-size:11px;color:var(--muted);flex-shrink:0}
+.funnel-bar-wrap{flex:1;background:var(--surface3);border-radius:10px;height:8px;overflow:hidden}
+.funnel-bar{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--teal3),var(--teal))}
+.funnel-num{width:40px;text-align:right;font-size:11px;color:var(--text);font-weight:700}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--teal)}
+.modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:9px 14px 9px 36px;font-size:13px;color:var(--text);outline:none;transition:border-color .15s}
+.search-wrap input:focus{border-color:var(--teal3)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:14px}
+
+/* ── FILTER ROW ── */
+.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:.15s}
+.filter-btn.active{background:var(--teal3);border-color:var(--teal3);color:var(--teal)}
+.filter-btn:hover{border-color:var(--border2);color:var(--text)}
+
+/* ── AUTOMACOES ── */
+.auto-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px}
+.auto-icon{font-size:20px;width:36px;text-align:center}
+.auto-info{flex:1}
+.auto-name{font-size:13px;font-weight:700}
+.auto-desc{font-size:11px;color:var(--muted);margin-top:2px}
+.auto-meta{text-align:right;font-size:11px;color:var(--muted2)}
+.auto-next{color:var(--teal);font-size:11px;font-weight:600}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty .e-icon{font-size:40px;margin-bottom:12px}
+.empty p{font-size:13px}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted)}
+.spin{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;margin-right:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast-msg{background:var(--surface3);border:1px solid var(--border2);border-radius:var(--radius2);padding:10px 16px;font-size:13px;animation:slideUp .2s;max-width:300px}
+.toast-msg.ok{border-left:3px solid var(--green)}
+.toast-msg.err{border-left:3px solid var(--red)}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .sidebar{display:none}
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="brand">Los Hombres</div>
+    <div class="version">Admin Panel v2.0</div>
+  </div>
+
+  <div class="sb-section">Agentes</div>
+
+  <div class="agent-card active" onclick="setAgent('all')" id="agent-all">
+    <div class="a-name"><span class="dot dot-global"></span> Todos os Agentes</div>
+    <div class="a-sub">Visão global</div>
+  </div>
+  <div class="agent-card" onclick="setAgent('bot')" id="agent-bot">
+    <div class="a-name"><span class="dot dot-bot"></span> Bot Telegram</div>
+    <div class="a-sub">@Atendimentoloshombresbot</div>
+  </div>
+  <div class="agent-card" onclick="setAgent('web')" id="agent-web">
+    <div class="a-name"><span class="dot dot-web"></span> Web Chat</div>
+    <div class="a-sub">loshombres-chat</div>
+  </div>
+
+  <div class="sb-section">Menu</div>
+  <div class="sb-nav">
+    <div class="nav-item active" onclick="showTab('insights')" id="nav-insights">
+      <span class="ni-icon">📊</span> Insights
+    </div>
+    <div class="nav-item" onclick="showTab('fluxos')" id="nav-fluxos">
+      <span class="ni-icon">⚡</span> Fluxos
+    </div>
+    <div class="nav-item" onclick="showTab('regras')" id="nav-regras">
+      <span class="ni-icon">📋</span> Regras
+    </div>
+    <div class="nav-item" onclick="showTab('conversas')" id="nav-conversas">
+      <span class="ni-icon">💬</span> Conversas
+    </div>
+    <div class="nav-item" onclick="showTab('aprendizagens')" id="nav-aprendizagens">
+      <span class="ni-icon">🧩</span> Aprendizagens
+    </div>
+    <div class="nav-item" onclick="showTab('leads')" id="nav-leads">
+      <span class="ni-icon">🎯</span> Leads
+    </div>
+    <div class="nav-item" onclick="showTab('agendamentos')" id="nav-agendamentos">
+      <span class="ni-icon">📅</span> Agendamentos
+    </div>
+    <div class="nav-item" onclick="showTab('automacoes')" id="nav-automacoes">
+      <span class="ni-icon">🔁</span> Automações
+    </div>
+    <div class="nav-item" onclick="showTab('identidade')" id="nav-identidade">
+      <span class="ni-icon">🧠</span> Identidade IA
+    </div>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="credits-bar">
+      <div class="credits-label"><span>💬 Mensagens</span><span id="cr-msg-label">–</span></div>
+      <div class="bar-track"><div class="bar-fill bar-msg" id="cr-msg-bar" style="width:0%"></div></div>
+    </div>
+    <div class="credits-bar">
+      <div class="credits-label"><span>🔌 Integração</span><span id="cr-int-label">–</span></div>
+      <div class="bar-track"><div class="bar-fill bar-int" id="cr-int-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ════════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar h1" id="tb-title" style="font-size:15px;font-weight:700">📊 Insights</div>
+      <div class="tb-sub" id="tb-sub">Visão geral do sistema</div>
+    </div>
+    <div class="topbar-right">
+      <span id="agent-badge" class="badge badge-green">🌐 Todos</span>
+      <button class="btn btn-ghost btn-sm" onclick="loadCurrentTab()">↻ Atualizar</button>
+      <button class="btn btn-teal btn-sm" onclick="openAddFluxoModal()">+ Novo Fluxo</button>
+    </div>
+  </div>
+
+  <!-- Tab bar (período p/ insights) -->
+  <div class="tab-bar" id="tab-bar">
+    <div class="tab active" onclick="setPeriod('hoje')" id="tab-hoje">Hoje</div>
+    <div class="tab" onclick="setPeriod('7d')" id="tab-7d">7 dias</div>
+    <div class="tab" onclick="setPeriod('30d')" id="tab-30d">30 dias</div>
+    <div class="tab" onclick="setPeriod('total')" id="tab-total">Total</div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="content">
+    <div class="loading"><div class="spin"></div> Carregando...</div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ══ MODAL GENÉRICO ══ -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modalBox">
+    <h3 id="modalTitle">Modal</h3>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-teal" id="modalSaveBtn" onclick="modalSave()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ══ CONFIG ══════════════════════════════════════════════════
+const APP_ID = '6a04cc22bf7a0dcea87e3c43';
+const PROXY_URL = `https://base44.app/api/apps/${APP_ID}/functions/adminProxy`;
+const ADMIN_KEY = 'loshombres2026';
+// Sem necessidade de token — painel usa adminProxy com chave fixa
+let SVC_TOKEN = 'proxy'; // apenas para compatibilidade
+
+// ══ STATE ════════════════════════════════════════════════════
+let currentTab = 'insights';
+let currentAgent = 'all';
+let currentPeriod = 'total';
+let allLeads = [], allAgendamentos = [], allRegras = [], allFluxos = [], allConversas = [];
+let modalSaveFn = null;
+
+// ══ AUTH ═════════════════════════════════════════════════════
+async function apiPost(path, body) {
+  return apiFetch(path, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+}
+async function apiPut(path, body) {
+  return apiFetch(path, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+}
+async function apiDelete(path) {
+  return apiFetch(path, { method: 'DELETE' });
+}
+
+async function ensureToken() {
+  return true; // Proxy com chave fixa — sem necessidade de token do usuário
+}
+
+async function apiFetch(path, opts = {}) {
+  // Usa adminProxy — sem token Bearer, sem expiração
+  const proxyUrl = `${PROXY_URL}?path=${encodeURIComponent(path)}`;
+  const headers = { 'x-admin-key': ADMIN_KEY, ...(opts.headers||{}) };
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(proxyUrl, { ...opts, headers });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const j = await res.json(); msg = j.message || j.error || msg; } catch(e){}
+    // Erro de acesso
+    if (res.status === 401 || res.status === 403) {
+      msg = 'Erro de acesso ao proxy. Verifique a chave adminProxy.';
+    }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+async function listEntity(name, query = {}) {
+  const qs = new URLSearchParams({ limit: '500', ...Object.fromEntries(Object.entries(query).map(([k,v])=>[k,String(v)])) });
+  // Passa path + querystring como parâmetros separados para o proxy
+  const proxyUrl = `${PROXY_URL}?path=${encodeURIComponent('/entities/'+name)}&${qs.toString()}`;
+  const res = await fetch(proxyUrl, { headers: { 'x-admin-key': ADMIN_KEY } });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  const raw = await res.json();
+  if (Array.isArray(raw)) return { items: raw };
+  return raw;
+}
+async function updateEntity(name, id, data) {
+  const res = await fetch(`${PROXY_URL}?path=${encodeURIComponent('/entities/'+name+'/'+id)}`, {
+    method: 'PUT', headers: { 'x-admin-key': ADMIN_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||`HTTP ${res.status}`); }
+  return res.json();
+}
+async function createEntity(name, data) {
+  const res = await fetch(`${PROXY_URL}?path=${encodeURIComponent('/entities/'+name)}`, {
+    method: 'POST', headers: { 'x-admin-key': ADMIN_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||`HTTP ${res.status}`); }
+  return res.json();
+}
+async function deleteEntity(name, id) {
+  const res = await fetch(`${PROXY_URL}?path=${encodeURIComponent('/entities/'+name+'/'+id)}`, {
+    method: 'DELETE', headers: { 'x-admin-key': ADMIN_KEY }
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||`HTTP ${res.status}`); }
+  return res.json().catch(()=>({}));
+}
+
+// ══ TOAST ════════════════════════════════════════════════════
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = `toast-msg ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ══ NAVIGATION ═══════════════════════════════════════════════
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const nav = document.getElementById(`nav-${tab}`);
+  if (nav) nav.classList.add('active');
+
+  const titles = {
+    insights: ['📊 Insights', 'Métricas e resultados do sistema'],
+    fluxos: ['⚡ Fluxos', 'Prompts e configurações por agente'],
+    regras: ['📋 Regras', 'Diretrizes de comportamento da IA'],
+    conversas: ['💬 Conversas', 'Histórico de atendimentos'],
+    aprendizagens: ['🧩 Aprendizagens', 'Sugestões da IA para aprovar'],
+    leads: ['🎯 Leads', 'Clientes que interagiram'],
+    agendamentos: ['📅 Agendamentos', 'Reservas e confirmações'],
+    automacoes: ['🔁 Automações', 'Crons e triggers ativos'],
+    identidade: ['🧠 Identidade IA', 'Personalidade e comportamento base'],
+  };
+  const [title, sub] = titles[tab] || ['–', ''];
+  document.getElementById('tb-title').textContent = title;
+  document.getElementById('tb-sub').textContent = sub;
+
+  // Tab bar: só mostra período no insights
+  document.getElementById('tab-bar').style.display = tab === 'insights' ? 'flex' : 'none';
+
+  loadCurrentTab();
+}
+
+function setAgent(agent) {
+  currentAgent = agent;
+  document.querySelectorAll('.agent-card').forEach(el => el.classList.remove('active'));
+  document.getElementById(`agent-${agent}`).classList.add('active');
+  const badges = { all: '🌐 Todos', bot: '🤖 Bot Telegram', web: '💻 Web Chat' };
+  const colors = { all: 'badge-green', bot: 'badge-teal', web: 'badge-gold' };
+  const badge = document.getElementById('agent-badge');
+  badge.textContent = badges[agent];
+  badge.className = `badge ${colors[agent]}`;
+  loadCurrentTab();
+}
+
+function setPeriod(p) {
+  currentPeriod = p;
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${p}`).classList.add('active');
+  if (currentTab === 'insights') renderInsights();
+}
+
+function loadCurrentTab() {
+  const fn = {
+    insights: loadInsights,
+    fluxos: loadFluxos,
+    regras: loadRegras,
+    conversas: loadConversas,
+    aprendizagens: loadAprendizagens,
+    leads: loadLeads,
+    agendamentos: loadAgendamentos,
+    automacoes: loadAutomacoes,
+    identidade: loadIdentidade,
+  }[currentTab];
+  if (fn) fn();
+}
+
+// ══ INSIGHTS ════════════════════════════════════════════════
+async function loadInsights() {
+  setLoading();
+  // DEBUG: testar fetch direto
+  const dbg = async () => {
+    try {
+      const url = `${PROXY_URL}?path=${encodeURIComponent('/entities/LeadConversa')}&limit=5`;
+      document.getElementById('content').innerHTML = '<div style="padding:20px;color:#2dd4bf">🔄 Testando fetch para: ' + url + '</div>';
+      const r = await fetch(url, { headers: { 'x-admin-key': ADMIN_KEY } });
+      document.getElementById('content').innerHTML += '<div style="padding:20px;color:#4ade80">✅ Fetch OK: HTTP ' + r.status + '</div>';
+      const d = await r.json();
+      document.getElementById('content').innerHTML += '<div style="padding:20px;color:#4ade80">✅ JSON OK: ' + JSON.stringify(d).substr(0,200) + '</div>';
+    } catch(e) {
+      document.getElementById('content').innerHTML += '<div style="padding:20px;color:#f87171">❌ ERRO: ' + e.message + '</div>';
+    }
+  };
+  dbg();
+}
+
+function filterByPeriod(items, field = 'created_date') {
+  const now = new Date();
+  const cutoffs = {
+    hoje: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+    '7d': new Date(now - 7*864e5),
+    '30d': new Date(now - 30*864e5),
+    total: new Date(0),
+  };
+  const cutoff = cutoffs[currentPeriod];
+  return items.filter(i => new Date(i[field] || i.created_date) >= cutoff);
+}
+
+function renderInsights() {
+  const leads = filterByPeriod(allLeads);
+  const ags = filterByPeriod(allAgendamentos);
+  const confirmados = ags.filter(a => a.status === 'Confirmado');
+  const receita = confirmados.reduce((s, a) => s + (a.valor_total || 0), 0);
+  const taxaConv = leads.length ? ((confirmados.length / leads.length) * 100).toFixed(1) : 0;
+
+  // Leads por canal
+  const botLeads = leads.filter(l => (l.canal_origem || '').includes('telegram'));
+  const webLeads = leads.filter(l => (l.canal_origem || '').includes('web'));
+
+  // Massagens mais pedidas
+  const massCount = {};
+  leads.forEach(l => { if(l.massagem_interesse) massCount[l.massagem_interesse] = (massCount[l.massagem_interesse]||0)+1; });
+  const topMass = Object.entries(massCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Etapa funil
+  const etapas = ['entrada','consulta_massagem','pediu_preco','acessou_agenda','pagou_sinal','confirmado'];
+  const etapaCount = {};
+  leads.forEach(l => { const e = l.etapa_funil||'entrada'; etapaCount[e] = (etapaCount[e]||0)+1; });
+
+  // Evolução últimos 7 dias
+  const evolucao = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(Date.now()-i*864e5);
+    const label = d.toLocaleDateString('pt-BR',{weekday:'short'});
+    const dayLeads = allLeads.filter(l => {
+      const ld = new Date(l.created_date);
+      return ld.toDateString() === d.toDateString();
+    }).length;
+    evolucao.push({label, val: dayLeads});
+  }
+  const maxEv = Math.max(...evolucao.map(e=>e.val), 1);
+
+  setContent(`
+    <div class="grid-4">
+      <div class="card"><div class="card-title">🎯 Leads</div><div class="card-value teal">${leads.length}</div><div class="card-sub">Bot: ${botLeads.length} · Web: ${webLeads.length}</div></div>
+      <div class="card"><div class="card-title">📅 Agendamentos</div><div class="card-value gold">${ags.length}</div><div class="card-sub">Confirmados: ${confirmados.length}</div></div>
+      <div class="card"><div class="card-title">✅ Taxa Conversão</div><div class="card-value ${taxaConv>10?'green':'red'}">${taxaConv}%</div><div class="card-sub">Leads → Confirmados</div></div>
+      <div class="card"><div class="card-title">💰 Receita</div><div class="card-value green">R$${receita.toLocaleString('pt-BR')}</div><div class="card-sub">Agendamentos confirmados</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">📈 Leads últimos 7 dias</div>
+        <div class="chart-bars">
+          ${evolucao.map(e=>`
+            <div class="chart-bar-wrap">
+              <div class="chart-bar-val">${e.val||''}</div>
+              <div class="chart-bar" style="height:${Math.max(8,(e.val/maxEv)*60)}px;background:linear-gradient(180deg,var(--teal),var(--teal3))"></div>
+              <div class="chart-bar-label">${e.label}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">🏆 Massagens mais pedidas</div>
+        ${topMass.length ? topMass.map(([m,n])=>`
+          <div class="funnel-row">
+            <div class="funnel-label">${m.slice(0,18)}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(n/topMass[0][1]*100)}%"></div></div>
+            <div class="funnel-num">${n}</div>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:13px">Sem dados ainda</div>'}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">🔽 Funil de conversão</div>
+        ${etapas.map(e=>{
+          const c = etapaCount[e]||0;
+          const max = etapaCount['entrada']||1;
+          return `<div class="funnel-row">
+            <div class="funnel-label">${e.replace('_',' ')}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(c/max*100)}%"></div></div>
+            <div class="funnel-num">${c}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">📊 Status agendamentos</div>
+        ${['Confirmado','Aguardando sinal','Cancelado'].map(s=>{
+          const c = ags.filter(a=>a.status===s).length;
+          const colors = {'Confirmado':'var(--green)','Aguardando sinal':'var(--yellow)','Cancelado':'var(--red)'};
+          return `<div class="funnel-row">
+            <div class="funnel-label">${s}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${ags.length?Math.round(c/ags.length*100):0}%;background:${colors[s]}"></div></div>
+            <div class="funnel-num">${c}</div>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">💡 SUGESTÃO: ${leads.length>10&&taxaConv<5?'Taxa de conversão baixa — considere enviar mensagem de reengajamento aos leads inativos.':'Sistema operando bem. Monitore diariamente.'}</div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function updateCredits(creds) {
+  if (!creds) return;
+  const msgPct = Math.min(100, Math.round((creds.msg_usado / creds.msg_total) * 100));
+  const intPct = Math.min(100, Math.round((creds.intg_usado / creds.intg_total) * 100));
+  document.getElementById('cr-msg-label').textContent = `${creds.msg_usado}/${creds.msg_total}`;
+  document.getElementById('cr-int-label').textContent = `${Math.round(creds.intg_usado/1000)}k/${Math.round(creds.intg_total/1000)}k`;
+  document.getElementById('cr-msg-bar').style.width = msgPct + '%';
+  document.getElementById('cr-int-bar').style.width = intPct + '%';
+}
+
+// ══ FLUXOS ══════════════════════════════════════════════════
+async function loadFluxos() {
+  setLoading();
+  try {
+    const r = await listEntity('ConfiguracaoAgente');
+    allFluxos = r.items || [];
+    renderFluxos();
+  } catch(e) { showError(e.message); }
+}
+
+function renderFluxos() {
+  let items = [...allFluxos];
+  // Filtrar por agente (via chave_fluxo)
+  if (currentAgent === 'bot') items = items.filter(f => (f.chave_fluxo||'').includes('telegram')||!(f.chave_fluxo||'').includes('web'));
+  if (currentAgent === 'web') items = items.filter(f => (f.chave_fluxo||'').includes('atendimento_cliente')||!(f.chave_fluxo||'').includes('telegram'));
+
+  // Agrupar por chave_fluxo
+  const grupos = {};
+  items.forEach(f => {
+    const g = f.chave_fluxo || 'geral';
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(f);
+  });
+
+  const agentLabel = { all: 'Todos', bot: 'Bot Telegram', web: 'Web Chat' }[currentAgent];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Fluxos — ${agentLabel}</h2>
+      <button class="btn btn-teal btn-sm" onclick="openAddFluxoModal()">+ Novo Fluxo</button>
+    </div>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--muted)">
+      💡 Edite diretamente e salve. As mudanças são aplicadas na próxima mensagem do cliente — sem precisar fazer deploy.
+    </div>
+    ${Object.keys(grupos).length === 0 ? '<div class="empty"><div class="e-icon">⚡</div><p>Nenhum fluxo cadastrado</p></div>' :
+      Object.entries(grupos).map(([chave, fields]) => `
+        <div class="fluxo-item" id="fluxo-${chave}">
+          <div class="fluxo-header" onclick="toggleFluxo('${chave}')">
+            <span style="font-size:16px">⚡</span>
+            <span class="fluxo-title">${chave}</span>
+            <span class="badge badge-teal">${fields.length} campo(s)</span>
+            <span style="color:var(--muted);font-size:12px;margin-left:8px">▼</span>
+          </div>
+          <div class="fluxo-body" id="fluxo-body-${chave}">
+            ${fields.map(f => `
+              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                  <span style="font-size:12px;font-weight:700;color:var(--teal)">${f.sub_categoria || '–'}</span>
+                  ${(()=>{ const ch=(f.chave_fluxo||'').toLowerCase(); const b=ch.includes('telegram')||!ch.includes('web'); const w=ch.includes('atendimento')||ch.includes('agendamento')||ch.includes('identidade')||!ch.includes('telegram'); return (b&&w)?'<span style="background:#1a7a5e;color:#7ff0cc;font-size:9px;padding:1px 7px;border-radius:10px">🟢 Ambos</span>':b?'<span style="background:#1a4a7a;color:#7fc5f0;font-size:9px;padding:1px 7px;border-radius:10px">🔵 Bot</span>':'<span style="background:#4a3a00;color:#f0c040;font-size:9px;padding:1px 7px;border-radius:10px">🟡 Web</span>'; })()}
+                  <label class="toggle" title="Ativo">
+                    <input type="checkbox" ${f.ativo !== false ? 'checked' : ''} onchange="toggleFluxoAtivo('${f.id}', this.checked)">
+                    <span class="slider"></span>
+                  </label>
+                  <span style="font-size:11px;color:var(--muted)">${f.descricao || ''}</span>
+                  <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="deleteFluxo('${f.id}')">🗑</button>
+                </div>
+                <div class="fluxo-field">
+                  <label>Valor / Prompt <span style="font-size:10px;color:var(--muted);font-weight:400">· texto livre ou JSON · ativa imediatamente</span></label>
+                  <textarea id="fval-${f.id}" rows="4">${escHtml(f.valor || '')}</textarea>
+                </div>
+                <div class="fluxo-actions">
+                  <button class="btn btn-teal btn-sm" onclick="saveFluxo('${f.id}')">💾 Salvar</button>
+                  <button class="btn btn-ghost btn-sm" onclick="shareFluxo('${f.id}')">🔗 Compartilhar</button>
+                </div>
+              </div>
+            `).join('')}
+            <button class="btn btn-ghost btn-sm" onclick="openAddCampoModal('${chave}')">+ Adicionar Campo</button>
+          </div>
+        </div>
+      `).join('')
+    }
+  `);
+}
+
+function toggleFluxo(chave) {
+  const body = document.getElementById(`fluxo-body-${chave}`);
+  const header = body.previousElementSibling;
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+}
+
+async function saveFluxo(id) {
+  const val = document.getElementById(`fval-${id}`).value;
+  const fluxo = allFluxos.find(f => f.id === id);
+  // Se o campo for horarios_* e o valor parece JSON, aceitar diretamente
+  // Se for texto livre (não começa com {[ ou "[ ), salvar como texto puro — o chatCliente lê ambos
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { valor: val });
+    toast('✅ Salvo! Ativo imediatamente no chat.');
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+async function deleteRegra(id) {
+  if (!confirm('Excluir esta regra?')) return;
+  try {
+    await deleteEntity('RegraAprendizado', id);
+    toast('🗑 Regra excluída');
+    loadRegras();
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+async function toggleFluxoAtivo(id, checked) {
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { ativo: checked });
+    toast(checked ? '✅ Ativado' : '⏸ Desativado');
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+async function deleteFluxo(id) {
+  if (!confirm('Excluir este campo?')) return;
+  try {
+    await deleteEntity('ConfiguracaoAgente', id);
+    toast('🗑 Excluído');
+    loadFluxos();
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+function shareFluxo(id) {
+  const fluxo = allFluxos.find(f => f.id === id);
+  if (!fluxo) return;
+  // Determinar agentes ativos com base em chave_fluxo
+  const chave = (fluxo.chave_fluxo || '').toLowerCase();
+  const emBot = chave.includes('telegram') || (!chave.includes('web'));
+  const emWeb = chave.includes('atendimento') || chave.includes('agendamento') || chave.includes('identidade') || chave.includes('relatorio') || (!chave.includes('telegram'));
+  const badgeHtml = (emBot && emWeb)
+    ? '<span style="background:#1a7a5e;color:#7ff0cc;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🟢 Ativo em ambos (Bot + Web)</span>'
+    : emBot
+      ? '<span style="background:#1a4a7a;color:#7fc5f0;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🔵 Ativo: Bot Telegram</span>'
+      : '<span style="background:#4a3a00;color:#f0c040;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🟡 Ativo: Web Chat</span>';
+  openModal('🔗 Compartilhar Fluxo', `
+    <div style="margin-bottom:16px">${badgeHtml}</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Este fluxo já está ativo nos agentes acima. Clique abaixo para marcar como compartilhado com o outro agente:</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button onclick="marcarCompartilhado('${id}','bot')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);cursor:pointer;font-size:12px">🤖 Ativar no Bot</button>
+      <button onclick="marcarCompartilhado('${id}','web')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);cursor:pointer;font-size:12px">💻 Ativar no Web</button>
+      <button onclick="marcarCompartilhado('${id}','ambos')" style="background:var(--teal3);border:1px solid var(--teal);border-radius:8px;padding:8px 14px;color:var(--teal);cursor:pointer;font-size:12px;font-weight:700">🟢 Ativar em Ambos</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted)">Chave: <b>${fluxo.chave_fluxo}</b> · Sub: <b>${fluxo.sub_categoria}</b></div>
+  `, () => {});
+}
+
+async function marcarCompartilhado(id, agente) {
+  const fluxo = allFluxos.find(f => f.id === id);
+  if (!fluxo) return;
+  // Salvar o agente alvo na descricao (prefixo) sem apagar o conteúdo
+  const novaDesc = (fluxo.descricao || '') + (fluxo.descricao && !fluxo.descricao.includes('[agente:') ? ' [agente:'+agente+']' : '');
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { descricao: novaDesc });
+    closeModal();
+    toast('✅ Marcado como ativo em: ' + agente);
+    loadFluxos();
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+function openAddFluxoModal() {
+  openModal('⚡ Novo Fluxo / Configuração', `
+    <div class="fluxo-field"><label>Chave do Fluxo</label><input type="text" id="new-chave" placeholder="ex: cursos, tatuagem, atendimento_vip"></div>
+    <div class="fluxo-field"><label>Sub-categoria</label><input type="text" id="new-sub" placeholder="ex: prompt_base, regra_desconto"></div>
+    <div class="fluxo-field"><label>Conteúdo / Instrução</label><textarea id="new-valor" rows="6" placeholder="Descreva as instruções ou regras para este fluxo..."></textarea></div>
+    <div class="fluxo-field"><label>🎯 Palavras-gatilho (separadas por vírgula)</label><input type="text" id="new-keywords" placeholder="ex: curso, aula, aprender, workshop"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:-8px;margin-bottom:10px">Quando o cliente digitar qualquer uma dessas palavras, este fluxo é ativado automaticamente.</div>
+  `, async () => {
+    const chave = document.getElementById('new-chave').value.trim();
+    const sub = document.getElementById('new-sub').value.trim() || 'prompt_base';
+    const valor = document.getElementById('new-valor').value.trim();
+    const kw = document.getElementById('new-keywords').value.trim();
+    if (!chave || !valor) return alert('Preencha chave e conteúdo.');
+    try {
+      await apiPost('/entities/ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor: valor + (kw ? '\n[KEYWORDS:'+kw+']' : ''), tipo_campo: 'textarea', descricao: kw ? 'Ativado por: '+kw : sub, ativo: true });
+      showToast('Fluxo criado! Reflete imediatamente nos agentes.', 'success');
+      loadFluxos();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+  });
+}
+
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = `toast-msg ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ══ NAVIGATION ═══════════════════════════════════════════════
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const nav = document.getElementById(`nav-${tab}`);
+  if (nav) nav.classList.add('active');
+
+  const titles = {
+    insights: ['📊 Insights', 'Métricas e resultados do sistema'],
+    fluxos: ['⚡ Fluxos', 'Prompts e configurações por agente'],
+    regras: ['📋 Regras', 'Diretrizes de comportamento da IA'],
+    conversas: ['💬 Conversas', 'Histórico de atendimentos'],
+    aprendizagens: ['🧩 Aprendizagens', 'Sugestões da IA para aprovar'],
+    leads: ['🎯 Leads', 'Clientes que interagiram'],
+    agendamentos: ['📅 Agendamentos', 'Reservas e confirmações'],
+    automacoes: ['🔁 Automações', 'Crons e triggers ativos'],
+    identidade: ['🧠 Identidade IA', 'Personalidade e comportamento base'],
+  };
+  const [title, sub] = titles[tab] || ['–', ''];
+  document.getElementById('tb-title').textContent = title;
+  document.getElementById('tb-sub').textContent = sub;
+
+  // Tab bar: só mostra período no insights
+  document.getElementById('tab-bar').style.display = tab === 'insights' ? 'flex' : 'none';
+
+  loadCurrentTab();
+}
+
+function setAgent(agent) {
+  currentAgent = agent;
+  document.querySelectorAll('.agent-card').forEach(el => el.classList.remove('active'));
+  document.getElementById(`agent-${agent}`).classList.add('active');
+  const badges = { all: '🌐 Todos', bot: '🤖 Bot Telegram', web: '💻 Web Chat' };
+  const colors = { all: 'badge-green', bot: 'badge-teal', web: 'badge-gold' };
+  const badge = document.getElementById('agent-badge');
+  badge.textContent = badges[agent];
+  badge.className = `badge ${colors[agent]}`;
+  loadCurrentTab();
+}
+
+function setPeriod(p) {
+  currentPeriod = p;
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${p}`).classList.add('active');
+  if (currentTab === 'insights') renderInsights();
+}
+
+function loadCurrentTab() {
+  const fn = {
+    insights: loadInsights,
+    fluxos: loadFluxos,
+    regras: loadRegras,
+    conversas: loadConversas,
+    aprendizagens: loadAprendizagens,
+    leads: loadLeads,
+    agendamentos: loadAgendamentos,
+    automacoes: loadAutomacoes,
+    identidade: loadIdentidade,
+  }[currentTab];
+  if (fn) fn();
+}
+
+// ══ INSIGHTS ════════════════════════════════════════════════
+async function loadInsights() {
+  setLoading();
+  try {
+    const results = await Promise.allSettled([
+      listEntity('LeadConversa'),
+      listEntity('Agendamento'),
+      listEntity('SnapshotCreditos'),
+    ]);
+    allLeads = results[0].status==='fulfilled' ? (results[0].value.items||[]) : [];
+    allAgendamentos = results[1].status==='fulfilled' ? (results[1].value.items||[]) : [];
+    const crItems = results[2].status==='fulfilled' ? (results[2].value.items||[]) : [];
+    const creds = crItems.sort((a,b) => new Date(b.created_date)-new Date(a.created_date))[0];
+    if (creds) updateCredits(creds);
+    renderInsights();
+  } catch(e) { showError(e.message); }
+}
+
+function filterByPeriod(items, field = 'created_date') {
+  const now = new Date();
+  const cutoffs = {
+    hoje: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+    '7d': new Date(now - 7*864e5),
+    '30d': new Date(now - 30*864e5),
+    total: new Date(0),
+  };
+  const cutoff = cutoffs[currentPeriod];
+  return items.filter(i => new Date(i[field] || i.created_date) >= cutoff);
+}
+
+function renderInsights() {
+  const leads = filterByPeriod(allLeads);
+  const ags = filterByPeriod(allAgendamentos);
+  const confirmados = ags.filter(a => a.status === 'Confirmado');
+  const receita = confirmados.reduce((s, a) => s + (a.valor_total || 0), 0);
+  const taxaConv = leads.length ? ((confirmados.length / leads.length) * 100).toFixed(1) : 0;
+
+  // Leads por canal
+  const botLeads = leads.filter(l => (l.canal_origem || '').includes('telegram'));
+  const webLeads = leads.filter(l => (l.canal_origem || '').includes('web'));
+
+  // Massagens mais pedidas
+  const massCount = {};
+  leads.forEach(l => { if(l.massagem_interesse) massCount[l.massagem_interesse] = (massCount[l.massagem_interesse]||0)+1; });
+  const topMass = Object.entries(massCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Etapa funil
+  const etapas = ['entrada','consulta_massagem','pediu_preco','acessou_agenda','pagou_sinal','confirmado'];
+  const etapaCount = {};
+  leads.forEach(l => { const e = l.etapa_funil||'entrada'; etapaCount[e] = (etapaCount[e]||0)+1; });
+
+  // Evolução últimos 7 dias
+  const evolucao = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(Date.now()-i*864e5);
+    const label = d.toLocaleDateString('pt-BR',{weekday:'short'});
+    const dayLeads = allLeads.filter(l => {
+      const ld = new Date(l.created_date);
+      return ld.toDateString() === d.toDateString();
+    }).length;
+    evolucao.push({label, val: dayLeads});
+  }
+  const maxEv = Math.max(...evolucao.map(e=>e.val), 1);
+
+  setContent(`
+    <div class="grid-4">
+      <div class="card"><div class="card-title">🎯 Leads</div><div class="card-value teal">${leads.length}</div><div class="card-sub">Bot: ${botLeads.length} · Web: ${webLeads.length}</div></div>
+      <div class="card"><div class="card-title">📅 Agendamentos</div><div class="card-value gold">${ags.length}</div><div class="card-sub">Confirmados: ${confirmados.length}</div></div>
+      <div class="card"><div class="card-title">✅ Taxa Conversão</div><div class="card-value ${taxaConv>10?'green':'red'}">${taxaConv}%</div><div class="card-sub">Leads → Confirmados</div></div>
+      <div class="card"><div class="card-title">💰 Receita</div><div class="card-value green">R$${receita.toLocaleString('pt-BR')}</div><div class="card-sub">Agendamentos confirmados</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">📈 Leads últimos 7 dias</div>
+        <div class="chart-bars">
+          ${evolucao.map(e=>`
+            <div class="chart-bar-wrap">
+              <div class="chart-bar-val">${e.val||''}</div>
+              <div class="chart-bar" style="height:${Math.max(8,(e.val/maxEv)*60)}px;background:linear-gradient(180deg,var(--teal),var(--teal3))"></div>
+              <div class="chart-bar-label">${e.label}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">🏆 Massagens mais pedidas</div>
+        ${topMass.length ? topMass.map(([m,n])=>`
+          <div class="funnel-row">
+            <div class="funnel-label">${m.slice(0,18)}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(n/topMass[0][1]*100)}%"></div></div>
+            <div class="funnel-num">${n}</div>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:13px">Sem dados ainda</div>'}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">🔽 Funil de conversão</div>
+        ${etapas.map(e=>{
+          const c = etapaCount[e]||0;
+          const max = etapaCount['entrada']||1;
+          return `<div class="funnel-row">
+            <div class="funnel-label">${e.replace('_',' ')}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(c/max*100)}%"></div></div>
+            <div class="funnel-num">${c}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">📊 Status agendamentos</div>
+        ${['Confirmado','Aguardando sinal','Cancelado'].map(s=>{
+          const c = ags.filter(a=>a.status===s).length;
+          const colors = {'Confirmado':'var(--green)','Aguardando sinal':'var(--yellow)','Cancelado':'var(--red)'};
+          return `<div class="funnel-row">
+            <div class="funnel-label">${s}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${ags.length?Math.round(c/ags.length*100):0}%;background:${colors[s]}"></div></div>
+            <div class="funnel-num">${c}</div>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">💡 SUGESTÃO: ${leads.length>10&&taxaConv<5?'Taxa de conversão baixa — considere enviar mensagem de reengajamento aos leads inativos.':'Sistema operando bem. Monitore diariamente.'}</div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function updateCredits(creds) {
+  if (!creds) return;
+  const msgPct = Math.min(100, Math.round((creds.msg_usado / creds.msg_total) * 100));
+  const intPct = Math.min(100, Math.round((creds.intg_usado / creds.intg_total) * 100));
+  document.getElementById('cr-msg-label').textContent = `${creds.msg_usado}/${creds.msg_total}`;
+  document.getElementById('cr-int-label').textContent = `${Math.round(creds.intg_usado/1000)}k/${Math.round(creds.intg_total/1000)}k`;
+  document.getElementById('cr-msg-bar').style.width = msgPct + '%';
+  document.getElementById('cr-int-bar').style.width = intPct + '%';
+}
+
+// ══ FLUXOS ══════════════════════════════════════════════════
+async function loadFluxos() {
+  setLoading();
+  try {
+    const r = await listEntity('ConfiguracaoAgente');
+    allFluxos = r.items || [];
+    renderFluxos();
+  } catch(e) { showError(e.message); }
+}
+
+function renderFluxos() {
+  let items = [...allFluxos];
+  // Filtrar por agente (via chave_fluxo)
+  if (currentAgent === 'bot') items = items.filter(f => (f.chave_fluxo||'').includes('telegram')||!(f.chave_fluxo||'').includes('web'));
+  if (currentAgent === 'web') items = items.filter(f => (f.chave_fluxo||'').includes('atendimento_cliente')||!(f.chave_fluxo||'').includes('telegram'));
+
+  // Agrupar por chave_fluxo
+  const grupos = {};
+  items.forEach(f => {
+    const g = f.chave_fluxo || 'geral';
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(f);
+  });
+
+  const agentLabel = { all: 'Todos', bot: 'Bot Telegram', web: 'Web Chat' }[currentAgent];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Fluxos — ${agentLabel}</h2>
+      <button class="btn btn-teal btn-sm" onclick="openAddFluxoModal()">+ Novo Fluxo</button>
+    </div>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--muted)">
+      💡 Edite diretamente e salve. As mudanças são aplicadas na próxima mensagem do cliente — sem precisar fazer deploy.
+    </div>
+    ${Object.keys(grupos).length === 0 ? '<div class="empty"><div class="e-icon">⚡</div><p>Nenhum fluxo cadastrado</p></div>' :
+      Object.entries(grupos).map(([chave, fields]) => `
+        <div class="fluxo-item" id="fluxo-${chave}">
+          <div class="fluxo-header" onclick="toggleFluxo('${chave}')">
+            <span style="font-size:16px">⚡</span>
+            <span class="fluxo-title">${chave}</span>
+            <span class="badge badge-teal">${fields.length} campo(s)</span>
+            <span style="color:var(--muted);font-size:12px;margin-left:8px">▼</span>
+          </div>
+          <div class="fluxo-body" id="fluxo-body-${chave}">
+            ${fields.map(f => `
+              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                  <span style="font-size:12px;font-weight:700;color:var(--teal)">${f.sub_categoria || '–'}</span>
+                  ${(()=>{ const ch=(f.chave_fluxo||'').toLowerCase(); const b=ch.includes('telegram')||!ch.includes('web'); const w=ch.includes('atendimento')||ch.includes('agendamento')||ch.includes('identidade')||!ch.includes('telegram'); return (b&&w)?'<span style="background:#1a7a5e;color:#7ff0cc;font-size:9px;padding:1px 7px;border-radius:10px">🟢 Ambos</span>':b?'<span style="background:#1a4a7a;color:#7fc5f0;font-size:9px;padding:1px 7px;border-radius:10px">🔵 Bot</span>':'<span style="background:#4a3a00;color:#f0c040;font-size:9px;padding:1px 7px;border-radius:10px">🟡 Web</span>'; })()}
+                  <label class="toggle" title="Ativo">
+                    <input type="checkbox" ${f.ativo !== false ? 'checked' : ''} onchange="toggleFluxoAtivo('${f.id}', this.checked)">
+                    <span class="slider"></span>
+                  </label>
+                  <span style="font-size:11px;color:var(--muted)">${f.descricao || ''}</span>
+                  <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="deleteFluxo('${f.id}')">🗑</button>
+                </div>
+                <div class="fluxo-field">
+                  <label>Valor / Prompt <span style="font-size:10px;color:var(--muted);font-weight:400">· texto livre ou JSON · ativa imediatamente</span></label>
+                  <textarea id="fval-${f.id}" rows="4">${escHtml(f.valor || '')}</textarea>
+                </div>
+                <div class="fluxo-actions">
+                  <button class="btn btn-teal btn-sm" onclick="saveFluxo('${f.id}')">💾 Salvar</button>
+                  <button class="btn btn-ghost btn-sm" onclick="shareFluxo('${f.id}')">🔗 Compartilhar</button>
+                </div>
+              </div>
+            `).join('')}
+            <button class="btn btn-ghost btn-sm" onclick="openAddCampoModal('${chave}')">+ Adicionar Campo</button>
+          </div>
+        </div>
+      `).join('')
+    }
+  `);
+}
+
+function toggleFluxo(chave) {
+  const body = document.getElementById(`fluxo-body-${chave}`);
+  const header = body.previousElementSibling;
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+}
+
+async function saveFluxo(id) {
+  const val = document.getElementById(`fval-${id}`).value;
+  const fluxo = allFluxos.find(f => f.id === id);
+  // Se o campo for horarios_* e o valor parece JSON, aceitar diretamente
+  // Se for texto livre (não começa com {[ ou "[ ), salvar como texto puro — o chatCliente lê ambos
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { valor: val });
+    toast('✅ Salvo! Ativo imediatamente no chat.');
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+async function toggleFluxoAtivo(id, checked) {
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { ativo: checked });
+    toast(checked ? '✅ Ativado' : '⏸ Desativado');
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+async function deleteFluxo(id) {
+  if (!confirm('Excluir este campo?')) return;
+  try {
+    await deleteEntity('ConfiguracaoAgente', id);
+    toast('🗑 Excluído');
+    loadFluxos();
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+function shareFluxo(id) {
+  const fluxo = allFluxos.find(f => f.id === id);
+  if (!fluxo) return;
+  // Determinar agentes ativos com base em chave_fluxo
+  const chave = (fluxo.chave_fluxo || '').toLowerCase();
+  const emBot = chave.includes('telegram') || (!chave.includes('web'));
+  const emWeb = chave.includes('atendimento') || chave.includes('agendamento') || chave.includes('identidade') || chave.includes('relatorio') || (!chave.includes('telegram'));
+  const badgeHtml = (emBot && emWeb)
+    ? '<span style="background:#1a7a5e;color:#7ff0cc;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🟢 Ativo em ambos (Bot + Web)</span>'
+    : emBot
+      ? '<span style="background:#1a4a7a;color:#7fc5f0;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🔵 Ativo: Bot Telegram</span>'
+      : '<span style="background:#4a3a00;color:#f0c040;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🟡 Ativo: Web Chat</span>';
+  openModal('🔗 Compartilhar Fluxo', `
+    <div style="margin-bottom:16px">${badgeHtml}</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Este fluxo já está ativo nos agentes acima. Clique abaixo para marcar como compartilhado com o outro agente:</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button onclick="marcarCompartilhado('${id}','bot')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);cursor:pointer;font-size:12px">🤖 Ativar no Bot</button>
+      <button onclick="marcarCompartilhado('${id}','web')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);cursor:pointer;font-size:12px">💻 Ativar no Web</button>
+      <button onclick="marcarCompartilhado('${id}','ambos')" style="background:var(--teal3);border:1px solid var(--teal);border-radius:8px;padding:8px 14px;color:var(--teal);cursor:pointer;font-size:12px;font-weight:700">🟢 Ativar em Ambos</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted)">Chave: <b>${fluxo.chave_fluxo}</b> · Sub: <b>${fluxo.sub_categoria}</b></div>
+  `, () => {});
+}
+
+async function marcarCompartilhado(id, agente) {
+  const fluxo = allFluxos.find(f => f.id === id);
+  if (!fluxo) return;
+  // Salvar o agente alvo na descricao (prefixo) sem apagar o conteúdo
+  const novaDesc = (fluxo.descricao || '') + (fluxo.descricao && !fluxo.descricao.includes('[agente:') ? ' [agente:'+agente+']' : '');
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { descricao: novaDesc });
+    closeModal();
+    toast('✅ Marcado como ativo em: ' + agente);
+    loadFluxos();
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+function openAddFluxoModal() {
+  openModal('⚡ Novo Fluxo', `
+    <div class="fluxo-field"><label>Chave do Fluxo</label><input type="text" id="new-chave" placeholder="ex: atendimento_cliente"></div>
+    <div class="fluxo-field"><label>Sub-categoria</label><input type="text" id="new-sub" placeholder="ex: prompt_base"></div>
+    <div class="fluxo-field"><label>Valor / Prompt</label><textarea id="new-valor" rows="5" placeholder="Conteúdo do fluxo..."></textarea></div>
+    <div class="fluxo-field"><label>Descrição (opcional)</label><input type="text" id="new-desc" placeholder="Para que serve?"></div>
+  `, async () => {
+    const chave = document.getElementById('new-chave').value.trim();
+    const sub = document.getElementById('new-sub').value.trim();
+    const valor = document.getElementById('new-valor').value.trim();
+    const desc = document.getElementById('new-desc').value.trim();
+    if (!chave || !sub || !valor) { toast('Preencha os campos obrigatórios', 'err'); return; }
+    await createEntity('ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor, descricao: desc, ativo: true, tipo_campo: 'text' });
+    toast('✅ Fluxo criado!');
+    closeModal();
+    loadFluxos();
+  });
+}
+
+function openAddCampoModal(chave) {
+  openModal('+ Adicionar Campo', `
+    <div class="fluxo-field"><label>Sub-categoria</label><input type="text" id="ac-sub" placeholder="ex: regra_horario"></div>
+    <div class="fluxo-field"><label>Valor</label><textarea id="ac-valor" rows="4"></textarea></div>
+    <div class="fluxo-field"><label>Descrição</label><input type="text" id="ac-desc"></div>
+  `, async () => {
+    const sub = document.getElementById('ac-sub').value.trim();
+    const valor = document.getElementById('ac-valor').value.trim();
+    const desc = document.getElementById('ac-desc').value.trim();
+    if (!sub || !valor) { toast('Preencha todos os campos', 'err'); return; }
+    await createEntity('ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor, descricao: desc, ativo: true, tipo_campo: 'text' });
+    toast('✅ Campo adicionado!');
+    closeModal();
+    loadFluxos();
+  });
+}
+
+// ══ REGRAS ══════════════════════════════════════════════════
+async function loadRegras() {
+  setLoading();
+  try {
+    const r = await listEntity('RegraAprendizado');
+    allRegras = r.items || [];
+    renderRegras('todos');
+  } catch(e) { showError(e.message); }
+}
+
+function renderRegras(filtro = 'todos') {
+  let items = [...allRegras];
+  if (filtro !== 'todos') items = items.filter(r => (r.fluxo||'geral') === filtro);
+  if (currentAgent === 'bot') items = items.filter(r => ['geral','atendimento','telegram'].includes(r.fluxo||'geral'));
+  if (currentAgent === 'web') items = items.filter(r => ['geral','atendimento','agendamento'].includes(r.fluxo||'geral'));
+
+  const fluxos = ['todos','geral','atendimento','agendamento','postagem','telegram'];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Regras da IA</h2>
+      <button class="btn btn-teal btn-sm" onclick="openAddRegraModal()">+ Nova Regra</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">
+      💡 As regras ativas são injetadas automaticamente no prompt de cada agente em tempo real.
+    </div>
+    <div class="filter-row">
+      ${fluxos.map(f => `<button class="filter-btn ${filtro===f?'active':''}" onclick="renderRegras('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join('')}
+    </div>
+    ${items.length === 0 ? '<div class="empty"><div class="e-icon">📋</div><p>Nenhuma regra encontrada</p></div>' : `
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Diretriz</th><th>Fluxo</th><th>Origem</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          ${items.map(r => `
+            <tr>
+              <td style="max-width:340px">
+                <div style="font-size:13px;line-height:1.5">${escHtml((r.diretriz||'').slice(0,120))}${(r.diretriz||'').length>120?'…':''}</div>
+                ${r.resumo_dia?('<div style="font-size:11px;color:var(--muted);margin-top:3px">'+escHtml(r.resumo_dia.slice(0,80))+'</div>)':''}
+              </td>
+              <td><span class="badge ${fluxoBadge(r.fluxo)}">${r.fluxo||'geral'}</span></td>
+              <td><span style="font-size:11px;color:var(--muted)">${r.origem||'manual'}</span></td>
+              <td>
+                <label class="toggle">
+                  <input type="checkbox" ${r.status?'checked':''} onchange="toggleRegra('${r.id}',this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-ghost btn-sm" onclick="editRegra('${r.id}')">✏️</button>
+                  <button class="btn btn-ghost btn-sm" onclick="shareRegra('${r.id}')">🔗</button>
+                  <button class="btn btn-red btn-sm" onclick="deleteRegra('${r.id}')">🗑</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  `);
+}
+
+function fluxoBadge(fluxo) {
+  const map = { geral:'badge-gray', atendimento:'badge-teal', agendamento:'badge-gold', postagem:'badge-blue', telegram:'badge-teal' };
+  return map[fluxo||'geral'] || 'badge-gray';
+}
+
+async function toggleRegra(id, checked) {
+  try {
+    await updateEntity('RegraAprendizado', id, { status: checked });
+    toast(checked ? '✅ Regra ativada' : '⏸ Regra desativada');
+    const r = allRegras.find(x => x.id === id);
+    if (r) r.status = checked;
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+function editRegra(id) {
+  const r = allRegras.find(x => x.id === id);
+  if (!r) return;
+  openModal('✏️ Editar Regra', `
+    <div class="fluxo-field"><label>Diretriz</label><textarea id="er-dir" rows="5">${escHtml(r.diretriz||'')}</textarea></div>
+    <div class="fluxo-field"><label>Fluxo</label>
+      <select id="er-fluxo" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px">
+        ${['geral','atendimento','agendamento','postagem','telegram'].map(f=>`<option value="${f}" ${r.fluxo===f?'selected':''}>${f}</option>`).join('')}
+      </select>
+    </div>
+  `, async () => {
+    const dir = document.getElementById('er-dir').value.trim();
+    const fluxo = document.getElementById('er-fluxo').value;
+    await updateEntity('RegraAprendizado', id, { diretriz: dir, fluxo });
+    toast('✅ Regra atualizada');
+    closeModal();
+    loadRegras();
+  });
+}
+
+function shareRegra(id) {
+  const r = allRegras.find(x => x.id === id);
+  if (!r) return;
+  openModal('🔗 Compartilhar / Duplicar Regra', `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Escolha o fluxo destino para duplicar esta regra:</p>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;color:var(--teal);margin-bottom:14px">${escHtml((r.diretriz||'').substring(0,120))}...</div>
+    <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">FLUXO DESTINO</label>
+    <select id="shareFluxoTarget" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;color:var(--text);margin-bottom:14px">
+      <option value="atendimento">atendimento</option>
+      <option value="agendamento">agendamento</option>
+      <option value="postagem">postagem</option>
+      <option value="geral">geral</option>
+    </select>
+    <button class="btn btn-teal" style="width:100%" onclick="confirmarShareRegra('${id}')">✅ Duplicar para este fluxo</button>
+  `);
+}
+async function confirmarShareRegra(id) {
+  const r = allRegras.find(x => x.id === id);
+  if (!r) return;
+  const fluxoDest = document.getElementById('shareFluxoTarget').value;
+  closeModal();
+  try {
+    await apiPost('/entities/RegraAprendizado', {
+      diretriz: r.diretriz,
+      resumo_dia: r.resumo_dia,
+      motivo: r.motivo,
+      origem: 'compartilhada_painel',
+      status: 'ativa',
+      fluxo: fluxoDest,
+      aprovado_por: 'jonathan'
+    });
+    showToast('Regra duplicada para fluxo: ' + fluxoDest, 'success');
+    loadRegras();
+  } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+function openAddRegraModal() {
+  openModal('📋 Nova Regra', `
+    <div class="fluxo-field"><label>Diretriz</label><textarea id="nr-dir" rows="5" placeholder="Ex: Sempre mencionar o desconto de 20% para agendamentos com 30+ dias..."></textarea></div>
+    <div class="fluxo-field"><label>Fluxo</label>
+      <select id="nr-fluxo" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px">
+        ${['geral','atendimento','agendamento','postagem','telegram'].map(f=>`<option value="${f}">${f}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fluxo-field"><label>Motivo (opcional)</label><input type="text" id="nr-motivo" placeholder="Por que essa regra foi criada?"></div>
+  `, async () => {
+    const dir = document.getElementById('nr-dir').value.trim();
+    const fluxo = document.getElementById('nr-fluxo').value;
+    const motivo = document.getElementById('nr-motivo').value.trim();
+    if (!dir) { toast('Digite a diretriz', 'err'); return; }
+    await createEntity('RegraAprendizado', { diretriz: dir, fluxo, motivo, status: true, origem: 'manual', data_geracao: new Date().toISOString() });
+    toast('✅ Regra criada!');
+    closeModal();
+    loadRegras();
+  });
+}
+
+// ══ CONVERSAS ═══════════════════════════════════════════════
+async function loadConversas() {
+  setLoading();
+  try {
+    const [lr, cr] = await Promise.all([
+      listEntity('LeadConversa'),
+      listEntity('ConversaCliente'),
+    ]);
+    allConversas = [
+      ...(lr.items||[]).map(l => ({...l, _canal:'bot'})),
+      ...(cr.items||[]).map(c => ({...c, _canal:'web'})),
+    ].sort((a,b) => new Date(b.data_ultima_mensagem||b.updated_date||b.created_date) - new Date(a.data_ultima_mensagem||a.updated_date||a.created_date));
+    renderConversas();
+  } catch(e) { showError(e.message); }
+}
+
+function renderConversas(filtro = 'todos') {
+  let items = [...allConversas];
+  if (filtro === 'bot') items = items.filter(c => c._canal === 'bot');
+  if (filtro === 'web') items = items.filter(c => c._canal === 'web');
+  if (currentAgent === 'bot') items = items.filter(c => c._canal === 'bot');
+  if (currentAgent === 'web') items = items.filter(c => c._canal === 'web');
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Histórico de Conversas</h2>
+      <span style="font-size:12px;color:var(--muted)">${items.length} conversas</span>
+    </div>
+    <div class="filter-row">
+      ${['todos','bot','web'].map(f=>`<button class="filter-btn ${filtro===f?'active':''}" onclick="renderConversas('${f}')">${f==='bot'?'🤖 Bot Telegram':f==='web'?'💻 Web Chat':'🌐 Todos'}</button>`).join('')}
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input placeholder="Buscar por nome, massagem..." oninput="filterConversas(this.value, '${filtro}')">
+    </div>
+    ${items.length === 0 ? '<div class="empty"><div class="e-icon">💬</div><p>Nenhuma conversa encontrada</p></div>' : `
+    <div class="conv-list">
+      ${items.slice(0,50).map(c => {
+        const nome = c.nome || `ID ${(c.whatsapp||'').slice(-4)}`;
+        const ultima = c.ultima_mensagem || c.resumo || 'sem mensagem';
+        const data = new Date(c.data_ultima_mensagem||c.updated_date||c.created_date);
+        const label = isToday(data) ? data.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : data.toLocaleDateString('pt-BR');
+        return `
+          <div class="conv-item" onclick="openConversa('${c.id}','${c._canal}')">
+            <div class="conv-avatar ${c._canal==='bot'?'conv-av-bot':'conv-av-web'}">${nome.charAt(0).toUpperCase()}</div>
+            <div class="conv-info">
+              <div class="conv-name">${escHtml(nome)} ${c.massagem_interesse?('<span class="badge badge-teal" style="font-size:10px">'+c.massagem_interesse+'</span>'):''}</div>
+              <div class="conv-last">${escHtml(ultima.slice(0,80))}</div>
+            </div>
+            <div class="conv-meta">
+              <div class="conv-time">${label}</div>
+              <div class="conv-canal">${c._canal==='bot'?'<span class="badge badge-teal" style="font-size:9px">🤖 Bot</span>':'<span class="badge badge-gold" style="font-size:9px">💻 Web</span>'}</div>
+              ${c.etapa_funil?('<div style="font-size:9px;color:var(--muted);margin-top:2px">'+c.etapa_funil+'</div>'):''}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>`}
+  `);
+}
+
+function filterConversas(query, filtro) {
+  const q = query.toLowerCase();
+  const filtered = allConversas.filter(c =>
+    (c.nome||'').toLowerCase().includes(q) ||
+    (c.massagem_interesse||'').toLowerCase().includes(q) ||
+    (c.ultima_mensagem||'').toLowerCase().includes(q)
+  );
+  // re-render com filtered
+  document.querySelector('.conv-list') && (document.querySelector('.conv-list').innerHTML =
+    filtered.slice(0,50).map(c => {
+      const nome = c.nome || `ID ${(c.whatsapp||'').slice(-4)}`;
+      return `<div class="conv-item"><div class="conv-avatar ${c._canal==='bot'?'conv-av-bot':'conv-av-web'}">${nome.charAt(0).toUpperCase()}</div><div class="conv-info"><div class="conv-name">${escHtml(nome)}</div><div class="conv-last">${escHtml((c.ultima_mensagem||'').slice(0,60))}</div></div></div>`;
+    }).join('')
+  );
+}
+
+function openConversa(id, canal) {
+  const c = allConversas.find(x => x.id === id);
+  if (!c) return;
+  const msgs = c.mensagens ? (Array.isArray(c.mensagens) ? c.mensagens : JSON.parse(c.mensagens)) : [];
+  openModal(`💬 ${c.nome||'Conversa'}`, `
+    <div style="margin-bottom:10px">
+      <span class="badge ${canal==='bot'?'badge-teal':'badge-gold'}">${canal==='bot'?'🤖 Bot Telegram':'💻 Web Chat'}</span>
+      ${c.massagem_interesse?`<span class="badge badge-gray" style="margin-left:6px">${c.massagem_interesse}</span>`:''}
+      ${c.whatsapp?`<span style="font-size:11px;color:var(--muted);margin-left:8px">📱 ${c.whatsapp}</span>`:''}
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
+      ${msgs.length > 0 ? msgs.map(m=>`
+        <div style="margin-bottom:10px;display:flex;${m.role==='user'?'justify-content:flex-end':''}">
+          <div style="max-width:80%;padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.5;background:${m.role==='user'?'var(--teal3)':'var(--surface3)'}">
+            ${escHtml(m.content||'')}
+          </div>
+        </div>`).join('') :
+        `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">${escHtml(c.resumo||c.ultima_mensagem||'Sem mensagens gravadas')}</div>`
+      }
+    </div>
+    ${c.etapa_funil?('<div style="margin-top:10px;font-size:11px;color:var(--muted)">Etapa: <b>'+c.etapa_funil+'</b> · Contato: '+new Date(c.data_ultima_mensagem||c.updated_date).toLocaleString('pt-BR')+'</div>)':''}
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="analisarConversa('${c.id}','${c._canal}')" style="background:var(--teal3);border:1px solid var(--teal);border-radius:8px;padding:8px 16px;color:var(--teal);cursor:pointer;font-size:12px;font-weight:700">🧩 Analisar com IA → Sugerir Regras</button>
+    </div>
+  `, () => {});
+}
+
+async function analisarConversa(id, canal) {
+  const c = allConversas.find(x => x.id === id);
+  if (!c) return;
+  const msgs = c.mensagens ? (Array.isArray(c.mensagens) ? c.mensagens : (() => { try { return JSON.parse(c.mensagens); } catch(e) { return []; } })()) : [];
+  if (msgs.length < 2) { toast('⚠️ Conversa sem mensagens suficientes para análise', 'err'); return; }
+  toast('🔄 Analisando conversa com IA...');
+  closeModal();
+  try {
+    const resumoConv = msgs.map(m => (m.role==='user'?'Cliente: ':'Agente: ') + (m.content||'')).join('\n').slice(0, 3000);
+    const resp = await fetch('https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/adminProxy?path=%2Faprendizagem-conversa', {
+      method: 'POST',
+      headers: { 'x-admin-key': 'loshombres2026', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversa_id: id, canal, resumo: resumoConv, nome: c.nome || 'Anônimo' })
+    });
+    const data = await resp.json();
+    if (data.sugestoes && data.sugestoes.length > 0) {
+      // Mostrar sugestões geradas
+      openModal('🧩 Sugestões de Aprendizagem', `
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">${data.sugestoes.length} sugestão(ões) gerada(s) a partir da conversa de <b>${escHtml(c.nome||'Anônimo')}</b>.</p>
+        ${data.sugestoes.map((s,i) => `
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
+            <div style="font-size:12px;color:var(--text);margin-bottom:8px">${escHtml(s.diretriz)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Fluxo sugerido: <b>${s.fluxo||'geral'}</b> · Motivo: ${escHtml(s.motivo||'')}</div>
+            <div style="display:flex;gap:6px">
+              <button onclick="aprovarSugestao(${i})" style="background:var(--teal3);border:1px solid var(--teal);border-radius:6px;padding:5px 12px;color:var(--teal);cursor:pointer;font-size:11px">✅ Aprovar</button>
+              <button onclick="this.closest('div[style]').remove()" style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--muted);cursor:pointer;font-size:11px">❌ Descartar</button>
+            </div>
+          </div>
+        `).join('')}
+      `, () => {});
+      window._sugestoesAtuais = data.sugestoes;
+    } else {
+      toast('ℹ️ ' + (data.mensagem || 'Nenhuma sugestão gerada para esta conversa.'));
+    }
+  } catch(e) { toast('❌ Erro na análise: ' + e.message, 'err'); }
+}
+
+async function aprovarSugestao(idx) {
+  const s = (window._sugestoesAtuais || [])[idx];
+  if (!s) return;
+  try {
+    await createEntity('RegraAprendizado', {
+      diretriz: s.diretriz, resumo_dia: s.motivo, motivo: s.motivo,
+      fluxo: s.fluxo || 'geral', status: false, origem: 'analise_conversa',
+      data_geracao: new Date().toISOString(), aprovado_por: 'jonathan'
+    });
+    toast('✅ Sugestão salva na aba Aprendizagens — ative quando quiser!');
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+
+// ══ APRENDIZAGENS ══════════════════════════════════════════════
+async function loadAprendizagens() {
+  setLoading();
+  try {
+    const r = await listEntity('RegraAprendizado');
+    window._allAprendizagens = r.items || [];
+    renderAprendizagens('todas');
+  } catch(e) { showError(e.message); }
+}
+
+function renderAprendizagens(filtro = 'todas') {
+  const items = (window._allAprendizagens || []);
+  const filtradas = filtro === 'ativas' ? items.filter(r => r.status)
+    : filtro === 'pendentes' ? items.filter(r => !r.status)
+    : items;
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>🧩 Aprendizagens da IA</h2>
+      <span style="font-size:12px;color:var(--muted)">${items.length} total · ${items.filter(r=>!r.status).length} aguardando aprovação</span>
+    </div>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--muted)">
+      💡 Sugestões geradas por análise de conversas. Ative as que fizerem sentido — são injetadas no prompt automaticamente.
+    </div>
+    <div class="filter-row" style="margin-bottom:14px">
+      \${['todas','ativas','pendentes'].map(f=>\`<button class="filter-btn \${filtro===f?'active':''}" onclick="renderAprendizagens('\${f}')">\${f==='todas'?'🌐 Todas':f==='ativas'?'✅ Ativas':'⏳ Aguardando'}</button>\`).join('')}
+    </div>
+    \${filtradas.length === 0 ? '<div class="empty"><div class="e-icon">🧩</div><p>Nenhuma aprendizagem encontrada</p></div>' :
+      filtradas.map(r => \`
+        <div style="background:var(--surface2);border:1px solid \${r.status?'var(--teal)':'var(--border)'};border-radius:10px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <label class="toggle" title="\${r.status?'Ativa':'Inativa'}">
+              <input type="checkbox" \${r.status?'checked':''} onchange="ativarAprendizagem('\${r.id}', this.checked)">
+              <span class="slider"></span>
+            </label>
+            <div style="flex:1">
+              <div style="font-size:13px;color:var(--text);margin-bottom:6px;line-height:1.5">\${escHtml(r.diretriz||'')}</div>
+              <div style="font-size:11px;color:var(--muted)">
+                Fluxo: <b style="color:var(--teal)">\${r.fluxo||'geral'}</b>
+                \${r.origem?' · Origem: '+escHtml(r.origem):''}
+                \${r.data_geracao?' · '+new Date(r.data_geracao).toLocaleDateString('pt-BR'):''}
+                \${r.motivo?'<br><span style="font-size:10px;color:var(--muted2)">📝 '+escHtml(r.motivo)+'</span>':''}
+              </div>
+            </div>
+            <button onclick="deletarAprendizagem('\${r.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:15px;padding:0">🗑</button>
+          </div>
+        </div>
+      \`).join('')
+    }
+  \`);
+}
+
+async function ativarAprendizagem(id, checked) {
+  try {
+    await updateEntity('RegraAprendizado', id, { status: checked });
+    toast(checked ? '✅ Aprendizagem ativada — já reflete nos agentes!' : '⏸ Desativada');
+    loadAprendizagens();
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+async function deletarAprendizagem(id) {
+  if (!confirm('Remover esta aprendizagem?')) return;
+  try {
+    await deleteEntity('RegraAprendizado', id);
+    toast('🗑 Removida');
+    loadAprendizagens();
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+// ══ LEADS ════════════════════════════════════════════════════
+async function loadLeads() {
+  setLoading();
+  try {
+    const r = await listEntity('LeadConversa');
+    allLeads = r.items || [];
+    renderLeads(window._leadsPeriodo || 'todos');
+  } catch(e) { showError(e.message); }
+}
+
+function renderLeads(filtro='todos') {
+  window._leadsPeriodo = filtro;
+  // Filtro de período
+  const now = new Date();
+  let allLeadsFiltered = allLeads;
+  const periodo = window._periodoLeads || 'todos';
+  if (periodo === 'hoje') {
+    allLeadsFiltered = allLeads.filter(l => { const d = new Date(l.data_ultimo_contato||l.created_date); return d.toDateString() === now.toDateString(); });
+  } else if (periodo === '7dias') {
+    const lim = new Date(now - 7*86400000);
+    allLeadsFiltered = allLeads.filter(l => new Date(l.data_ultimo_contato||l.created_date) >= lim);
+  } else if (periodo === '30dias') {
+    const lim = new Date(now - 30*86400000);
+    allLeadsFiltered = allLeads.filter(l => new Date(l.data_ultimo_contato||l.created_date) >= lim);
+  }
+  let items = [...allLeadsFiltered].sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
+  if (filtro !== 'todos') items = items.filter(l => l.etapa_funil === filtro);
+  if (currentAgent === 'bot') items = items.filter(l => (l.canal_origem||'').includes('telegram'));
+  if (currentAgent === 'web') items = items.filter(l => (l.canal_origem||'').includes('web'));
+
+  const etapas = ['todos','entrada','consulta_massagem','pediu_preco','acessou_agenda','pagou_sinal','confirmado'];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Leads</h2>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">${allLeadsFiltered.length} leads</span>
+        <button class="btn btn-ghost btn-sm" onclick="window._periodoLeads='hoje';renderLeads()">Hoje</button>
+        <button class="btn btn-ghost btn-sm" onclick="window._periodoLeads='7dias';renderLeads()">7 dias</button>
+        <button class="btn btn-ghost btn-sm" onclick="window._periodoLeads='30dias';renderLeads()">30 dias</button>
+        <button class="btn btn-teal btn-sm" onclick="window._periodoLeads='todos';renderLeads()">Todos</button>
+      </div>
+    </div>
+    <div class="filter-row">
+      ${etapas.map(e=>`<button class="filter-btn ${filtro===e?'active':''}" onclick="renderLeads('${e}')">${e.replace('_',' ')}</button>`).join('')}
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Nome</th><th>Canal</th><th>Massagem</th><th>Etapa</th><th>Último contato</th></tr></thead>
+        <tbody>
+          ${items.slice(0,80).map(l => `
+            <tr>
+              <td>
+                <div style="font-weight:600">${escHtml(l.nome||'Anônimo')}</div>
+                ${l.whatsapp?('<div style="font-size:11px;color:var(--muted)">📱 '+l.whatsapp+'</div>'):''}
+              </td>
+              <td><span class="badge ${(l.canal_origem||'').includes('telegram')?'badge-teal':'badge-gold'}">${l.canal_origem||'–'}</span></td>
+              <td><span style="font-size:12px">${l.massagem_interesse||'–'}</span></td>
+              <td><span class="badge badge-gray">${l.etapa_funil||'–'}</span></td>
+              <td><span style="font-size:11px;color:var(--muted)">${l.data_ultimo_contato?new Date(l.data_ultimo_contato).toLocaleString('pt-BR'):'–'}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `);
+}
+
+// ══ AGENDAMENTOS ════════════════════════════════════════════
+async function loadAgendamentos() {
+  setLoading();
+  try {
+    const r = await listEntity('Agendamento');
+    allAgendamentos = (r.items||[]).sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
+    renderAgendamentos();
+  } catch(e) { showError(e.message); }
+}
+
+function renderAgendamentos(filtro='todos') {
+  let items = [...allAgendamentos];
+  if (filtro !== 'todos') items = items.filter(a => a.status === filtro);
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Agendamentos</h2>
+      <span style="font-size:12px;color:var(--muted)">${items.length} registros</span>
+    </div>
+    <div class="filter-row">
+      ${['todos','Confirmado','Aguardando sinal','Cancelado'].map(s=>`
+        <button class="filter-btn ${filtro===s?'active':''}" onclick="renderAgendamentos('${s}')">${s}</button>
+      `).join('')}
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Cliente</th><th>Massagem</th><th>Unidade</th><th>Data/Hora</th><th>Valor</th><th>Status</th></tr></thead>
+        <tbody>
+          ${items.slice(0,60).map(a => {
+            const dt = a.data_hora ? new Date(a.data_hora).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+            const statusBadge = {Confirmado:'badge-green','Aguardando sinal':'badge-gold',Cancelado:'badge-red'}[a.status]||'badge-gray';
+            return `
+              <tr>
+                <td>
+                  <div style="font-weight:600">${escHtml(a.nome_cliente||'–')}</div>
+                  ${a.whatsapp?`<div style="font-size:11px;color:var(--muted)">📱 ${a.whatsapp}</div>`:''}
+                </td>
+                <td><span style="font-size:12px">${escHtml(a.massagem||'–')}</span></td>
+                <td><span class="badge badge-gray">${a.unidade||'–'}</span></td>
+                <td><span style="font-size:12px">${dt}</span></td>
+                <td><span style="color:var(--gold);font-weight:700">R$${a.valor_total||0}</span></td>
+                <td><span class="badge ${statusBadge}">${a.status||'–'}</span></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `);
+}
+
+// ══ AUTOMAÇÕES ═══════════════════════════════════════════════
+function loadAutomacoes() {
+  const autos = [
+    { icon:'📊', name:'Relatório de Expediente', link:'https://cron-job.org', editFn:'cronRelatorioExpediente', desc:'Relatório diário às 19h — divergências Calendar vs Planilha', status:'ativo', proxima:'Hoje 19:00', canal:'Grupo JG', freq:'Diário' },
+    { icon:'🔍', name:'Vistoria de Agenda', link:'https://cron-job.org', editFn:'cronVistoriaAgenda', desc:'Verifica agendamentos pendentes e alerta', status:'ativo', proxima:'Periódico', canal:'Grupo JG', freq:'Periódico' },
+    { icon:'🔄', name:'Reengajamento', link:'https://cron-job.org', editFn:'cronReengajamento', desc:'Contata leads inativos após período definido', status:'ativo', proxima:'Periódico', canal:'WhatsApp', freq:'Periódico' },
+    { icon:'👋', link:'https://cron-job.org', editFn:'cronAbandonados', name:'Abandonados', desc:'Follow-up para conversas sem resposta', status:'ativo', proxima:'Periódico', canal:'Telegram Bot', freq:'Periódico' },
+    { icon:'🧠', name:'Aprendizagem Diária', desc:'Analisa logs e sugere novas regras de comportamento', status:'ativo', proxima:'19:00', canal:'Grupo JG', freq:'Diário' },
+    { icon:'💳', name:'Monitor de Créditos', desc:'Snapshot periódico do uso de créditos Base44', status:'ativo', proxima:'Periódico', canal:'–', freq:'Periódico' },
+  ];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Automações Ativas</h2>
+      <a href="https://app.cron-job.org" target="_blank" class="btn btn-ghost btn-sm">⚙️ cron-job.org</a>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">
+      💡 As automações são disparadas via <b>cron-job.org</b> (conta: loshombresestudiospa1@gmail.com). Clique em cada uma para ver detalhes ou pausar.
+    </div>
+    ${autos.map(a => `
+      <div class="auto-item">
+        <div class="auto-icon">${a.icon}</div>
+        <div class="auto-info">
+          <div class="auto-name">${a.name}</div>
+          <div class="auto-desc">${a.desc}</div>
+          <div style="margin-top:4px;display:flex;gap:8px">
+            <span class="badge badge-teal" style="font-size:10px">${a.freq}</span>
+            <span class="badge badge-gray" style="font-size:10px">→ ${a.canal}</span>
+          </div>
+        </div>
+        <div class="auto-meta">
+          <div class="auto-next">⏰ ${a.proxima}</div>
+          <div style="margin-top:6px"><span class="badge badge-green" style="font-size:10px">● ${a.status}</span></div>
+        </div>
+      </div>
+    `).join('')}
+
+    <div class="card" style="margin-top:16px;border-color:var(--teal3)">
+      <div class="card-title">🔗 Links rápidos</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+        <a href="https://dionisio872-hue.github.io/loshombres-chat/" target="_blank" class="btn btn-ghost btn-sm">💻 Chat Web</a>
+        <a href="https://t.me/Atendimentoloshombresbot" target="_blank" class="btn btn-ghost btn-sm">🤖 Bot Telegram</a>
+        <a href="https://calendar.app.google/jBk4U8zf5WGb73MH6" target="_blank" class="btn btn-ghost btn-sm">📅 Agenda Savassi</a>
+        <a href="https://calendar.app.google/dandDDiGYKtD36Q19" target="_blank" class="btn btn-ghost btn-sm">📅 Agenda Betim</a>
+      </div>
+    </div>
+  `);
+}
+
+// ══ IDENTIDADE ═══════════════════════════════════════════════
+async function loadIdentidade() {
+  setLoading();
+  try {
+    const r = await listEntity('ConfiguracaoAgente');
+    const items = r.items || [];
+    const promptBot = items.find(i => i.sub_categoria === 'prompt_base' && (i.chave_fluxo||'').includes('telegram'));
+    const promptWeb = items.find(i => i.sub_categoria === 'prompt_base' && (i.chave_fluxo||'').includes('atendimento'));
+
+    setContent(`
+      <div class="sec-hdr"><h2>Identidade da IA</h2></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">
+        💡 O prompt base define a <b>personalidade, tom e regras fundamentais</b> de cada agente. Edite e salve — aplicado na próxima mensagem, sem deploy.
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span class="dot dot-bot"></span>
+            <span style="font-size:13px;font-weight:700">Bot Telegram</span>
+          </div>
+          ${promptBot ? `
+            <div class="fluxo-field">
+              <label>Prompt Base</label>
+              <textarea id="id-bot" rows="14">${escHtml(promptBot.valor||'')}</textarea>
+            </div>
+            <button class="btn btn-teal" onclick="saveIdentidade('${promptBot.id}','id-bot')">💾 Salvar Bot</button>
+          ` : `
+            <div class="fluxo-field"><label>Prompt Base</label><textarea id="id-bot-new" rows="14" placeholder="Digite o prompt base do bot Telegram..."></textarea></div>
+            <button class="btn btn-teal" onclick="createIdentidade('id-bot-new','telegram_bot','prompt_base')">+ Criar Prompt Bot</button>
+          `}
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span class="dot dot-web"></span>
+            <span style="font-size:13px;font-weight:700">Web Chat</span>
+          </div>
+          ${promptWeb ? `
+            <div class="fluxo-field">
+              <label>Prompt Base</label>
+              <textarea id="id-web" rows="14">${escHtml(promptWeb.valor||'')}</textarea>
+            </div>
+            <button class="btn btn-teal" onclick="saveIdentidade('${promptWeb.id}','id-web')">💾 Salvar Web</button>
+          ` : `
+            <div class="fluxo-field"><label>Prompt Base</label><textarea id="id-web-new" rows="14" placeholder="Digite o prompt base do chat web..."></textarea></div>
+            <button class="btn btn-teal" onclick="createIdentidade('id-web-new','atendimento_cliente','prompt_base')">+ Criar Prompt Web</button>
+          `}
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">💡 Sugestões de melhoria de prompt</div>
+        <div style="font-size:13px;line-height:1.7;margin-top:8px">
+          <div style="margin-bottom:8px">🎯 <b>Defina a persona:</b> "Você é o Jonathan, massagista. Fale na primeira pessoa, de forma calorosa e direta."</div>
+          <div style="margin-bottom:8px">⏱ <b>Limite o tamanho:</b> "Responda em no máximo 3 frases. Sem listas. Sem bullet points."</div>
+          <div style="margin-bottom:8px">🚫 <b>Proibições explícitas:</b> "NUNCA invente preços, horários ou informações que não foram informadas no contexto."</div>
+          <div style="margin-bottom:8px">🔀 <b>Contexto dinâmico:</b> O sistema injeta automaticamente os blocos [FLUXO_ATIVADO] com dados em tempo real.</div>
+        </div>
+      </div>
+    `);
+  } catch(e) { showError(e.message); }
+}
+
+async function saveIdentidade(id, fieldId) {
+  const val = document.getElementById(fieldId).value;
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { valor: val });
+    toast('✅ Identidade salva!');
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+async function createIdentidade(fieldId, chave, sub) {
+  const val = document.getElementById(fieldId).value.trim();
+  if (!val) { toast('Digite o prompt', 'err'); return; }
+  try {
+    await createEntity('ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor: val, ativo: true, tipo_campo: 'text' });
+    toast('✅ Prompt criado!');
+    loadIdentidade();
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+// ══ MODAL ════════════════════════════════════════════════════
+function openModal(title, body, saveFn) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  modalSaveFn = saveFn;
+  document.getElementById('modalSaveBtn').style.display = saveFn ? '' : 'none';
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+function modalSave() { if (modalSaveFn) modalSaveFn(); }
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ══ HELPERS ══════════════════════════════════════════════════
+function setLoading() { document.getElementById('content').innerHTML = '<div class="loading"><div class="spin"></div> Carregando dados...</div>'; }
+function setContent(html) { document.getElementById('content').innerHTML = html; }
+function showError(msg) {
+  const isAuth = msg.includes('private') || msg.includes('Token') || msg.includes('401') || msg.includes('403');
+  const extra = isAuth ? `
+    <br><br>
+    <button class="btn btn-teal btn-sm" onclick="localStorage.removeItem('lh_svc_token');location.reload()">🔄 Limpar token e relogar</button>
+  ` : `<br><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="loadCurrentTab()">↺ Tentar novamente</button>`;
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:400px;gap:16px">
+      <div style="font-size:40px">❌</div>
+      <div style="font-size:14px;color:var(--red);max-width:400px;text-align:center">${escHtml(msg)}</div>
+      <div style="text-align:center">${extra}</div>
+    </div>`;
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function isToday(d) { const t = new Date(); return d.toDateString() === t.toDateString(); }
+
+// ══ INIT ══════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  loadInsights();
+});
+</script>
+
+<!-- TOKEN MODAL -->
+<div id="tokenModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#0d2626;border:1px solid #1e4040;border-radius:12px;padding:32px;width:420px;max-width:90vw">
+    <div style="font-size:20px;font-weight:800;color:#2dd4bf;margin-bottom:8px">🔐 Los Hombres Admin</div>
+    <div style="font-size:13px;color:#6b9e9e;margin-bottom:20px">Cole o Service Token para acessar o painel.</div>
+    <input id="tokenInput" type="password" placeholder="eyJhbGci..." style="width:100%;background:#112e2e;border:1px solid #245050;border-radius:6px;padding:12px;font-size:13px;color:#e8f5f5;outline:none;font-family:monospace;margin-bottom:8px"/>
+    <div id="tokenError" style="display:none;color:#ef4444;font-size:11px;margin-bottom:8px">Token inválido. Cole o token completo.</div>
+    <button id="tokenSaveBtn" style="width:100%;background:#0f766e;color:#2dd4bf;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">Entrar →</button>
+    <div style="font-size:10px;color:#4a7a7a;margin-top:12px;text-align:center">O token fica salvo no navegador. Não precisa colar de novo.</div>
+  </div>
+</div>
+</body>
+</html>
