@@ -275,6 +275,9 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
     <div class="nav-item" onclick="showTab('identidade')" id="nav-identidade">
       <span class="ni-icon">🧠</span> Identidade IA
     </div>
+    <div class="nav-item" onclick="showTab('instrucoes')" id="nav-instrucoes">
+      <span class="ni-icon">📚</span> Instruções & Mídias
+    </div>
   </div>
 
   <div class="sb-bottom">
@@ -445,6 +448,7 @@ function showTab(tab) {
     agendamentos: ['📅 Agendamentos', 'Reservas e confirmações'],
     automacoes: ['🔁 Automações', 'Crons e triggers ativos'],
     identidade: ['🧠 Identidade IA', 'Personalidade e comportamento base'],
+    instrucoes: ['📚 Instruções & Mídias', 'Banco de links, áudios, vídeos e regras dos bots'],
   };
   const [title, sub] = titles[tab] || ['–', ''];
   document.getElementById('tb-title').textContent = title;
@@ -486,6 +490,7 @@ function loadCurrentTab() {
     agendamentos: loadAgendamentos,
     automacoes: loadAutomacoes,
     identidade: loadIdentidade,
+    instrucoes: loadInstrucoes,
   }[currentTab];
   if (fn) fn();
 }
@@ -1159,24 +1164,6 @@ async function marcarCompartilhado(id, agente) {
   } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
 }
 
-function openAddFluxoModal() {
-  openModal('⚡ Novo Fluxo', `
-    <div class="fluxo-field"><label>Chave do Fluxo</label><input type="text" id="new-chave" placeholder="ex: atendimento_cliente"></div>
-    <div class="fluxo-field"><label>Sub-categoria</label><input type="text" id="new-sub" placeholder="ex: prompt_base"></div>
-    <div class="fluxo-field"><label>Valor / Prompt</label><textarea id="new-valor" rows="5" placeholder="Conteúdo do fluxo..."></textarea></div>
-    <div class="fluxo-field"><label>Descrição (opcional)</label><input type="text" id="new-desc" placeholder="Para que serve?"></div>
-  `, async () => {
-    const chave = document.getElementById('new-chave').value.trim();
-    const sub = document.getElementById('new-sub').value.trim();
-    const valor = document.getElementById('new-valor').value.trim();
-    const desc = document.getElementById('new-desc').value.trim();
-    if (!chave || !sub || !valor) { toast('Preencha os campos obrigatórios', 'err'); return; }
-    await createEntity('ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor, descricao: desc, ativo: true, tipo_campo: 'text' });
-    toast('✅ Fluxo criado!');
-    closeModal();
-    loadFluxos();
-  });
-}
 
 function openAddCampoModal(chave) {
   openModal('+ Adicionar Campo', `
@@ -1192,6 +1179,134 @@ function openAddCampoModal(chave) {
     toast('✅ Campo adicionado!');
     closeModal();
     loadFluxos();
+  });
+}
+
+// ══ INSTRUÇÕES & MÍDIAS ══════════════════════════════════════════════
+// Aba para cadastro de links, áudios, vídeos e instruções acessados pelos bots
+let allInstrucoes = [];
+
+async function loadInstrucoes() {
+  setLoading();
+  try {
+    const r = await listEntity('ConfiguracaoAgente', { chave_fluxo: 'instrucoes' });
+    allInstrucoes = r.items || [];
+    renderInstrucoes();
+  } catch(e) { showError(e.message); }
+}
+
+function renderItemInstrucao(item) {
+  var tipos = { audio: '🎵', video: '🎬', link: '🔗', instrucao: '📝', matriz: '🧠' };
+  var tipo  = item.tipo_campo || 'instrucao';
+  var icone = tipos[tipo] || '📝';
+  var badgeCls = tipo==='audio'?'badge-green':tipo==='video'?'badge-blue':tipo==='link'?'badge-gold':'badge-gray';
+  var checked = item.ativo !== false ? 'checked' : '';
+  return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;margin-bottom:10px">'
+    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+    + '<span style="font-size:18px">' + icone + '</span>'
+    + '<span style="font-size:12px;font-weight:700;color:var(--teal)">' + escHtml(item.sub_categoria||'–') + '</span>'
+    + '<span class="badge ' + badgeCls + '">' + tipo + '</span>'
+    + '<label class="toggle" title="Ativo"><input type="checkbox" ' + checked + ' onchange="toggleFluxoAtivo(\'' + item.id + '\', this.checked)"><span class="slider"></span></label>'
+    + '<span style="font-size:11px;color:var(--muted);flex:1">' + escHtml(item.descricao||'') + '</span>'
+    + '<button class="btn btn-red btn-sm" onclick="deleteFluxo(\'' + item.id + '\')">🗑</button>'
+    + '</div>'
+    + '<div class="fluxo-field"><label>Conteúdo / URL / Texto</label>'
+    + '<textarea id="iv-' + item.id + '" rows="3">' + escHtml(item.valor||'') + '</textarea></div>'
+    + '<div class="fluxo-actions"><button class="btn btn-teal btn-sm" onclick="saveFluxoById(\'' + item.id + '\', document.getElementById(\'iv-' + item.id + '\').value)">💾 Salvar</button></div>'
+    + '</div>';
+}
+
+function renderGrupoInstrucao(grp, items) {
+  var itensHtml = items.map(renderItemInstrucao).join('');
+  return '<div class="fluxo-item">'
+    + '<div class="fluxo-header open" onclick="this.classList.toggle(\'open\');this.nextElementSibling.classList.toggle(\'open\')">'
+    + '<span style="font-size:16px">📁</span>'
+    + '<span class="fluxo-title">' + escHtml(grp) + '</span>'
+    + '<span class="badge badge-teal">' + items.length + ' item(s)</span>'
+    + '<span style="color:var(--muted);font-size:12px;margin-left:8px">▼</span>'
+    + '</div>'
+    + '<div class="fluxo-body open">' + itensHtml
+    + '<button class="btn btn-ghost btn-sm" onclick="openAddInstrucaoModal(\'' + grp + '\')">+ Adicionar item</button>'
+    + '</div></div>';
+}
+
+function renderInstrucoes() {
+  const grupos = {};
+  allInstrucoes.forEach(function(item) {
+    var g = item.sub_categoria || 'geral';
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(item);
+  });
+
+  var corpoHtml = Object.keys(grupos).length === 0
+    ? '<div class="empty"><div class="e-icon">📚</div><p>Nenhuma instrução cadastrada. Crie a primeira!</p></div>'
+    : Object.entries(grupos).map(function(e){ return renderGrupoInstrucao(e[0], e[1]); }).join('');
+
+  setContent(
+    '<div class="sec-hdr">'
+    + '<h2>📚 Instruções & Mídias</h2>'
+    + '<button class="btn btn-teal btn-sm" onclick="openAddInstrucaoModal()">+ Nova Instrução / Mídia</button>'
+    + '</div>'
+    + '<div style="margin-bottom:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:12px;color:var(--muted);line-height:1.7">'
+    + '<b style="color:var(--teal)">Como funciona:</b> Tudo aqui é acessado pelos bots via chave <code style="background:var(--surface3);padding:2px 6px;border-radius:4px;color:var(--gold)">instrucoes</code>. '
+    + 'Use <b>sub_categoria</b> para agrupar: '
+    + '<code style="color:var(--teal)">audio_relaxante</code>, '
+    + '<code style="color:var(--teal)">video_tantra</code>, '
+    + '<code style="color:var(--teal)">matriz_comportamento</code>, etc. '
+    + 'O bot injeta o conteúdo automaticamente quando o fluxo correspondente é ativado.'
+    + '</div>'
+    + corpoHtml
+  );
+}
+
+function saveFluxoById(id, valor) {
+  apiPut('/entities/ConfiguracaoAgente/' + id, { valor })
+    .then(() => toast('✅ Salvo!'))
+    .catch(e => toast('Erro: ' + e.message, 'err'));
+}
+
+function openAddInstrucaoModal(grupoFixo) {
+  var labelMap = {instrucao:'📝 Instrução/Regra', audio:'🎵 Áudio', video:'🎬 Vídeo', link:'🔗 Link', matriz:'🧠 Matriz de Comportamento'};
+  var tipoOpts = ['instrucao','audio','video','link','matriz'].map(function(t){
+    return '<option value="' + t + '">' + labelMap[t] + '</option>';
+  }).join('');
+  var grupoVal = grupoFixo || '';
+  var modalHtml =
+    '<div class="fluxo-field">'
+    + '<label>Tipo</label>'
+    + '<select id="ni-tipo" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;color:var(--text);font-size:13px">'
+    + tipoOpts
+    + '</select></div>'
+    + '<div class="fluxo-field"><label>Sub-categoria / Nome</label>'
+    + '<input type="text" id="ni-sub" placeholder="ex: audio_relaxante, video_tantra, matriz_comportamento" value="' + escHtml(grupoVal) + '"></div>'
+    + '<div class="fluxo-field"><label>Conteúdo / URL / Texto livre</label>'
+    + '<textarea id="ni-valor" rows="6" placeholder="Cole aqui o link (áudio/vídeo), texto de instrução, ou a Matriz de Comportamento completa..."></textarea></div>'
+    + '<div class="fluxo-field"><label>Descrição (para referência)</label>'
+    + '<input type="text" id="ni-desc" placeholder="ex: Áudio da massagem Relaxante Sensual"></div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:-8px">'
+    + '💡 <b>Áudio/Vídeo:</b> cole o link do Telegram ou YouTube. O bot injeta como [AUDIO:url] ou [VIDEO:url].<br>'
+    + '💡 <b>Instrução/Matriz:</b> cole o texto completo — o bot lê e aplica automaticamente.'
+    + '</div>';
+
+  openModal('📚 Nova Instrução / Mídia', modalHtml, async function() {
+    var tipo  = document.getElementById('ni-tipo').value;
+    var sub   = document.getElementById('ni-sub').value.trim();
+    var valor = document.getElementById('ni-valor').value.trim();
+    var desc  = document.getElementById('ni-desc').value.trim();
+    if (!sub || !valor) { toast('Preencha sub-categoria e conteúdo', 'err'); return; }
+    try {
+      await apiPost('/entities/ConfiguracaoAgente', {
+        chave_fluxo: 'instrucoes',
+        sub_categoria: sub,
+        valor: valor,
+        descricao: desc,
+        tipo_campo: tipo,
+        ativo: true
+      });
+      toast('✅ Instrução/Mídia cadastrada!');
+      closeModal();
+      loadInstrucoes();
+    } catch(e) { toast('Erro: ' + e.message, 'err'); }
   });
 }
 
