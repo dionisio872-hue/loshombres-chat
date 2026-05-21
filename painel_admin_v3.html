@@ -344,25 +344,50 @@ let allLeads = [], allAgendamentos = [], allRegras = [], allFluxos = [], allConv
 let modalSaveFn = null;
 
 // ══ AUTH ═════════════════════════════════════════════════════
+async function apiPost(path, body) {
+  return apiFetch(path, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+}
+async function apiPut(path, body) {
+  return apiFetch(path, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+}
+async function apiDelete(path) {
+  return apiFetch(path, { method: 'DELETE' });
+}
+
 async function ensureToken() {
   if (SVC_TOKEN) return true;
-  // Aceitar token via URL ?token=xxx
+  // 1) URL ?token=xxx
   const urlToken = new URLSearchParams(window.location.search).get('token');
-  if (urlToken) { SVC_TOKEN = urlToken; localStorage.setItem('lh_svc_token', SVC_TOKEN); return true; }
-  const t = prompt('🔐 Cole o Service Token do Base44:');
-  if (!t) return false;
-  SVC_TOKEN = t.trim();
-  localStorage.setItem('lh_svc_token', SVC_TOKEN);
-  return true;
+  if (urlToken && urlToken !== 'SEU_TOKEN' && urlToken.length > 20) {
+    SVC_TOKEN = urlToken.trim();
+    localStorage.setItem('lh_svc_token', SVC_TOKEN);
+    return true;
+  }
+  // 2) Modal bonito
+  return new Promise(resolve => {
+    document.getElementById('tokenModal').style.display = 'flex';
+    document.getElementById('tokenSaveBtn').onclick = () => {
+      const v = document.getElementById('tokenInput').value.trim();
+      if (!v || v.length < 20) { document.getElementById('tokenError').style.display='block'; return; }
+      SVC_TOKEN = v;
+      localStorage.setItem('lh_svc_token', SVC_TOKEN);
+      document.getElementById('tokenModal').style.display = 'none';
+      resolve(true);
+    };
+    document.getElementById('tokenInput').onkeydown = e => { if(e.key==='Enter') document.getElementById('tokenSaveBtn').click(); };
+  });
 }
 
 async function apiFetch(path, opts = {}) {
   if (!await ensureToken()) throw new Error('Sem token');
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...opts,
-    headers: { 'Authorization': `Bearer ${SVC_TOKEN}`, 'Content-Type': 'application/json', ...(opts.headers||{}) }
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const headers = { 'Authorization': `Bearer ${SVC_TOKEN}`, ...(opts.headers||{}) };
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`${BASE_URL}${path}`, { ...opts, headers });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const j = await res.json(); msg = j.message || j.error || msg; } catch(e){}
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -384,6 +409,344 @@ async function deleteEntity(name, id) {
 }
 
 // ══ TOAST ════════════════════════════════════════════════════
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = `toast-msg ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ══ NAVIGATION ═══════════════════════════════════════════════
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const nav = document.getElementById(`nav-${tab}`);
+  if (nav) nav.classList.add('active');
+
+  const titles = {
+    insights: ['📊 Insights', 'Métricas e resultados do sistema'],
+    fluxos: ['⚡ Fluxos', 'Prompts e configurações por agente'],
+    regras: ['📋 Regras', 'Diretrizes de comportamento da IA'],
+    conversas: ['💬 Conversas', 'Histórico de atendimentos'],
+    leads: ['🎯 Leads', 'Clientes que interagiram'],
+    agendamentos: ['📅 Agendamentos', 'Reservas e confirmações'],
+    automacoes: ['🔁 Automações', 'Crons e triggers ativos'],
+    identidade: ['🧠 Identidade IA', 'Personalidade e comportamento base'],
+  };
+  const [title, sub] = titles[tab] || ['–', ''];
+  document.getElementById('tb-title').textContent = title;
+  document.getElementById('tb-sub').textContent = sub;
+
+  // Tab bar: só mostra período no insights
+  document.getElementById('tab-bar').style.display = tab === 'insights' ? 'flex' : 'none';
+
+  loadCurrentTab();
+}
+
+function setAgent(agent) {
+  currentAgent = agent;
+  document.querySelectorAll('.agent-card').forEach(el => el.classList.remove('active'));
+  document.getElementById(`agent-${agent}`).classList.add('active');
+  const badges = { all: '🌐 Todos', bot: '🤖 Bot Telegram', web: '💻 Web Chat' };
+  const colors = { all: 'badge-green', bot: 'badge-teal', web: 'badge-gold' };
+  const badge = document.getElementById('agent-badge');
+  badge.textContent = badges[agent];
+  badge.className = `badge ${colors[agent]}`;
+  loadCurrentTab();
+}
+
+function setPeriod(p) {
+  currentPeriod = p;
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${p}`).classList.add('active');
+  if (currentTab === 'insights') renderInsights();
+}
+
+function loadCurrentTab() {
+  const fn = {
+    insights: loadInsights,
+    fluxos: loadFluxos,
+    regras: loadRegras,
+    conversas: loadConversas,
+    leads: loadLeads,
+    agendamentos: loadAgendamentos,
+    automacoes: loadAutomacoes,
+    identidade: loadIdentidade,
+  }[currentTab];
+  if (fn) fn();
+}
+
+// ══ INSIGHTS ════════════════════════════════════════════════
+async function loadInsights() {
+  setLoading();
+  try {
+    const [leadsR, agsR, crR] = await Promise.all([
+      listEntity('LeadConversa'),
+      listEntity('Agendamento'),
+      listEntity('SnapshotCreditos'),
+    ]);
+    allLeads = leadsR.items || [];
+    allAgendamentos = agsR.items || [];
+    const creds = (crR.items || []).sort((a,b) => new Date(b.created_date) - new Date(a.created_date))[0];
+    updateCredits(creds);
+    renderInsights();
+  } catch(e) { showError(e.message); }
+}
+
+function filterByPeriod(items, field = 'created_date') {
+  const now = new Date();
+  const cutoffs = {
+    hoje: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+    '7d': new Date(now - 7*864e5),
+    '30d': new Date(now - 30*864e5),
+    total: new Date(0),
+  };
+  const cutoff = cutoffs[currentPeriod];
+  return items.filter(i => new Date(i[field] || i.created_date) >= cutoff);
+}
+
+function renderInsights() {
+  const leads = filterByPeriod(allLeads);
+  const ags = filterByPeriod(allAgendamentos);
+  const confirmados = ags.filter(a => a.status === 'Confirmado');
+  const receita = confirmados.reduce((s, a) => s + (a.valor_total || 0), 0);
+  const taxaConv = leads.length ? ((confirmados.length / leads.length) * 100).toFixed(1) : 0;
+
+  // Leads por canal
+  const botLeads = leads.filter(l => (l.canal_origem || '').includes('telegram'));
+  const webLeads = leads.filter(l => (l.canal_origem || '').includes('web'));
+
+  // Massagens mais pedidas
+  const massCount = {};
+  leads.forEach(l => { if(l.massagem_interesse) massCount[l.massagem_interesse] = (massCount[l.massagem_interesse]||0)+1; });
+  const topMass = Object.entries(massCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Etapa funil
+  const etapas = ['entrada','consulta_massagem','pediu_preco','acessou_agenda','pagou_sinal','confirmado'];
+  const etapaCount = {};
+  leads.forEach(l => { const e = l.etapa_funil||'entrada'; etapaCount[e] = (etapaCount[e]||0)+1; });
+
+  // Evolução últimos 7 dias
+  const evolucao = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(Date.now()-i*864e5);
+    const label = d.toLocaleDateString('pt-BR',{weekday:'short'});
+    const dayLeads = allLeads.filter(l => {
+      const ld = new Date(l.created_date);
+      return ld.toDateString() === d.toDateString();
+    }).length;
+    evolucao.push({label, val: dayLeads});
+  }
+  const maxEv = Math.max(...evolucao.map(e=>e.val), 1);
+
+  setContent(`
+    <div class="grid-4">
+      <div class="card"><div class="card-title">🎯 Leads</div><div class="card-value teal">${leads.length}</div><div class="card-sub">Bot: ${botLeads.length} · Web: ${webLeads.length}</div></div>
+      <div class="card"><div class="card-title">📅 Agendamentos</div><div class="card-value gold">${ags.length}</div><div class="card-sub">Confirmados: ${confirmados.length}</div></div>
+      <div class="card"><div class="card-title">✅ Taxa Conversão</div><div class="card-value ${taxaConv>10?'green':'red'}">${taxaConv}%</div><div class="card-sub">Leads → Confirmados</div></div>
+      <div class="card"><div class="card-title">💰 Receita</div><div class="card-value green">R$${receita.toLocaleString('pt-BR')}</div><div class="card-sub">Agendamentos confirmados</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">📈 Leads últimos 7 dias</div>
+        <div class="chart-bars">
+          ${evolucao.map(e=>`
+            <div class="chart-bar-wrap">
+              <div class="chart-bar-val">${e.val||''}</div>
+              <div class="chart-bar" style="height:${Math.max(8,(e.val/maxEv)*60)}px;background:linear-gradient(180deg,var(--teal),var(--teal3))"></div>
+              <div class="chart-bar-label">${e.label}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">🏆 Massagens mais pedidas</div>
+        ${topMass.length ? topMass.map(([m,n])=>`
+          <div class="funnel-row">
+            <div class="funnel-label">${m.slice(0,18)}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(n/topMass[0][1]*100)}%"></div></div>
+            <div class="funnel-num">${n}</div>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:13px">Sem dados ainda</div>'}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">🔽 Funil de conversão</div>
+        ${etapas.map(e=>{
+          const c = etapaCount[e]||0;
+          const max = etapaCount['entrada']||1;
+          return `<div class="funnel-row">
+            <div class="funnel-label">${e.replace('_',' ')}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(c/max*100)}%"></div></div>
+            <div class="funnel-num">${c}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">📊 Status agendamentos</div>
+        ${['Confirmado','Aguardando sinal','Cancelado'].map(s=>{
+          const c = ags.filter(a=>a.status===s).length;
+          const colors = {'Confirmado':'var(--green)','Aguardando sinal':'var(--yellow)','Cancelado':'var(--red)'};
+          return `<div class="funnel-row">
+            <div class="funnel-label">${s}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${ags.length?Math.round(c/ags.length*100):0}%;background:${colors[s]}"></div></div>
+            <div class="funnel-num">${c}</div>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">💡 SUGESTÃO: ${leads.length>10&&taxaConv<5?'Taxa de conversão baixa — considere enviar mensagem de reengajamento aos leads inativos.':'Sistema operando bem. Monitore diariamente.'}</div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function updateCredits(creds) {
+  if (!creds) return;
+  const msgPct = Math.min(100, Math.round((creds.msg_usado / creds.msg_total) * 100));
+  const intPct = Math.min(100, Math.round((creds.intg_usado / creds.intg_total) * 100));
+  document.getElementById('cr-msg-label').textContent = `${creds.msg_usado}/${creds.msg_total}`;
+  document.getElementById('cr-int-label').textContent = `${Math.round(creds.intg_usado/1000)}k/${Math.round(creds.intg_total/1000)}k`;
+  document.getElementById('cr-msg-bar').style.width = msgPct + '%';
+  document.getElementById('cr-int-bar').style.width = intPct + '%';
+}
+
+// ══ FLUXOS ══════════════════════════════════════════════════
+async function loadFluxos() {
+  setLoading();
+  try {
+    const r = await listEntity('ConfiguracaoAgente');
+    allFluxos = r.items || [];
+    renderFluxos();
+  } catch(e) { showError(e.message); }
+}
+
+function renderFluxos() {
+  let items = [...allFluxos];
+  // Filtrar por agente (via chave_fluxo)
+  if (currentAgent === 'bot') items = items.filter(f => (f.chave_fluxo||'').includes('telegram')||!(f.chave_fluxo||'').includes('web'));
+  if (currentAgent === 'web') items = items.filter(f => (f.chave_fluxo||'').includes('atendimento_cliente')||!(f.chave_fluxo||'').includes('telegram'));
+
+  // Agrupar por chave_fluxo
+  const grupos = {};
+  items.forEach(f => {
+    const g = f.chave_fluxo || 'geral';
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(f);
+  });
+
+  const agentLabel = { all: 'Todos', bot: 'Bot Telegram', web: 'Web Chat' }[currentAgent];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Fluxos — ${agentLabel}</h2>
+      <button class="btn btn-teal btn-sm" onclick="openAddFluxoModal()">+ Novo Fluxo</button>
+    </div>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--muted)">
+      💡 Edite diretamente e salve. As mudanças são aplicadas na próxima mensagem do cliente — sem precisar fazer deploy.
+    </div>
+    ${Object.keys(grupos).length === 0 ? '<div class="empty"><div class="e-icon">⚡</div><p>Nenhum fluxo cadastrado</p></div>' :
+      Object.entries(grupos).map(([chave, fields]) => `
+        <div class="fluxo-item" id="fluxo-${chave}">
+          <div class="fluxo-header" onclick="toggleFluxo('${chave}')">
+            <span style="font-size:16px">⚡</span>
+            <span class="fluxo-title">${chave}</span>
+            <span class="badge badge-teal">${fields.length} campo(s)</span>
+            <span style="color:var(--muted);font-size:12px;margin-left:8px">▼</span>
+          </div>
+          <div class="fluxo-body" id="fluxo-body-${chave}">
+            ${fields.map(f => `
+              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                  <span style="font-size:12px;font-weight:700;color:var(--teal)">${f.sub_categoria || '–'}</span>
+                  <label class="toggle" title="Ativo">
+                    <input type="checkbox" ${f.ativo !== false ? 'checked' : ''} onchange="toggleFluxoAtivo('${f.id}', this.checked)">
+                    <span class="slider"></span>
+                  </label>
+                  <span style="font-size:11px;color:var(--muted)">${f.descricao || ''}</span>
+                  <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="deleteFluxo('${f.id}')">🗑</button>
+                </div>
+                <div class="fluxo-field">
+                  <label>Valor / Prompt</label>
+                  <textarea id="fval-${f.id}" rows="4">${escHtml(f.valor || '')}</textarea>
+                </div>
+                <div class="fluxo-actions">
+                  <button class="btn btn-teal btn-sm" onclick="saveFluxo('${f.id}')">💾 Salvar</button>
+                  <button class="btn btn-ghost btn-sm" onclick="shareFluxo('${f.id}')">🔗 Compartilhar</button>
+                </div>
+              </div>
+            `).join('')}
+            <button class="btn btn-ghost btn-sm" onclick="openAddCampoModal('${chave}')">+ Adicionar Campo</button>
+          </div>
+        </div>
+      `).join('')
+    }
+  `);
+}
+
+function toggleFluxo(chave) {
+  const body = document.getElementById(`fluxo-body-${chave}`);
+  const header = body.previousElementSibling;
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+}
+
+async function saveFluxo(id) {
+  const val = document.getElementById(`fval-${id}`).value;
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { valor: val });
+    toast('✅ Fluxo salvo!');
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+async function toggleFluxoAtivo(id, checked) {
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { ativo: checked });
+    toast(checked ? '✅ Ativado' : '⏸ Desativado');
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+async function deleteFluxo(id) {
+  if (!confirm('Excluir este campo?')) return;
+  try {
+    await deleteEntity('ConfiguracaoAgente', id);
+    toast('🗑 Excluído');
+    loadFluxos();
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+function shareFluxo(id) {
+  const fluxo = allFluxos.find(f => f.id === id);
+  if (!fluxo) return;
+  openModal('🔗 Compartilhar Fluxo', `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Copie o JSON abaixo para importar em outro agente:</p>
+    <textarea style="width:100%;height:120px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--text);font-size:12px" readonly>${JSON.stringify({chave_fluxo:fluxo.chave_fluxo,sub_categoria:fluxo.sub_categoria,valor:fluxo.valor,descricao:fluxo.descricao},null,2)}</textarea>
+  `, () => {});
+}
+
+function openAddFluxoModal() {
+  openModal('⚡ Novo Fluxo / Configuração', `
+    <div class="fluxo-field"><label>Chave do Fluxo</label><input type="text" id="new-chave" placeholder="ex: cursos, tatuagem, atendimento_vip"></div>
+    <div class="fluxo-field"><label>Sub-categoria</label><input type="text" id="new-sub" placeholder="ex: prompt_base, regra_desconto"></div>
+    <div class="fluxo-field"><label>Conteúdo / Instrução</label><textarea id="new-valor" rows="6" placeholder="Descreva as instruções ou regras para este fluxo..."></textarea></div>
+    <div class="fluxo-field"><label>🎯 Palavras-gatilho (separadas por vírgula)</label><input type="text" id="new-keywords" placeholder="ex: curso, aula, aprender, workshop"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:-8px;margin-bottom:10px">Quando o cliente digitar qualquer uma dessas palavras, este fluxo é ativado automaticamente.</div>
+  `, async () => {
+    const chave = document.getElementById('new-chave').value.trim();
+    const sub = document.getElementById('new-sub').value.trim() || 'prompt_base';
+    const valor = document.getElementById('new-valor').value.trim();
+    const kw = document.getElementById('new-keywords').value.trim();
+    if (!chave || !valor) return alert('Preencha chave e conteúdo.');
+    try {
+      await apiPost('/entities/ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor: valor + (kw ? '\n[KEYWORDS:'+kw+']' : ''), tipo_campo: 'textarea', descricao: kw ? 'Ativado por: '+kw : sub, ativo: true });
+      showToast('Fluxo criado! Reflete imediatamente nos agentes.', 'success');
+      loadFluxos();
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+  });
+}
+
 function toast(msg, type = 'ok') {
   const el = document.createElement('div');
   el.className = `toast-msg ${type}`;
@@ -837,20 +1200,37 @@ function editRegra(id) {
 function shareRegra(id) {
   const r = allRegras.find(x => x.id === id);
   if (!r) return;
-  openModal('🔗 Compartilhar Regra', `
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Para aplicar ao outro agente, adicione a diretriz no fluxo correspondente:</p>
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:13px;line-height:1.6">${escHtml(r.diretriz||'')}</div>
-    <div style="margin-top:10px;font-size:11px;color:var(--muted)">Fluxo: <b>${r.fluxo||'geral'}</b></div>
-  `, () => {});
+  openModal('🔗 Compartilhar / Duplicar Regra', `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Escolha o fluxo destino para duplicar esta regra:</p>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;color:var(--teal);margin-bottom:14px">${escHtml((r.diretriz||'').substring(0,120))}...</div>
+    <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px">FLUXO DESTINO</label>
+    <select id="shareFluxoTarget" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;color:var(--text);margin-bottom:14px">
+      <option value="atendimento">atendimento</option>
+      <option value="agendamento">agendamento</option>
+      <option value="postagem">postagem</option>
+      <option value="geral">geral</option>
+    </select>
+    <button class="btn btn-teal" style="width:100%" onclick="confirmarShareRegra('${id}')">✅ Duplicar para este fluxo</button>
+  `);
 }
-
-async function deleteRegra(id) {
-  if (!confirm('Excluir esta regra permanentemente?')) return;
+async function confirmarShareRegra(id) {
+  const r = allRegras.find(x => x.id === id);
+  if (!r) return;
+  const fluxoDest = document.getElementById('shareFluxoTarget').value;
+  closeModal();
   try {
-    await deleteEntity('RegraAprendizado', id);
-    toast('🗑 Regra excluída');
+    await apiPost('/entities/RegraAprendizado', {
+      diretriz: r.diretriz,
+      resumo_dia: r.resumo_dia,
+      motivo: r.motivo,
+      origem: 'compartilhada_painel',
+      status: 'ativa',
+      fluxo: fluxoDest,
+      aprovado_por: 'jonathan'
+    });
+    showToast('Regra duplicada para fluxo: ' + fluxoDest, 'success');
     loadRegras();
-  } catch(e) { toast('❌ Erro', 'err'); }
+  } catch(e) { showToast('Erro: ' + e.message, 'error'); }
 }
 
 function openAddRegraModal() {
@@ -981,12 +1361,26 @@ async function loadLeads() {
   try {
     const r = await listEntity('LeadConversa');
     allLeads = r.items || [];
-    renderLeads();
+    renderLeads(window._leadsPeriodo || 'todos');
   } catch(e) { showError(e.message); }
 }
 
 function renderLeads(filtro='todos') {
-  let items = [...allLeads].sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
+  window._leadsPeriodo = filtro;
+  // Filtro de período
+  const now = new Date();
+  let allLeadsFiltered = allLeads;
+  const periodo = window._periodoLeads || 'todos';
+  if (periodo === 'hoje') {
+    allLeadsFiltered = allLeads.filter(l => { const d = new Date(l.data_ultimo_contato||l.created_date); return d.toDateString() === now.toDateString(); });
+  } else if (periodo === '7dias') {
+    const lim = new Date(now - 7*86400000);
+    allLeadsFiltered = allLeads.filter(l => new Date(l.data_ultimo_contato||l.created_date) >= lim);
+  } else if (periodo === '30dias') {
+    const lim = new Date(now - 30*86400000);
+    allLeadsFiltered = allLeads.filter(l => new Date(l.data_ultimo_contato||l.created_date) >= lim);
+  }
+  let items = [...allLeadsFiltered].sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
   if (filtro !== 'todos') items = items.filter(l => l.etapa_funil === filtro);
   if (currentAgent === 'bot') items = items.filter(l => (l.canal_origem||'').includes('telegram'));
   if (currentAgent === 'web') items = items.filter(l => (l.canal_origem||'').includes('web'));
@@ -996,7 +1390,13 @@ function renderLeads(filtro='todos') {
   setContent(`
     <div class="sec-hdr">
       <h2>Leads</h2>
-      <span style="font-size:12px;color:var(--muted)">${items.length} leads</span>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">${allLeadsFiltered.length} leads</span>
+        <button class="btn btn-ghost btn-sm" onclick="window._periodoLeads='hoje';renderLeads()">Hoje</button>
+        <button class="btn btn-ghost btn-sm" onclick="window._periodoLeads='7dias';renderLeads()">7 dias</button>
+        <button class="btn btn-ghost btn-sm" onclick="window._periodoLeads='30dias';renderLeads()">30 dias</button>
+        <button class="btn btn-teal btn-sm" onclick="window._periodoLeads='todos';renderLeads()">Todos</button>
+      </div>
     </div>
     <div class="filter-row">
       ${etapas.map(e=>`<button class="filter-btn ${filtro===e?'active':''}" onclick="renderLeads('${e}')">${e.replace('_',' ')}</button>`).join('')}
@@ -1077,10 +1477,10 @@ function renderAgendamentos(filtro='todos') {
 // ══ AUTOMAÇÕES ═══════════════════════════════════════════════
 function loadAutomacoes() {
   const autos = [
-    { icon:'📊', name:'Relatório de Expediente', desc:'Relatório diário às 19h — divergências Calendar vs Planilha', status:'ativo', proxima:'Hoje 19:00', canal:'Grupo JG', freq:'Diário' },
-    { icon:'🔍', name:'Vistoria de Agenda', desc:'Verifica agendamentos pendentes e alerta', status:'ativo', proxima:'Periódico', canal:'Grupo JG', freq:'Periódico' },
-    { icon:'🔄', name:'Reengajamento', desc:'Contata leads inativos após período definido', status:'ativo', proxima:'Periódico', canal:'WhatsApp', freq:'Periódico' },
-    { icon:'👋', name:'Abandonados', desc:'Follow-up para conversas sem resposta', status:'ativo', proxima:'Periódico', canal:'Telegram Bot', freq:'Periódico' },
+    { icon:'📊', name:'Relatório de Expediente', link:'https://cron-job.org', editFn:'cronRelatorioExpediente', desc:'Relatório diário às 19h — divergências Calendar vs Planilha', status:'ativo', proxima:'Hoje 19:00', canal:'Grupo JG', freq:'Diário' },
+    { icon:'🔍', name:'Vistoria de Agenda', link:'https://cron-job.org', editFn:'cronVistoriaAgenda', desc:'Verifica agendamentos pendentes e alerta', status:'ativo', proxima:'Periódico', canal:'Grupo JG', freq:'Periódico' },
+    { icon:'🔄', name:'Reengajamento', link:'https://cron-job.org', editFn:'cronReengajamento', desc:'Contata leads inativos após período definido', status:'ativo', proxima:'Periódico', canal:'WhatsApp', freq:'Periódico' },
+    { icon:'👋', link:'https://cron-job.org', editFn:'cronAbandonados', name:'Abandonados', desc:'Follow-up para conversas sem resposta', status:'ativo', proxima:'Periódico', canal:'Telegram Bot', freq:'Periódico' },
     { icon:'🧠', name:'Aprendizagem Diária', desc:'Analisa logs e sugere novas regras de comportamento', status:'ativo', proxima:'19:00', canal:'Grupo JG', freq:'Diário' },
     { icon:'💳', name:'Monitor de Créditos', desc:'Snapshot periódico do uso de créditos Base44', status:'ativo', proxima:'Periódico', canal:'–', freq:'Periódico' },
   ];
@@ -1229,5 +1629,17 @@ window.addEventListener('load', () => {
   loadInsights();
 });
 </script>
+
+<!-- TOKEN MODAL -->
+<div id="tokenModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#0d2626;border:1px solid #1e4040;border-radius:12px;padding:32px;width:420px;max-width:90vw">
+    <div style="font-size:20px;font-weight:800;color:#2dd4bf;margin-bottom:8px">🔐 Los Hombres Admin</div>
+    <div style="font-size:13px;color:#6b9e9e;margin-bottom:20px">Cole o Service Token para acessar o painel.</div>
+    <input id="tokenInput" type="password" placeholder="eyJhbGci..." style="width:100%;background:#112e2e;border:1px solid #245050;border-radius:6px;padding:12px;font-size:13px;color:#e8f5f5;outline:none;font-family:monospace;margin-bottom:8px"/>
+    <div id="tokenError" style="display:none;color:#ef4444;font-size:11px;margin-bottom:8px">Token inválido. Cole o token completo.</div>
+    <button id="tokenSaveBtn" style="width:100%;background:#0f766e;color:#2dd4bf;border:none;border-radius:6px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">Entrar →</button>
+    <div style="font-size:10px;color:#4a7a7a;margin-top:12px;text-align:center">O token fica salvo no navegador. Não precisa colar de novo.</div>
+  </div>
+</div>
 </body>
 </html>
