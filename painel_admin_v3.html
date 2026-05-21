@@ -1148,13 +1148,13 @@ let allInstrucoes = [];
 async function loadInstrucoes() {
   setLoading();
   try {
-    // Busca instrucoes + midias_massagens (áudios/vídeos por massagem)
-    const [r1, r2] = await Promise.all([
-      listEntity('ConfiguracaoAgente', { chave_fluxo: 'instrucoes' }),
-      listEntity('ConfiguracaoAgente', { chave_fluxo: 'midias_massagens' }),
-    ]);
-    const r = [...(r1||[]), ...(r2||[])];
-    allInstrucoes = Array.isArray(r) ? r : (r.items || []);
+    // Busca TODOS ConfiguracaoAgente e filtra no cliente
+    const rAll = await listEntity('ConfiguracaoAgente');
+    const todosItens = Array.isArray(rAll) ? rAll : (rAll.items || []);
+    allInstrucoes = todosItens.filter(function(i) {
+      var ch = (i.chave_fluxo || '').toLowerCase();
+      return ch === 'instrucoes' || ch === 'midias_massagens';
+    });
     renderInstrucoes();
   } catch(e) { showError(e.message); }
 }
