@@ -3,252 +3,1231 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Los Hombres · Admin</title>
+<title>Los Hombres Admin</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e0e0e0;min-height:100vh}
-header{background:#141414;border-bottom:1px solid #222;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px}
-header h1{font-size:.9rem;color:#b8a47a;letter-spacing:.08em;font-weight:700}
-#sg{font-size:.7rem;color:#888}
-.tabs{display:flex;border-bottom:1px solid #1e1e1e;background:#0d0d0d;padding:0 16px;overflow-x:auto;position:sticky;top:53px;z-index:99}
-.tab{padding:12px 16px;font-size:.78rem;color:#555;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
-.tab.active{color:#b8a47a;border-bottom-color:#b8a47a}.tab:hover{color:#ccc}
-.pane{display:none;padding:20px;max-width:940px;margin:0 auto}.pane.active{display:block}
-.card{background:#141414;border:1px solid #1e1e1e;border-radius:10px;padding:18px;margin-bottom:14px}
-.card-title{font-size:.82rem;color:#b8a47a;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.card-sub{font-size:.7rem;color:#555;margin-bottom:12px;line-height:1.4}
-.etapa{background:#0f0f0f;border:1px solid #1e1e1e;border-left:3px solid #2d5a2d;border-radius:8px;padding:14px;margin-bottom:10px}
-.etapa-num{font-size:.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
-.etapa-titulo{font-size:.82rem;color:#ccc;font-weight:600;margin-bottom:4px}
-.etapa-desc{font-size:.75rem;color:#777;line-height:1.5}
-textarea{width:100%;background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:10px 12px;color:#e0e0e0;font-size:.78rem;line-height:1.5;resize:vertical;min-height:80px;font-family:monospace;outline:none;transition:border .2s}
-textarea:focus{border-color:#b8a47a55}
-input[type=text]{width:100%;background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:8px 12px;color:#e0e0e0;font-size:.78rem;outline:none}
-select{background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:7px 10px;color:#e0e0e0;font-size:.78rem;outline:none}
-.btn{padding:7px 14px;border-radius:7px;border:none;cursor:pointer;font-size:.76rem;font-weight:600;transition:all .2s}
-.btn-gold{background:#b8a47a;color:#0a0a0a}.btn-gold:hover{background:#cdb98a}
-.btn-outline{background:transparent;border:1px solid #2a2a2a;color:#888}.btn-outline:hover{border-color:#555;color:#ccc}
-.btn-sm{padding:5px 11px;font-size:.72rem}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
-.badge{font-size:.62rem;padding:2px 8px;border-radius:8px;font-weight:700}
-.b-perm{background:#1a2a1a;color:#66bb6a;border:1px solid #2d4a2d}
-.b-on{background:#1a2a1a;color:#66bb6a}.b-off{background:#1a1a1a;color:#555;border:1px solid #222}
-.b-agend{background:#1a2020;color:#4db6ac}.b-post{background:#2a1a2a;color:#ce93d8}
-.b-atend{background:#1a2030;color:#64b5f6}.b-geral{background:#1a1a1a;color:#888;border:1px solid #2a2a2a}
-.regra-item{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;margin-bottom:8px}
-.regra-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.regra-txt{font-size:.78rem;color:#bbb;line-height:1.5;margin-bottom:4px}
-.regra-motivo{font-size:.7rem;color:#555;font-style:italic}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:#0f0f0f;border:1px solid #1e1e1e;border-radius:8px;padding:14px;text-align:center}
-.kpi-val{font-size:1.6rem;font-weight:700;color:#b8a47a}
-.kpi-label{font-size:.68rem;color:#666;margin-top:4px}
-.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.bar{height:8px;background:#b8a47a;border-radius:4px;min-width:4px}
-.bar-label{color:#aaa;min-width:140px;font-size:.74rem}
-.bar-val{color:#777;font-size:.7rem}
-.info{background:#161620;border:1px solid #22223a;border-radius:8px;padding:12px 14px;font-size:.76rem;color:#8888bb;line-height:1.6;margin-bottom:16px}
-.funil-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:.76rem}
-.funil-row:last-child{border-bottom:none}
-.flash{padding:5px 12px;border-radius:6px;font-size:.74rem;font-weight:600;animation:fadeout 3s forwards}
-.flash.ok{background:#1a2a1a;color:#66bb6a}.flash.err{background:#2a0a0a;color:#e57373}
-@keyframes fadeout{0%,70%{opacity:1}100%{opacity:0}}
-.loader{display:inline-block;width:12px;height:12px;border:2px solid #333;border-top-color:#b8a47a;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#071a1a;--surface:#0d2626;--surface2:#112e2e;--surface3:#163636;
+  --border:#1e4040;--border2:#245050;
+  --teal:#2dd4bf;--teal2:#14b8a6;--teal3:#0f766e;
+  --gold:#c9a84c;--gold2:#a07830;
+  --text:#e8f5f5;--muted:#6b9e9e;--muted2:#4a7a7a;
+  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;
+  --bot-color:#2dd4bf;--web-color:#c9a84c;
+  --radius:10px;--radius2:6px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}
+
+/* ── LAYOUT ── */
+.shell{display:flex;height:100vh}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.sb-logo .brand{font-size:11px;letter-spacing:4px;color:var(--teal);text-transform:uppercase;font-weight:800}
+.sb-logo .version{font-size:10px;color:var(--muted2);margin-top:2px}
+.sb-section{padding:12px 12px 4px;font-size:10px;letter-spacing:2px;color:var(--muted2);text-transform:uppercase;font-weight:700}
+.agent-card{margin:4px 8px;border-radius:var(--radius2);padding:10px 12px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.agent-card:hover{background:var(--surface2)}
+.agent-card.active{background:var(--surface3);border-color:var(--border2)}
+.agent-card .a-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.agent-card .a-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.agent-card .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-bot{background:var(--bot-color)}
+.dot-web{background:var(--web-color)}
+.dot-global{background:var(--green)}
+.sb-nav{margin-top:8px;flex:1;overflow-y:auto}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:var(--border2)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .12s;border-left:3px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--teal);border-left-color:var(--teal);background:var(--surface2)}
+.nav-item .ni-icon{font-size:15px;width:18px;text-align:center}
+.nav-item .ni-badge{margin-left:auto;background:var(--teal3);color:var(--teal);font-size:10px;padding:1px 6px;border-radius:20px;font-weight:700}
+.sb-bottom{padding:12px;border-top:1px solid var(--border)}
+.credits-bar{margin-bottom:6px}
+.credits-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);margin-bottom:3px}
+.bar-track{background:var(--surface3);border-radius:10px;height:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:10px;transition:width .5s}
+.bar-msg{background:linear-gradient(90deg,var(--teal3),var(--teal))}
+.bar-int{background:linear-gradient(90deg,var(--gold2),var(--gold))}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.topbar h1{font-size:15px;font-weight:700;color:var(--text)}
+.topbar .tb-sub{font-size:12px;color:var(--muted)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn{padding:7px 14px;border-radius:var(--radius2);border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-teal{background:var(--teal3);color:var(--teal)}
+.btn-teal:hover{background:var(--teal2);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-gold{background:var(--gold2);color:var(--gold)}
+.btn-red{background:#450a0a;color:var(--red)}
+.btn-green{background:#052e16;color:var(--green)}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:20px}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:2px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{padding:12px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+
+/* ── CARDS / GRID ── */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}
+.card-value{font-size:28px;font-weight:800;color:var(--text)}
+.card-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.card-value.teal{color:var(--teal)}
+.card-value.gold{color:var(--gold)}
+.card-value.green{color:var(--green)}
+.card-value.red{color:var(--red)}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-hdr h2{font-size:14px;font-weight:700;color:var(--text)}
+.sec-hdr .sec-sub{font-size:12px;color:var(--muted)}
+
+/* ── TABLE ── */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{background:var(--surface2);padding:10px 14px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;white-space:nowrap}
+td{padding:10px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--surface2)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-teal{background:#0f3030;color:var(--teal)}
+.badge-gold{background:#2a1f00;color:var(--gold)}
+.badge-green{background:#052e16;color:var(--green)}
+.badge-red{background:#450a0a;color:var(--red)}
+.badge-blue{background:#0c1a3a;color:var(--blue)}
+.badge-gray{background:var(--surface3);color:var(--muted)}
+
+/* ── TOGGLE ── */
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--surface3);border-radius:20px;cursor:pointer;transition:.2s}
+.slider:before{position:absolute;content:'';height:14px;width:14px;left:3px;bottom:3px;background:var(--muted);border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--teal3)}
+input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
+
+/* ── FLUXO EDITOR ── */
+.fluxo-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.fluxo-header{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid transparent;transition:.15s}
+.fluxo-header:hover{background:var(--surface2)}
+.fluxo-header.open{border-bottom-color:var(--border)}
+.fluxo-title{font-size:13px;font-weight:700;flex:1}
+.fluxo-body{padding:16px;display:none}
+.fluxo-body.open{display:block}
+.fluxo-field{margin-bottom:14px}
+.fluxo-field label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600}
+.fluxo-field textarea,.fluxo-field input[type=text]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px 12px;font-size:13px;color:var(--text);font-family:inherit;line-height:1.5;resize:vertical;min-height:80px;transition:border-color .15s;outline:none}
+.fluxo-field textarea:focus,.fluxo-field input[type=text]:focus{border-color:var(--teal3)}
+.fluxo-actions{display:flex;gap:8px;margin-top:12px}
+
+/* ── CONVERSA ── */
+.conv-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.conv-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.conv-item:hover{background:var(--surface2)}
+.conv-item:last-child{border-bottom:none}
+.conv-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.conv-av-bot{background:var(--teal3);color:var(--teal)}
+.conv-av-web{background:var(--gold2);color:var(--gold)}
+.conv-info{flex:1;min-width:0}
+.conv-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-last{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.conv-meta{text-align:right;flex-shrink:0}
+.conv-time{font-size:10px;color:var(--muted2)}
+.conv-canal{font-size:10px;margin-top:3px}
+
+/* ── INSIGHT CHART (barras simples) ── */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.chart-title{font-size:12px;color:var(--muted);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:80px}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chart-bar{width:100%;border-radius:4px 4px 0 0;min-height:4px;transition:height .4s}
+.chart-bar-label{font-size:9px;color:var(--muted2)}
+.chart-bar-val{font-size:10px;color:var(--text);font-weight:700}
+.funnel-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.funnel-label{width:120px;font-size:11px;color:var(--muted);flex-shrink:0}
+.funnel-bar-wrap{flex:1;background:var(--surface3);border-radius:10px;height:8px;overflow:hidden}
+.funnel-bar{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--teal3),var(--teal))}
+.funnel-num{width:40px;text-align:right;font-size:11px;color:var(--text);font-weight:700}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--teal)}
+.modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:9px 14px 9px 36px;font-size:13px;color:var(--text);outline:none;transition:border-color .15s}
+.search-wrap input:focus{border-color:var(--teal3)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:14px}
+
+/* ── FILTER ROW ── */
+.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:.15s}
+.filter-btn.active{background:var(--teal3);border-color:var(--teal3);color:var(--teal)}
+.filter-btn:hover{border-color:var(--border2);color:var(--text)}
+
+/* ── AUTOMACOES ── */
+.auto-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px}
+.auto-icon{font-size:20px;width:36px;text-align:center}
+.auto-info{flex:1}
+.auto-name{font-size:13px;font-weight:700}
+.auto-desc{font-size:11px;color:var(--muted);margin-top:2px}
+.auto-meta{text-align:right;font-size:11px;color:var(--muted2)}
+.auto-next{color:var(--teal);font-size:11px;font-weight:600}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty .e-icon{font-size:40px;margin-bottom:12px}
+.empty p{font-size:13px}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted)}
+.spin{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;margin-right:10px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty{color:#444;font-size:.8rem;text-align:center;padding:24px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.lbl{font-size:.7rem;color:#777;margin-bottom:5px;display:block}
-hr{border:none;border-top:1px solid #1a1a1a;margin:18px 0}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast-msg{background:var(--surface3);border:1px solid var(--border2);border-radius:var(--radius2);padding:10px 16px;font-size:13px;animation:slideUp .2s;max-width:300px}
+.toast-msg.ok{border-left:3px solid var(--green)}
+.toast-msg.err{border-left:3px solid var(--red)}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .sidebar{display:none}
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+}
 </style>
 </head>
 <body>
-<header>
-  <h1>🏠 LOS HOMBRES · Admin v2</h1>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <a href="https://dionisio872-hue.github.io/loshombres-chat/" target="_blank" class="btn btn-outline btn-sm">💬 Chat Web</a>
-    <a href="https://t.me/Atendimentoloshombresbot" target="_blank" class="btn btn-outline btn-sm">🤖 Telegram</a>
-    <span id="sg">⏳ carregando…</span>
-  </div>
-</header>
-<div class="tabs">
-  <div class="tab active" onclick="go('id')">🧠 Identidade</div>
-  <div class="tab" onclick="go('ag')">📅 Agendamento</div>
-  <div class="tab" onclick="go('po')">📣 Postagem</div>
-  <div class="tab" onclick="go('rg')">📋 Regras</div>
-  <div class="tab" onclick="go('in')">📊 Insights</div>
-</div>
 
-<div class="pane active" id="pane-id">
-  <div class="info">💡 O <b>Prompt Base</b> define personalidade e tom. Mudanças entram em vigor imediatamente — sem deploy.</div>
-  <div class="card">
-    <div class="card-title">📝 Prompt Base <span class="badge b-perm">Permanente</span></div>
-    <div class="card-sub">Personalidade, tom de voz, proibições e fluxo geral.</div>
-    <textarea id="promptBase" rows="18" placeholder="Carregando…"></textarea>
-    <div class="row"><button class="btn btn-gold" onclick="salvarPromptBase()">💾 Salvar Prompt</button><span id="stPrompt"></span></div>
-  </div>
-  <div class="card">
-    <div class="card-title">🔒 Regras Permanentes de Comportamento</div>
-    <div class="card-sub">Carregadas junto ao prompt. Nunca apagadas por deploy.</div>
-    <div id="listaPerm"><div class="loader"></div></div>
-  </div>
-</div>
+<div class="shell">
 
-<div class="pane" id="pane-ag">
-  <div class="info">📅 Configurações do fluxo de agendamento lidas em tempo real pelo chatCliente.</div>
-  <div class="etapa"><div class="etapa-num">Etapa 1</div><div class="etapa-titulo">Identificação do interesse</div><div class="etapa-desc">Pergunta o que o cliente busca. Tom direto e acolhedor.</div></div>
-  <div class="etapa"><div class="etapa-num">Etapa 2</div><div class="etapa-titulo">Sugestão de massagem</div><div class="etapa-desc">Sugere UMA massagem + envia áudio e vídeo uma vez por sessão.</div></div>
-  <div class="etapa"><div class="etapa-num">Etapa 3</div><div class="etapa-titulo">Data, horário e unidade</div><div class="etapa-desc">Betim: ter/qui | Savassi: seg/qui/sex/sab. Cruza planilha + Calendar em tempo real.</div></div>
-  <div class="etapa"><div class="etapa-num">Etapa 4</div><div class="etapa-titulo">Sinal via PIX</div><div class="etapa-desc">QR Code + linha digitável. Validação via OpenAI Vision.</div></div>
-  <div class="etapa"><div class="etapa-num">Etapa 5</div><div class="etapa-titulo">Gravação e confirmação</div><div class="etapa-desc">Planilha + Google Calendar + Gmail + Telegram + LeadConversa.</div></div>
-  <hr>
-  <div class="card">
-    <div class="card-title">⚙️ Parâmetros de Agendamento</div>
-    <div class="card-sub">Salvos automaticamente ao sair do campo.</div>
-    <div id="configsAg"><div class="loader"></div></div>
+<!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="brand">Los Hombres</div>
+    <div class="version">Admin Panel v2.0</div>
   </div>
-  <div class="card">
-    <div class="card-title">📋 Regras de Agendamento Aprendidas</div>
-    <div id="regrasAgList"><div class="loader"></div></div>
-  </div>
-</div>
 
-<div class="pane" id="pane-po">
-  <div class="info">📣 Regras para postagens no Instagram, Twitter e Canal Telegram.</div>
-  <div class="card">
-    <div class="card-title">📋 Regras de Postagem Aprendidas</div>
-    <div id="regrasPoList"><div class="loader"></div></div>
-  </div>
-  <div class="card">
-    <div class="card-title">🖼️ Mídias Postadas</div>
-    <div class="card-sub">Cada mídia pode ser usada em até 3 canais. Após os 3, nunca mais.</div>
-    <div id="midiasList"><div class="loader"></div></div>
-  </div>
-</div>
+  <div class="sb-section">Agentes</div>
 
-<div class="pane" id="pane-rg">
-  <div class="info">📋 Todas as regras aprendidas. Ativas são injetadas no prompt em tempo real.</div>
-  <div class="card">
-    <div class="card-title">➕ Nova Regra Manual</div>
-    <div class="grid2" style="margin-bottom:10px">
-      <div><span class="lbl">Contexto</span>
-        <select id="novaFluxo"><option value="geral">Geral</option><option value="agendamento">Agendamento</option><option value="postagem">Postagem</option><option value="atendimento">Atendimento</option></select>
-      </div>
-      <div><span class="lbl">Motivo</span><input type="text" id="novaMotivo" placeholder="Ex: cliente reclamou de X"></div>
+  <div class="agent-card active" onclick="setAgent('all')" id="agent-all">
+    <div class="a-name"><span class="dot dot-global"></span> Todos os Agentes</div>
+    <div class="a-sub">Visão global</div>
+  </div>
+  <div class="agent-card" onclick="setAgent('bot')" id="agent-bot">
+    <div class="a-name"><span class="dot dot-bot"></span> Bot Telegram</div>
+    <div class="a-sub">@Atendimentoloshombresbot</div>
+  </div>
+  <div class="agent-card" onclick="setAgent('web')" id="agent-web">
+    <div class="a-name"><span class="dot dot-web"></span> Web Chat</div>
+    <div class="a-sub">loshombres-chat</div>
+  </div>
+
+  <div class="sb-section">Menu</div>
+  <div class="sb-nav">
+    <div class="nav-item active" onclick="showTab('insights')" id="nav-insights">
+      <span class="ni-icon">📊</span> Insights
     </div>
-    <span class="lbl">Diretriz</span>
-    <textarea id="novaDiretriz" rows="3" placeholder="Ex: Sempre confirmar o nome antes de sugerir horários."></textarea>
-    <div class="row"><button class="btn btn-gold" onclick="salvarNovaRegra()">➕ Adicionar</button><span id="stNovaRegra"></span></div>
-  </div>
-  <div class="card">
-    <div class="card-title">📋 Todas as Regras <span id="totalRegras" style="color:#555;font-weight:400;font-size:.75rem"></span></div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('')">Todas</button>
-      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('agendamento')">Agendamento</button>
-      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('postagem')">Postagem</button>
-      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('atendimento')">Atendimento</button>
-      <button class="btn btn-outline btn-sm" onclick="filtrarRegras('geral')">Geral</button>
+    <div class="nav-item" onclick="showTab('fluxos')" id="nav-fluxos">
+      <span class="ni-icon">⚡</span> Fluxos
     </div>
-    <div id="todasRegras"><div class="loader"></div></div>
+    <div class="nav-item" onclick="showTab('regras')" id="nav-regras">
+      <span class="ni-icon">📋</span> Regras
+    </div>
+    <div class="nav-item" onclick="showTab('conversas')" id="nav-conversas">
+      <span class="ni-icon">💬</span> Conversas
+    </div>
+    <div class="nav-item" onclick="showTab('leads')" id="nav-leads">
+      <span class="ni-icon">🎯</span> Leads
+    </div>
+    <div class="nav-item" onclick="showTab('agendamentos')" id="nav-agendamentos">
+      <span class="ni-icon">📅</span> Agendamentos
+    </div>
+    <div class="nav-item" onclick="showTab('automacoes')" id="nav-automacoes">
+      <span class="ni-icon">🔁</span> Automações
+    </div>
+    <div class="nav-item" onclick="showTab('identidade')" id="nav-identidade">
+      <span class="ni-icon">🧠</span> Identidade IA
+    </div>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="credits-bar">
+      <div class="credits-label"><span>💬 Mensagens</span><span id="cr-msg-label">–</span></div>
+      <div class="bar-track"><div class="bar-fill bar-msg" id="cr-msg-bar" style="width:0%"></div></div>
+    </div>
+    <div class="credits-bar">
+      <div class="credits-label"><span>🔌 Integração</span><span id="cr-int-label">–</span></div>
+      <div class="bar-track"><div class="bar-fill bar-int" id="cr-int-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ════════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar h1" id="tb-title" style="font-size:15px;font-weight:700">📊 Insights</div>
+      <div class="tb-sub" id="tb-sub">Visão geral do sistema</div>
+    </div>
+    <div class="topbar-right">
+      <span id="agent-badge" class="badge badge-green">🌐 Todos</span>
+      <button class="btn btn-ghost btn-sm" onclick="loadCurrentTab()">↻ Atualizar</button>
+      <button class="btn btn-teal btn-sm" onclick="openAddFluxoModal()">+ Novo Fluxo</button>
+    </div>
+  </div>
+
+  <!-- Tab bar (período p/ insights) -->
+  <div class="tab-bar" id="tab-bar">
+    <div class="tab active" onclick="setPeriod('hoje')" id="tab-hoje">Hoje</div>
+    <div class="tab" onclick="setPeriod('7d')" id="tab-7d">7 dias</div>
+    <div class="tab" onclick="setPeriod('30d')" id="tab-30d">30 dias</div>
+    <div class="tab" onclick="setPeriod('total')" id="tab-total">Total</div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="content">
+    <div class="loading"><div class="spin"></div> Carregando...</div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ══ MODAL GENÉRICO ══ -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modalBox">
+    <h3 id="modalTitle">Modal</h3>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-teal" id="modalSaveBtn" onclick="modalSave()">Salvar</button>
+    </div>
   </div>
 </div>
 
-<div class="pane" id="pane-in">
-  <div class="info">📊 Dados de leads, conversões e funil de agendamento em tempo real.</div>
-  <div class="kpi-grid" id="kpiGrid"><div class="loader"></div></div>
-  <div class="card"><div class="card-title">🔄 Funil de Leads</div><div id="funil"><div class="loader"></div></div></div>
-  <div class="card"><div class="card-title">📈 Massagens Mais Solicitadas</div><div id="topMassagens"><div class="loader"></div></div></div>
-</div>
+<!-- TOAST -->
+<div id="toast"></div>
 
 <script>
-var BASE = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/painelAdmin';
-var _configs = [], _regras = [];
+// ══ CONFIG ══════════════════════════════════════════════════
+const APP_ID = '6a04cc22bf7a0dcea87e3c43';
+const BASE_URL = `https://base44.app/api/apps/${APP_ID}`;
+let SVC_TOKEN = localStorage.getItem('lh_svc_token') || '';
 
-function go(id) {
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
-  var order=['id','ag','po','rg','in'];
-  var idx=order.indexOf(id);
-  if(idx>=0) document.querySelectorAll('.tab')[idx].classList.add('active');
-  document.getElementById('pane-'+id).classList.add('active');
-  if(id==='ag') carregarAg();
-  if(id==='po') carregarPo();
-  if(id==='rg') carregarRegras();
-  if(id==='in') carregarInsights();
+// ══ STATE ════════════════════════════════════════════════════
+let currentTab = 'insights';
+let currentAgent = 'all';
+let currentPeriod = 'total';
+let allLeads = [], allAgendamentos = [], allRegras = [], allFluxos = [], allConversas = [];
+let modalSaveFn = null;
+
+// ══ AUTH ═════════════════════════════════════════════════════
+async function ensureToken() {
+  if (SVC_TOKEN) return true;
+  // Aceitar token via URL ?token=xxx
+  const urlToken = new URLSearchParams(window.location.search).get('token');
+  if (urlToken) { SVC_TOKEN = urlToken; localStorage.setItem('lh_svc_token', SVC_TOKEN); return true; }
+  const t = prompt('🔐 Cole o Service Token do Base44:');
+  if (!t) return false;
+  SVC_TOKEN = t.trim();
+  localStorage.setItem('lh_svc_token', SVC_TOKEN);
+  return true;
 }
 
-function api(tipo,extra){return fetch(BASE+'?tipo='+tipo+(extra||'')).then(function(r){return r.json();});}
-function action(body){return fetch(BASE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();});}
-function flash(id,ok,msg){var el=document.getElementById(id);if(!el)return;el.className='flash '+(ok?'ok':'err');el.textContent=msg;setTimeout(function(){el.textContent='';el.className='';},3500);}
-function bFluxo(f){var m={agendamento:'b-agend',postagem:'b-post',atendimento:'b-atend',geral:'b-geral'};return '<span class="badge '+(m[f]||'b-geral')+'">'+f+'</span>';}
-
-function carregarIdentidade(){
-  document.getElementById('sg').textContent='carregando…';
-  api('configs').then(function(d){
-    var items=d.items||[];_configs=items;
-    var pb=items.find(function(x){return x.sub_categoria==='prompt_base';});
-    if(pb){document.getElementById('promptBase').value=pb.valor||'';document.getElementById('promptBase').dataset.id=pb.id;}
-    var perms=items.filter(function(x){return x.chave_fluxo==='atendimento_cliente'&&x.sub_categoria!=='prompt_base'&&x.sub_categoria!=='links_uteis';});
-    var el=document.getElementById('listaPerm');
-    el.innerHTML=perms.length?perms.map(function(r){var v=typeof r.valor==='string'?r.valor:JSON.stringify(r.valor,null,2);return '<div class="regra-item"><div class="regra-header"><span class="badge b-perm">Permanente</span><span style="color:#aaa;font-size:.78rem">'+r.sub_categoria+'</span></div><div class="regra-txt">'+v+'</div></div>';}).join(''):'<div class="empty">Nenhuma regra permanente</div>';
-    document.getElementById('sg').textContent='✅ '+items.length+' configs · v2';
-  }).catch(function(e){document.getElementById('sg').textContent='❌ '+e.message;});
+async function apiFetch(path, opts = {}) {
+  if (!await ensureToken()) throw new Error('Sem token');
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${SVC_TOKEN}`, 'Content-Type': 'application/json', ...(opts.headers||{}) }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
 
-function salvarPromptBase(){
-  var ta=document.getElementById('promptBase');var id=ta.dataset.id;
-  if(!id){flash('stPrompt',false,'ID não encontrado');return;}
-  action({acao:'patch_config',id:id,data:{valor:ta.value}}).then(function(){flash('stPrompt',true,'✅ Salvo!');}).catch(function(e){flash('stPrompt',false,'❌ '+e.message);});
+async function listEntity(name, query = {}) {
+  const qs = new URLSearchParams({ limit: '500', ...Object.fromEntries(Object.entries(query).map(([k,v])=>[k,String(v)])) });
+  const raw = await apiFetch(`/entities/${name}?${qs}`);
+  // API retorna array direto OU {items:[]}
+  if (Array.isArray(raw)) return { items: raw };
+  return raw;
+}
+async function updateEntity(name, id, data) {
+  return apiFetch(`/entities/${name}/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+async function createEntity(name, data) {
+  return apiFetch(`/entities/${name}`, { method: 'POST', body: JSON.stringify(data) });
+}
+async function deleteEntity(name, id) {
+  return apiFetch(`/entities/${name}/${id}`, { method: 'DELETE' });
 }
 
-function carregarAg(){
-  var cfgs=_configs.filter(function(x){return x.chave_fluxo==='agendamento';});
-  var el=document.getElementById('configsAg');
-  el.innerHTML=cfgs.length?cfgs.map(function(c){var val=typeof c.valor==='object'?JSON.stringify(c.valor,null,2):String(c.valor);var rows=Math.min(val.split('\n').length+1,8);return '<div class="regra-item"><div class="regra-header"><span style="color:#b8a47a;font-size:.78rem;font-weight:600">'+c.sub_categoria+'</span></div><textarea rows="'+rows+'" data-id="'+c.id+'" onchange="salvarConfig(this)">'+val+'</textarea></div>';}).join(''):'<div class="empty">Nenhuma config</div>';
-  renderRegrasLista(_regras.filter(function(x){return x.fluxo==='agendamento';}),'regrasAgList');
-}
-function salvarConfig(ta){var id=ta.dataset.id;var val=ta.value;var parsed;try{parsed=JSON.parse(val);}catch(e){parsed=val;}action({acao:'patch_config',id:id,data:{valor:parsed}}).then(function(){ta.style.borderColor='#2d5a2d';setTimeout(function(){ta.style.borderColor='';},1500);});}
-
-function carregarPo(){
-  renderRegrasLista(_regras.filter(function(x){return x.fluxo==='postagem';}),'regrasPoList');
-  var mEl=document.getElementById('midiasList');
-  api('midias').then(function(d){var items=d.items||[];mEl.innerHTML=items.length?items.map(function(m){var usados=(m.canais_postados||[]).join(', ')||'nenhum';var st=m.todos_canais_usados?'<span class="badge" style="background:#2a0a0a;color:#e57373">ESGOTADA</span>':'<span class="badge b-on">Disponível</span>';return '<div class="regra-item"><div class="regra-header">'+st+'<span style="font-size:.78rem;color:#aaa">'+m.midia_id+'</span></div><div class="regra-txt">'+(m.descricao||'')+'</div><div class="regra-motivo">Canais: '+usados+'</div></div>';}).join(''):'<div class="empty">Nenhuma mídia</div>';}).catch(function(e){mEl.innerHTML='<div class="empty">Erro: '+e.message+'</div>';});
+// ══ TOAST ════════════════════════════════════════════════════
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = `toast-msg ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
 }
 
-function carregarRegras(){
-  api('regras').then(function(d){_regras=d.items||[];document.getElementById('totalRegras').textContent='('+_regras.length+' total)';renderTodasRegras(_regras);renderRegrasLista(_regras.filter(function(x){return x.fluxo==='agendamento';}),'regrasAgList');renderRegrasLista(_regras.filter(function(x){return x.fluxo==='postagem';}),'regrasPoList');});
-}
-function filtrarRegras(fluxo){var lista=fluxo?_regras.filter(function(x){return x.fluxo===fluxo;}):_regras;renderTodasRegras(lista);}
-function renderTodasRegras(lista){
-  var el=document.getElementById('todasRegras');
-  el.innerHTML=lista.length?lista.map(function(r){var ativo=r.status===true||r.status==='true';return '<div class="regra-item"><div class="regra-header"><span class="badge '+(ativo?'b-on':'b-off')+'">'+(ativo?'Ativa':'Inativa')+'</span>'+bFluxo(r.fluxo||'geral')+'<span style="font-size:.7rem;color:#555">'+(r.data_geracao||'').substring(0,10)+'</span></div><div class="regra-txt">'+r.diretriz+'</div><div class="regra-motivo">'+r.motivo+'</div><div class="row"><button class="btn btn-outline btn-sm" onclick="toggleRegra(\''+r.id+'\','+ativo+')">'+( ativo?'⏸ Desativar':'▶ Ativar')+'</button></div></div>';}).join(''):'<div class="empty">Nenhuma regra</div>';
-}
-function renderRegrasLista(lista,elId){var el=document.getElementById(elId);if(!el)return;el.innerHTML=lista.length?lista.map(function(r){var ativo=r.status===true||r.status==='true';return '<div class="regra-item"><div class="regra-header"><span class="badge '+(ativo?'b-on':'b-off')+'">'+(ativo?'✅':'⏸')+'</span><span style="font-size:.78rem;color:#bbb">'+r.diretriz.substring(0,80)+(r.diretriz.length>80?'…':'')+'</span></div><div class="regra-motivo">'+r.motivo+'</div></div>';}).join(''):'<div class="empty">Nenhuma regra</div>';}
-function toggleRegra(id,eraAtivo){action({acao:'patch_regra',id:id,data:{status:!eraAtivo}}).then(function(){carregarRegras();});}
-function salvarNovaRegra(){
-  var d=document.getElementById('novaDiretriz').value.trim();var m=document.getElementById('novaMotivo').value.trim();var f=document.getElementById('novaFluxo').value;
-  if(!d){flash('stNovaRegra',false,'Diretriz obrigatória');return;}
-  action({acao:'nova_regra',data:{diretriz:d,motivo:m||'Manual',fluxo:f}}).then(function(){flash('stNovaRegra',true,'✅ Adicionada!');document.getElementById('novaDiretriz').value='';document.getElementById('novaMotivo').value='';carregarRegras();}).catch(function(e){flash('stNovaRegra',false,'❌ '+e.message);});
+// ══ NAVIGATION ═══════════════════════════════════════════════
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const nav = document.getElementById(`nav-${tab}`);
+  if (nav) nav.classList.add('active');
+
+  const titles = {
+    insights: ['📊 Insights', 'Métricas e resultados do sistema'],
+    fluxos: ['⚡ Fluxos', 'Prompts e configurações por agente'],
+    regras: ['📋 Regras', 'Diretrizes de comportamento da IA'],
+    conversas: ['💬 Conversas', 'Histórico de atendimentos'],
+    leads: ['🎯 Leads', 'Clientes que interagiram'],
+    agendamentos: ['📅 Agendamentos', 'Reservas e confirmações'],
+    automacoes: ['🔁 Automações', 'Crons e triggers ativos'],
+    identidade: ['🧠 Identidade IA', 'Personalidade e comportamento base'],
+  };
+  const [title, sub] = titles[tab] || ['–', ''];
+  document.getElementById('tb-title').textContent = title;
+  document.getElementById('tb-sub').textContent = sub;
+
+  // Tab bar: só mostra período no insights
+  document.getElementById('tab-bar').style.display = tab === 'insights' ? 'flex' : 'none';
+
+  loadCurrentTab();
 }
 
-function carregarInsights(){
-  var kg=document.getElementById('kpiGrid');kg.innerHTML='<div class="loader"></div>';
-  api('insights').then(function(d){
-    var leads=(d.leads&&d.leads.items)||[];var agends=(d.agendamentos&&d.agendamentos.items)||[];
-    var conv=leads.filter(function(l){return l.converteu;}).length;
-    var pct=leads.length?Math.round(conv/leads.length*100):0;
-    var agConf=agends.filter(function(a){return a.status==='confirmado';}).length;
-    kg.innerHTML=[kpi(leads.length,'Total Leads'),kpi(conv,'Converteram'),kpi(pct+'%','Conversão'),kpi(agends.length,'Agendamentos'),kpi(agConf,'Confirmados')].join('');
-    var etapas={};leads.forEach(function(l){var e=l.etapa_funil||'—';etapas[e]=(etapas[e]||0)+1;});
-    document.getElementById('funil').innerHTML=Object.entries(etapas).sort(function(a,b){return b[1]-a[1];}).map(function(e){return '<div class="funil-row"><span style="color:#aaa">'+e[0]+'</span><span style="color:#b8a47a;font-weight:700">'+e[1]+'</span></div>';}).join('')||'<div class="empty">Sem dados</div>';
-    var mas={};leads.forEach(function(l){if(l.massagem_interesse)mas[l.massagem_interesse]=(mas[l.massagem_interesse]||0)+1;});
-    var sorted=Object.entries(mas).sort(function(a,b){return b[1]-a[1];}).slice(0,8);var maxV=sorted.length?sorted[0][1]:1;
-    document.getElementById('topMassagens').innerHTML=sorted.map(function(e){return '<div class="bar-row"><span class="bar-label">'+e[0]+'</span><div class="bar" style="width:'+Math.round(e[1]/maxV*180)+'px"></div><span class="bar-val">'+e[1]+'</span></div>';}).join('')||'<div class="empty">Sem dados</div>';
-  }).catch(function(e){kg.innerHTML='<div class="empty">Erro: '+e.message+'</div>';});
+function setAgent(agent) {
+  currentAgent = agent;
+  document.querySelectorAll('.agent-card').forEach(el => el.classList.remove('active'));
+  document.getElementById(`agent-${agent}`).classList.add('active');
+  const badges = { all: '🌐 Todos', bot: '🤖 Bot Telegram', web: '💻 Web Chat' };
+  const colors = { all: 'badge-green', bot: 'badge-teal', web: 'badge-gold' };
+  const badge = document.getElementById('agent-badge');
+  badge.textContent = badges[agent];
+  badge.className = `badge ${colors[agent]}`;
+  loadCurrentTab();
 }
-function kpi(v,l){return '<div class="kpi"><div class="kpi-val">'+v+'</div><div class="kpi-label">'+l+'</div></div>';}
 
-carregarIdentidade();
-api('regras').then(function(d){_regras=d.items||[];});
+function setPeriod(p) {
+  currentPeriod = p;
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${p}`).classList.add('active');
+  if (currentTab === 'insights') renderInsights();
+}
+
+function loadCurrentTab() {
+  const fn = {
+    insights: loadInsights,
+    fluxos: loadFluxos,
+    regras: loadRegras,
+    conversas: loadConversas,
+    leads: loadLeads,
+    agendamentos: loadAgendamentos,
+    automacoes: loadAutomacoes,
+    identidade: loadIdentidade,
+  }[currentTab];
+  if (fn) fn();
+}
+
+// ══ INSIGHTS ════════════════════════════════════════════════
+async function loadInsights() {
+  setLoading();
+  try {
+    const [leadsR, agsR, crR] = await Promise.all([
+      listEntity('LeadConversa'),
+      listEntity('Agendamento'),
+      listEntity('SnapshotCreditos'),
+    ]);
+    allLeads = leadsR.items || [];
+    allAgendamentos = agsR.items || [];
+    const creds = (crR.items || []).sort((a,b) => new Date(b.created_date) - new Date(a.created_date))[0];
+    updateCredits(creds);
+    renderInsights();
+  } catch(e) { showError(e.message); }
+}
+
+function filterByPeriod(items, field = 'created_date') {
+  const now = new Date();
+  const cutoffs = {
+    hoje: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+    '7d': new Date(now - 7*864e5),
+    '30d': new Date(now - 30*864e5),
+    total: new Date(0),
+  };
+  const cutoff = cutoffs[currentPeriod];
+  return items.filter(i => new Date(i[field] || i.created_date) >= cutoff);
+}
+
+function renderInsights() {
+  const leads = filterByPeriod(allLeads);
+  const ags = filterByPeriod(allAgendamentos);
+  const confirmados = ags.filter(a => a.status === 'Confirmado');
+  const receita = confirmados.reduce((s, a) => s + (a.valor_total || 0), 0);
+  const taxaConv = leads.length ? ((confirmados.length / leads.length) * 100).toFixed(1) : 0;
+
+  // Leads por canal
+  const botLeads = leads.filter(l => (l.canal_origem || '').includes('telegram'));
+  const webLeads = leads.filter(l => (l.canal_origem || '').includes('web'));
+
+  // Massagens mais pedidas
+  const massCount = {};
+  leads.forEach(l => { if(l.massagem_interesse) massCount[l.massagem_interesse] = (massCount[l.massagem_interesse]||0)+1; });
+  const topMass = Object.entries(massCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Etapa funil
+  const etapas = ['entrada','consulta_massagem','pediu_preco','acessou_agenda','pagou_sinal','confirmado'];
+  const etapaCount = {};
+  leads.forEach(l => { const e = l.etapa_funil||'entrada'; etapaCount[e] = (etapaCount[e]||0)+1; });
+
+  // Evolução últimos 7 dias
+  const evolucao = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(Date.now()-i*864e5);
+    const label = d.toLocaleDateString('pt-BR',{weekday:'short'});
+    const dayLeads = allLeads.filter(l => {
+      const ld = new Date(l.created_date);
+      return ld.toDateString() === d.toDateString();
+    }).length;
+    evolucao.push({label, val: dayLeads});
+  }
+  const maxEv = Math.max(...evolucao.map(e=>e.val), 1);
+
+  setContent(`
+    <div class="grid-4">
+      <div class="card"><div class="card-title">🎯 Leads</div><div class="card-value teal">${leads.length}</div><div class="card-sub">Bot: ${botLeads.length} · Web: ${webLeads.length}</div></div>
+      <div class="card"><div class="card-title">📅 Agendamentos</div><div class="card-value gold">${ags.length}</div><div class="card-sub">Confirmados: ${confirmados.length}</div></div>
+      <div class="card"><div class="card-title">✅ Taxa Conversão</div><div class="card-value ${taxaConv>10?'green':'red'}">${taxaConv}%</div><div class="card-sub">Leads → Confirmados</div></div>
+      <div class="card"><div class="card-title">💰 Receita</div><div class="card-value green">R$${receita.toLocaleString('pt-BR')}</div><div class="card-sub">Agendamentos confirmados</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">📈 Leads últimos 7 dias</div>
+        <div class="chart-bars">
+          ${evolucao.map(e=>`
+            <div class="chart-bar-wrap">
+              <div class="chart-bar-val">${e.val||''}</div>
+              <div class="chart-bar" style="height:${Math.max(8,(e.val/maxEv)*60)}px;background:linear-gradient(180deg,var(--teal),var(--teal3))"></div>
+              <div class="chart-bar-label">${e.label}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">🏆 Massagens mais pedidas</div>
+        ${topMass.length ? topMass.map(([m,n])=>`
+          <div class="funnel-row">
+            <div class="funnel-label">${m.slice(0,18)}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(n/topMass[0][1]*100)}%"></div></div>
+            <div class="funnel-num">${n}</div>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:13px">Sem dados ainda</div>'}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-wrap">
+        <div class="chart-title">🔽 Funil de conversão</div>
+        ${etapas.map(e=>{
+          const c = etapaCount[e]||0;
+          const max = etapaCount['entrada']||1;
+          return `<div class="funnel-row">
+            <div class="funnel-label">${e.replace('_',' ')}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(c/max*100)}%"></div></div>
+            <div class="funnel-num">${c}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">📊 Status agendamentos</div>
+        ${['Confirmado','Aguardando sinal','Cancelado'].map(s=>{
+          const c = ags.filter(a=>a.status===s).length;
+          const colors = {'Confirmado':'var(--green)','Aguardando sinal':'var(--yellow)','Cancelado':'var(--red)'};
+          return `<div class="funnel-row">
+            <div class="funnel-label">${s}</div>
+            <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${ags.length?Math.round(c/ags.length*100):0}%;background:${colors[s]}"></div></div>
+            <div class="funnel-num">${c}</div>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">💡 SUGESTÃO: ${leads.length>10&&taxaConv<5?'Taxa de conversão baixa — considere enviar mensagem de reengajamento aos leads inativos.':'Sistema operando bem. Monitore diariamente.'}</div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+function updateCredits(creds) {
+  if (!creds) return;
+  const msgPct = Math.min(100, Math.round((creds.msg_usado / creds.msg_total) * 100));
+  const intPct = Math.min(100, Math.round((creds.intg_usado / creds.intg_total) * 100));
+  document.getElementById('cr-msg-label').textContent = `${creds.msg_usado}/${creds.msg_total}`;
+  document.getElementById('cr-int-label').textContent = `${Math.round(creds.intg_usado/1000)}k/${Math.round(creds.intg_total/1000)}k`;
+  document.getElementById('cr-msg-bar').style.width = msgPct + '%';
+  document.getElementById('cr-int-bar').style.width = intPct + '%';
+}
+
+// ══ FLUXOS ══════════════════════════════════════════════════
+async function loadFluxos() {
+  setLoading();
+  try {
+    const r = await listEntity('ConfiguracaoAgente');
+    allFluxos = r.items || [];
+    renderFluxos();
+  } catch(e) { showError(e.message); }
+}
+
+function renderFluxos() {
+  let items = [...allFluxos];
+  // Filtrar por agente (via chave_fluxo)
+  if (currentAgent === 'bot') items = items.filter(f => (f.chave_fluxo||'').includes('telegram')||!(f.chave_fluxo||'').includes('web'));
+  if (currentAgent === 'web') items = items.filter(f => (f.chave_fluxo||'').includes('atendimento_cliente')||!(f.chave_fluxo||'').includes('telegram'));
+
+  // Agrupar por chave_fluxo
+  const grupos = {};
+  items.forEach(f => {
+    const g = f.chave_fluxo || 'geral';
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(f);
+  });
+
+  const agentLabel = { all: 'Todos', bot: 'Bot Telegram', web: 'Web Chat' }[currentAgent];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Fluxos — ${agentLabel}</h2>
+      <button class="btn btn-teal btn-sm" onclick="openAddFluxoModal()">+ Novo Fluxo</button>
+    </div>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--muted)">
+      💡 Edite diretamente e salve. As mudanças são aplicadas na próxima mensagem do cliente — sem precisar fazer deploy.
+    </div>
+    ${Object.keys(grupos).length === 0 ? '<div class="empty"><div class="e-icon">⚡</div><p>Nenhum fluxo cadastrado</p></div>' :
+      Object.entries(grupos).map(([chave, fields]) => `
+        <div class="fluxo-item" id="fluxo-${chave}">
+          <div class="fluxo-header" onclick="toggleFluxo('${chave}')">
+            <span style="font-size:16px">⚡</span>
+            <span class="fluxo-title">${chave}</span>
+            <span class="badge badge-teal">${fields.length} campo(s)</span>
+            <span style="color:var(--muted);font-size:12px;margin-left:8px">▼</span>
+          </div>
+          <div class="fluxo-body" id="fluxo-body-${chave}">
+            ${fields.map(f => `
+              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                  <span style="font-size:12px;font-weight:700;color:var(--teal)">${f.sub_categoria || '–'}</span>
+                  <label class="toggle" title="Ativo">
+                    <input type="checkbox" ${f.ativo !== false ? 'checked' : ''} onchange="toggleFluxoAtivo('${f.id}', this.checked)">
+                    <span class="slider"></span>
+                  </label>
+                  <span style="font-size:11px;color:var(--muted)">${f.descricao || ''}</span>
+                  <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="deleteFluxo('${f.id}')">🗑</button>
+                </div>
+                <div class="fluxo-field">
+                  <label>Valor / Prompt</label>
+                  <textarea id="fval-${f.id}" rows="4">${escHtml(f.valor || '')}</textarea>
+                </div>
+                <div class="fluxo-actions">
+                  <button class="btn btn-teal btn-sm" onclick="saveFluxo('${f.id}')">💾 Salvar</button>
+                  <button class="btn btn-ghost btn-sm" onclick="shareFluxo('${f.id}')">🔗 Compartilhar</button>
+                </div>
+              </div>
+            `).join('')}
+            <button class="btn btn-ghost btn-sm" onclick="openAddCampoModal('${chave}')">+ Adicionar Campo</button>
+          </div>
+        </div>
+      `).join('')
+    }
+  `);
+}
+
+function toggleFluxo(chave) {
+  const body = document.getElementById(`fluxo-body-${chave}`);
+  const header = body.previousElementSibling;
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+}
+
+async function saveFluxo(id) {
+  const val = document.getElementById(`fval-${id}`).value;
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { valor: val });
+    toast('✅ Fluxo salvo!');
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+async function toggleFluxoAtivo(id, checked) {
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { ativo: checked });
+    toast(checked ? '✅ Ativado' : '⏸ Desativado');
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+async function deleteFluxo(id) {
+  if (!confirm('Excluir este campo?')) return;
+  try {
+    await deleteEntity('ConfiguracaoAgente', id);
+    toast('🗑 Excluído');
+    loadFluxos();
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+function shareFluxo(id) {
+  const fluxo = allFluxos.find(f => f.id === id);
+  if (!fluxo) return;
+  openModal('🔗 Compartilhar Fluxo', `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Copie o JSON abaixo para importar em outro agente:</p>
+    <textarea style="width:100%;height:120px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--text);font-size:12px" readonly>${JSON.stringify({chave_fluxo:fluxo.chave_fluxo,sub_categoria:fluxo.sub_categoria,valor:fluxo.valor,descricao:fluxo.descricao},null,2)}</textarea>
+  `, () => {});
+}
+
+function openAddFluxoModal() {
+  openModal('⚡ Novo Fluxo', `
+    <div class="fluxo-field"><label>Chave do Fluxo</label><input type="text" id="new-chave" placeholder="ex: atendimento_cliente"></div>
+    <div class="fluxo-field"><label>Sub-categoria</label><input type="text" id="new-sub" placeholder="ex: prompt_base"></div>
+    <div class="fluxo-field"><label>Valor / Prompt</label><textarea id="new-valor" rows="5" placeholder="Conteúdo do fluxo..."></textarea></div>
+    <div class="fluxo-field"><label>Descrição (opcional)</label><input type="text" id="new-desc" placeholder="Para que serve?"></div>
+  `, async () => {
+    const chave = document.getElementById('new-chave').value.trim();
+    const sub = document.getElementById('new-sub').value.trim();
+    const valor = document.getElementById('new-valor').value.trim();
+    const desc = document.getElementById('new-desc').value.trim();
+    if (!chave || !sub || !valor) { toast('Preencha os campos obrigatórios', 'err'); return; }
+    await createEntity('ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor, descricao: desc, ativo: true, tipo_campo: 'text' });
+    toast('✅ Fluxo criado!');
+    closeModal();
+    loadFluxos();
+  });
+}
+
+function openAddCampoModal(chave) {
+  openModal('+ Adicionar Campo', `
+    <div class="fluxo-field"><label>Sub-categoria</label><input type="text" id="ac-sub" placeholder="ex: regra_horario"></div>
+    <div class="fluxo-field"><label>Valor</label><textarea id="ac-valor" rows="4"></textarea></div>
+    <div class="fluxo-field"><label>Descrição</label><input type="text" id="ac-desc"></div>
+  `, async () => {
+    const sub = document.getElementById('ac-sub').value.trim();
+    const valor = document.getElementById('ac-valor').value.trim();
+    const desc = document.getElementById('ac-desc').value.trim();
+    if (!sub || !valor) { toast('Preencha todos os campos', 'err'); return; }
+    await createEntity('ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor, descricao: desc, ativo: true, tipo_campo: 'text' });
+    toast('✅ Campo adicionado!');
+    closeModal();
+    loadFluxos();
+  });
+}
+
+// ══ REGRAS ══════════════════════════════════════════════════
+async function loadRegras() {
+  setLoading();
+  try {
+    const r = await listEntity('RegraAprendizado');
+    allRegras = r.items || [];
+    renderRegras('todos');
+  } catch(e) { showError(e.message); }
+}
+
+function renderRegras(filtro = 'todos') {
+  let items = [...allRegras];
+  if (filtro !== 'todos') items = items.filter(r => (r.fluxo||'geral') === filtro);
+  if (currentAgent === 'bot') items = items.filter(r => ['geral','atendimento','telegram'].includes(r.fluxo||'geral'));
+  if (currentAgent === 'web') items = items.filter(r => ['geral','atendimento','agendamento'].includes(r.fluxo||'geral'));
+
+  const fluxos = ['todos','geral','atendimento','agendamento','postagem','telegram'];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Regras da IA</h2>
+      <button class="btn btn-teal btn-sm" onclick="openAddRegraModal()">+ Nova Regra</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">
+      💡 As regras ativas são injetadas automaticamente no prompt de cada agente em tempo real.
+    </div>
+    <div class="filter-row">
+      ${fluxos.map(f => `<button class="filter-btn ${filtro===f?'active':''}" onclick="renderRegras('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join('')}
+    </div>
+    ${items.length === 0 ? '<div class="empty"><div class="e-icon">📋</div><p>Nenhuma regra encontrada</p></div>' : `
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Diretriz</th><th>Fluxo</th><th>Origem</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          ${items.map(r => `
+            <tr>
+              <td style="max-width:340px">
+                <div style="font-size:13px;line-height:1.5">${escHtml((r.diretriz||'').slice(0,120))}${(r.diretriz||'').length>120?'…':''}</div>
+                ${r.resumo_dia?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${escHtml(r.resumo_dia.slice(0,80))}</div>`:''}
+              </td>
+              <td><span class="badge ${fluxoBadge(r.fluxo)}">${r.fluxo||'geral'}</span></td>
+              <td><span style="font-size:11px;color:var(--muted)">${r.origem||'manual'}</span></td>
+              <td>
+                <label class="toggle">
+                  <input type="checkbox" ${r.status?'checked':''} onchange="toggleRegra('${r.id}',this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </td>
+              <td>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-ghost btn-sm" onclick="editRegra('${r.id}')">✏️</button>
+                  <button class="btn btn-ghost btn-sm" onclick="shareRegra('${r.id}')">🔗</button>
+                  <button class="btn btn-red btn-sm" onclick="deleteRegra('${r.id}')">🗑</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  `);
+}
+
+function fluxoBadge(fluxo) {
+  const map = { geral:'badge-gray', atendimento:'badge-teal', agendamento:'badge-gold', postagem:'badge-blue', telegram:'badge-teal' };
+  return map[fluxo||'geral'] || 'badge-gray';
+}
+
+async function toggleRegra(id, checked) {
+  try {
+    await updateEntity('RegraAprendizado', id, { status: checked });
+    toast(checked ? '✅ Regra ativada' : '⏸ Regra desativada');
+    const r = allRegras.find(x => x.id === id);
+    if (r) r.status = checked;
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+function editRegra(id) {
+  const r = allRegras.find(x => x.id === id);
+  if (!r) return;
+  openModal('✏️ Editar Regra', `
+    <div class="fluxo-field"><label>Diretriz</label><textarea id="er-dir" rows="5">${escHtml(r.diretriz||'')}</textarea></div>
+    <div class="fluxo-field"><label>Fluxo</label>
+      <select id="er-fluxo" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px">
+        ${['geral','atendimento','agendamento','postagem','telegram'].map(f=>`<option value="${f}" ${r.fluxo===f?'selected':''}>${f}</option>`).join('')}
+      </select>
+    </div>
+  `, async () => {
+    const dir = document.getElementById('er-dir').value.trim();
+    const fluxo = document.getElementById('er-fluxo').value;
+    await updateEntity('RegraAprendizado', id, { diretriz: dir, fluxo });
+    toast('✅ Regra atualizada');
+    closeModal();
+    loadRegras();
+  });
+}
+
+function shareRegra(id) {
+  const r = allRegras.find(x => x.id === id);
+  if (!r) return;
+  openModal('🔗 Compartilhar Regra', `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Para aplicar ao outro agente, adicione a diretriz no fluxo correspondente:</p>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:13px;line-height:1.6">${escHtml(r.diretriz||'')}</div>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted)">Fluxo: <b>${r.fluxo||'geral'}</b></div>
+  `, () => {});
+}
+
+async function deleteRegra(id) {
+  if (!confirm('Excluir esta regra permanentemente?')) return;
+  try {
+    await deleteEntity('RegraAprendizado', id);
+    toast('🗑 Regra excluída');
+    loadRegras();
+  } catch(e) { toast('❌ Erro', 'err'); }
+}
+
+function openAddRegraModal() {
+  openModal('📋 Nova Regra', `
+    <div class="fluxo-field"><label>Diretriz</label><textarea id="nr-dir" rows="5" placeholder="Ex: Sempre mencionar o desconto de 20% para agendamentos com 30+ dias..."></textarea></div>
+    <div class="fluxo-field"><label>Fluxo</label>
+      <select id="nr-fluxo" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px">
+        ${['geral','atendimento','agendamento','postagem','telegram'].map(f=>`<option value="${f}">${f}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fluxo-field"><label>Motivo (opcional)</label><input type="text" id="nr-motivo" placeholder="Por que essa regra foi criada?"></div>
+  `, async () => {
+    const dir = document.getElementById('nr-dir').value.trim();
+    const fluxo = document.getElementById('nr-fluxo').value;
+    const motivo = document.getElementById('nr-motivo').value.trim();
+    if (!dir) { toast('Digite a diretriz', 'err'); return; }
+    await createEntity('RegraAprendizado', { diretriz: dir, fluxo, motivo, status: true, origem: 'manual', data_geracao: new Date().toISOString() });
+    toast('✅ Regra criada!');
+    closeModal();
+    loadRegras();
+  });
+}
+
+// ══ CONVERSAS ═══════════════════════════════════════════════
+async function loadConversas() {
+  setLoading();
+  try {
+    const [lr, cr] = await Promise.all([
+      listEntity('LeadConversa'),
+      listEntity('ConversaCliente'),
+    ]);
+    allConversas = [
+      ...(lr.items||[]).map(l => ({...l, _canal:'bot'})),
+      ...(cr.items||[]).map(c => ({...c, _canal:'web'})),
+    ].sort((a,b) => new Date(b.data_ultima_mensagem||b.updated_date||b.created_date) - new Date(a.data_ultima_mensagem||a.updated_date||a.created_date));
+    renderConversas();
+  } catch(e) { showError(e.message); }
+}
+
+function renderConversas(filtro = 'todos') {
+  let items = [...allConversas];
+  if (filtro === 'bot') items = items.filter(c => c._canal === 'bot');
+  if (filtro === 'web') items = items.filter(c => c._canal === 'web');
+  if (currentAgent === 'bot') items = items.filter(c => c._canal === 'bot');
+  if (currentAgent === 'web') items = items.filter(c => c._canal === 'web');
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Histórico de Conversas</h2>
+      <span style="font-size:12px;color:var(--muted)">${items.length} conversas</span>
+    </div>
+    <div class="filter-row">
+      ${['todos','bot','web'].map(f=>`<button class="filter-btn ${filtro===f?'active':''}" onclick="renderConversas('${f}')">${f==='bot'?'🤖 Bot Telegram':f==='web'?'💻 Web Chat':'🌐 Todos'}</button>`).join('')}
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input placeholder="Buscar por nome, massagem..." oninput="filterConversas(this.value, '${filtro}')">
+    </div>
+    ${items.length === 0 ? '<div class="empty"><div class="e-icon">💬</div><p>Nenhuma conversa encontrada</p></div>' : `
+    <div class="conv-list">
+      ${items.slice(0,50).map(c => {
+        const nome = c.nome || `ID ${(c.whatsapp||'').slice(-4)}`;
+        const ultima = c.ultima_mensagem || c.resumo || 'sem mensagem';
+        const data = new Date(c.data_ultima_mensagem||c.updated_date||c.created_date);
+        const label = isToday(data) ? data.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : data.toLocaleDateString('pt-BR');
+        return `
+          <div class="conv-item" onclick="openConversa('${c.id}','${c._canal}')">
+            <div class="conv-avatar ${c._canal==='bot'?'conv-av-bot':'conv-av-web'}">${nome.charAt(0).toUpperCase()}</div>
+            <div class="conv-info">
+              <div class="conv-name">${escHtml(nome)} ${c.massagem_interesse?`<span class="badge badge-teal" style="font-size:10px">${c.massagem_interesse}</span>`:''}</div>
+              <div class="conv-last">${escHtml(ultima.slice(0,80))}</div>
+            </div>
+            <div class="conv-meta">
+              <div class="conv-time">${label}</div>
+              <div class="conv-canal">${c._canal==='bot'?'<span class="badge badge-teal" style="font-size:9px">🤖 Bot</span>':'<span class="badge badge-gold" style="font-size:9px">💻 Web</span>'}</div>
+              ${c.etapa_funil?`<div style="font-size:9px;color:var(--muted);margin-top:2px">${c.etapa_funil}</div>`:''}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>`}
+  `);
+}
+
+function filterConversas(query, filtro) {
+  const q = query.toLowerCase();
+  const filtered = allConversas.filter(c =>
+    (c.nome||'').toLowerCase().includes(q) ||
+    (c.massagem_interesse||'').toLowerCase().includes(q) ||
+    (c.ultima_mensagem||'').toLowerCase().includes(q)
+  );
+  // re-render com filtered
+  document.querySelector('.conv-list') && (document.querySelector('.conv-list').innerHTML =
+    filtered.slice(0,50).map(c => {
+      const nome = c.nome || `ID ${(c.whatsapp||'').slice(-4)}`;
+      return `<div class="conv-item"><div class="conv-avatar ${c._canal==='bot'?'conv-av-bot':'conv-av-web'}">${nome.charAt(0).toUpperCase()}</div><div class="conv-info"><div class="conv-name">${escHtml(nome)}</div><div class="conv-last">${escHtml((c.ultima_mensagem||'').slice(0,60))}</div></div></div>`;
+    }).join('')
+  );
+}
+
+function openConversa(id, canal) {
+  const c = allConversas.find(x => x.id === id);
+  if (!c) return;
+  const msgs = c.mensagens ? (Array.isArray(c.mensagens) ? c.mensagens : JSON.parse(c.mensagens)) : [];
+  openModal(`💬 ${c.nome||'Conversa'}`, `
+    <div style="margin-bottom:10px">
+      <span class="badge ${canal==='bot'?'badge-teal':'badge-gold'}">${canal==='bot'?'🤖 Bot Telegram':'💻 Web Chat'}</span>
+      ${c.massagem_interesse?`<span class="badge badge-gray" style="margin-left:6px">${c.massagem_interesse}</span>`:''}
+      ${c.whatsapp?`<span style="font-size:11px;color:var(--muted);margin-left:8px">📱 ${c.whatsapp}</span>`:''}
+    </div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
+      ${msgs.length > 0 ? msgs.map(m=>`
+        <div style="margin-bottom:10px;display:flex;${m.role==='user'?'justify-content:flex-end':''}">
+          <div style="max-width:80%;padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.5;background:${m.role==='user'?'var(--teal3)':'var(--surface3)'}">
+            ${escHtml(m.content||'')}
+          </div>
+        </div>`).join('') :
+        `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">${escHtml(c.resumo||c.ultima_mensagem||'Sem mensagens gravadas')}</div>`
+      }
+    </div>
+    ${c.etapa_funil?`<div style="margin-top:10px;font-size:11px;color:var(--muted)">Etapa: <b>${c.etapa_funil}</b> · Contato: ${new Date(c.data_ultima_mensagem||c.updated_date).toLocaleString('pt-BR')}</div>`:''}
+  `, () => {});
+}
+
+// ══ LEADS ════════════════════════════════════════════════════
+async function loadLeads() {
+  setLoading();
+  try {
+    const r = await listEntity('LeadConversa');
+    allLeads = r.items || [];
+    renderLeads();
+  } catch(e) { showError(e.message); }
+}
+
+function renderLeads(filtro='todos') {
+  let items = [...allLeads].sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
+  if (filtro !== 'todos') items = items.filter(l => l.etapa_funil === filtro);
+  if (currentAgent === 'bot') items = items.filter(l => (l.canal_origem||'').includes('telegram'));
+  if (currentAgent === 'web') items = items.filter(l => (l.canal_origem||'').includes('web'));
+
+  const etapas = ['todos','entrada','consulta_massagem','pediu_preco','acessou_agenda','pagou_sinal','confirmado'];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Leads</h2>
+      <span style="font-size:12px;color:var(--muted)">${items.length} leads</span>
+    </div>
+    <div class="filter-row">
+      ${etapas.map(e=>`<button class="filter-btn ${filtro===e?'active':''}" onclick="renderLeads('${e}')">${e.replace('_',' ')}</button>`).join('')}
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Nome</th><th>Canal</th><th>Massagem</th><th>Etapa</th><th>Último contato</th></tr></thead>
+        <tbody>
+          ${items.slice(0,80).map(l => `
+            <tr>
+              <td>
+                <div style="font-weight:600">${escHtml(l.nome||'Anônimo')}</div>
+                ${l.whatsapp?`<div style="font-size:11px;color:var(--muted)">📱 ${l.whatsapp}</div>`:''}
+              </td>
+              <td><span class="badge ${(l.canal_origem||'').includes('telegram')?'badge-teal':'badge-gold'}">${l.canal_origem||'–'}</span></td>
+              <td><span style="font-size:12px">${l.massagem_interesse||'–'}</span></td>
+              <td><span class="badge badge-gray">${l.etapa_funil||'–'}</span></td>
+              <td><span style="font-size:11px;color:var(--muted)">${l.data_ultimo_contato?new Date(l.data_ultimo_contato).toLocaleString('pt-BR'):'–'}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `);
+}
+
+// ══ AGENDAMENTOS ════════════════════════════════════════════
+async function loadAgendamentos() {
+  setLoading();
+  try {
+    const r = await listEntity('Agendamento');
+    allAgendamentos = (r.items||[]).sort((a,b)=>new Date(b.created_date)-new Date(a.created_date));
+    renderAgendamentos();
+  } catch(e) { showError(e.message); }
+}
+
+function renderAgendamentos(filtro='todos') {
+  let items = [...allAgendamentos];
+  if (filtro !== 'todos') items = items.filter(a => a.status === filtro);
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Agendamentos</h2>
+      <span style="font-size:12px;color:var(--muted)">${items.length} registros</span>
+    </div>
+    <div class="filter-row">
+      ${['todos','Confirmado','Aguardando sinal','Cancelado'].map(s=>`
+        <button class="filter-btn ${filtro===s?'active':''}" onclick="renderAgendamentos('${s}')">${s}</button>
+      `).join('')}
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Cliente</th><th>Massagem</th><th>Unidade</th><th>Data/Hora</th><th>Valor</th><th>Status</th></tr></thead>
+        <tbody>
+          ${items.slice(0,60).map(a => {
+            const dt = a.data_hora ? new Date(a.data_hora).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+            const statusBadge = {Confirmado:'badge-green','Aguardando sinal':'badge-gold',Cancelado:'badge-red'}[a.status]||'badge-gray';
+            return `
+              <tr>
+                <td>
+                  <div style="font-weight:600">${escHtml(a.nome_cliente||'–')}</div>
+                  ${a.whatsapp?`<div style="font-size:11px;color:var(--muted)">📱 ${a.whatsapp}</div>`:''}
+                </td>
+                <td><span style="font-size:12px">${escHtml(a.massagem||'–')}</span></td>
+                <td><span class="badge badge-gray">${a.unidade||'–'}</span></td>
+                <td><span style="font-size:12px">${dt}</span></td>
+                <td><span style="color:var(--gold);font-weight:700">R$${a.valor_total||0}</span></td>
+                <td><span class="badge ${statusBadge}">${a.status||'–'}</span></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `);
+}
+
+// ══ AUTOMAÇÕES ═══════════════════════════════════════════════
+function loadAutomacoes() {
+  const autos = [
+    { icon:'📊', name:'Relatório de Expediente', desc:'Relatório diário às 19h — divergências Calendar vs Planilha', status:'ativo', proxima:'Hoje 19:00', canal:'Grupo JG', freq:'Diário' },
+    { icon:'🔍', name:'Vistoria de Agenda', desc:'Verifica agendamentos pendentes e alerta', status:'ativo', proxima:'Periódico', canal:'Grupo JG', freq:'Periódico' },
+    { icon:'🔄', name:'Reengajamento', desc:'Contata leads inativos após período definido', status:'ativo', proxima:'Periódico', canal:'WhatsApp', freq:'Periódico' },
+    { icon:'👋', name:'Abandonados', desc:'Follow-up para conversas sem resposta', status:'ativo', proxima:'Periódico', canal:'Telegram Bot', freq:'Periódico' },
+    { icon:'🧠', name:'Aprendizagem Diária', desc:'Analisa logs e sugere novas regras de comportamento', status:'ativo', proxima:'19:00', canal:'Grupo JG', freq:'Diário' },
+    { icon:'💳', name:'Monitor de Créditos', desc:'Snapshot periódico do uso de créditos Base44', status:'ativo', proxima:'Periódico', canal:'–', freq:'Periódico' },
+  ];
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>Automações Ativas</h2>
+      <a href="https://app.cron-job.org" target="_blank" class="btn btn-ghost btn-sm">⚙️ cron-job.org</a>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">
+      💡 As automações são disparadas via <b>cron-job.org</b> (conta: loshombresestudiospa1@gmail.com). Clique em cada uma para ver detalhes ou pausar.
+    </div>
+    ${autos.map(a => `
+      <div class="auto-item">
+        <div class="auto-icon">${a.icon}</div>
+        <div class="auto-info">
+          <div class="auto-name">${a.name}</div>
+          <div class="auto-desc">${a.desc}</div>
+          <div style="margin-top:4px;display:flex;gap:8px">
+            <span class="badge badge-teal" style="font-size:10px">${a.freq}</span>
+            <span class="badge badge-gray" style="font-size:10px">→ ${a.canal}</span>
+          </div>
+        </div>
+        <div class="auto-meta">
+          <div class="auto-next">⏰ ${a.proxima}</div>
+          <div style="margin-top:6px"><span class="badge badge-green" style="font-size:10px">● ${a.status}</span></div>
+        </div>
+      </div>
+    `).join('')}
+
+    <div class="card" style="margin-top:16px;border-color:var(--teal3)">
+      <div class="card-title">🔗 Links rápidos</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+        <a href="https://dionisio872-hue.github.io/loshombres-chat/" target="_blank" class="btn btn-ghost btn-sm">💻 Chat Web</a>
+        <a href="https://t.me/Atendimentoloshombresbot" target="_blank" class="btn btn-ghost btn-sm">🤖 Bot Telegram</a>
+        <a href="https://calendar.app.google/jBk4U8zf5WGb73MH6" target="_blank" class="btn btn-ghost btn-sm">📅 Agenda Savassi</a>
+        <a href="https://calendar.app.google/dandDDiGYKtD36Q19" target="_blank" class="btn btn-ghost btn-sm">📅 Agenda Betim</a>
+      </div>
+    </div>
+  `);
+}
+
+// ══ IDENTIDADE ═══════════════════════════════════════════════
+async function loadIdentidade() {
+  setLoading();
+  try {
+    const r = await listEntity('ConfiguracaoAgente');
+    const items = r.items || [];
+    const promptBot = items.find(i => i.sub_categoria === 'prompt_base' && (i.chave_fluxo||'').includes('telegram'));
+    const promptWeb = items.find(i => i.sub_categoria === 'prompt_base' && (i.chave_fluxo||'').includes('atendimento'));
+
+    setContent(`
+      <div class="sec-hdr"><h2>Identidade da IA</h2></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">
+        💡 O prompt base define a <b>personalidade, tom e regras fundamentais</b> de cada agente. Edite e salve — aplicado na próxima mensagem, sem deploy.
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span class="dot dot-bot"></span>
+            <span style="font-size:13px;font-weight:700">Bot Telegram</span>
+          </div>
+          ${promptBot ? `
+            <div class="fluxo-field">
+              <label>Prompt Base</label>
+              <textarea id="id-bot" rows="14">${escHtml(promptBot.valor||'')}</textarea>
+            </div>
+            <button class="btn btn-teal" onclick="saveIdentidade('${promptBot.id}','id-bot')">💾 Salvar Bot</button>
+          ` : `
+            <div class="fluxo-field"><label>Prompt Base</label><textarea id="id-bot-new" rows="14" placeholder="Digite o prompt base do bot Telegram..."></textarea></div>
+            <button class="btn btn-teal" onclick="createIdentidade('id-bot-new','telegram_bot','prompt_base')">+ Criar Prompt Bot</button>
+          `}
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span class="dot dot-web"></span>
+            <span style="font-size:13px;font-weight:700">Web Chat</span>
+          </div>
+          ${promptWeb ? `
+            <div class="fluxo-field">
+              <label>Prompt Base</label>
+              <textarea id="id-web" rows="14">${escHtml(promptWeb.valor||'')}</textarea>
+            </div>
+            <button class="btn btn-teal" onclick="saveIdentidade('${promptWeb.id}','id-web')">💾 Salvar Web</button>
+          ` : `
+            <div class="fluxo-field"><label>Prompt Base</label><textarea id="id-web-new" rows="14" placeholder="Digite o prompt base do chat web..."></textarea></div>
+            <button class="btn btn-teal" onclick="createIdentidade('id-web-new','atendimento_cliente','prompt_base')">+ Criar Prompt Web</button>
+          `}
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">💡 Sugestões de melhoria de prompt</div>
+        <div style="font-size:13px;line-height:1.7;margin-top:8px">
+          <div style="margin-bottom:8px">🎯 <b>Defina a persona:</b> "Você é o Jonathan, massagista. Fale na primeira pessoa, de forma calorosa e direta."</div>
+          <div style="margin-bottom:8px">⏱ <b>Limite o tamanho:</b> "Responda em no máximo 3 frases. Sem listas. Sem bullet points."</div>
+          <div style="margin-bottom:8px">🚫 <b>Proibições explícitas:</b> "NUNCA invente preços, horários ou informações que não foram informadas no contexto."</div>
+          <div style="margin-bottom:8px">🔀 <b>Contexto dinâmico:</b> O sistema injeta automaticamente os blocos [FLUXO_ATIVADO] com dados em tempo real.</div>
+        </div>
+      </div>
+    `);
+  } catch(e) { showError(e.message); }
+}
+
+async function saveIdentidade(id, fieldId) {
+  const val = document.getElementById(fieldId).value;
+  try {
+    await updateEntity('ConfiguracaoAgente', id, { valor: val });
+    toast('✅ Identidade salva!');
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+async function createIdentidade(fieldId, chave, sub) {
+  const val = document.getElementById(fieldId).value.trim();
+  if (!val) { toast('Digite o prompt', 'err'); return; }
+  try {
+    await createEntity('ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor: val, ativo: true, tipo_campo: 'text' });
+    toast('✅ Prompt criado!');
+    loadIdentidade();
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
+// ══ MODAL ════════════════════════════════════════════════════
+function openModal(title, body, saveFn) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  modalSaveFn = saveFn;
+  document.getElementById('modalSaveBtn').style.display = saveFn ? '' : 'none';
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+function modalSave() { if (modalSaveFn) modalSaveFn(); }
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ══ HELPERS ══════════════════════════════════════════════════
+function setLoading() { document.getElementById('content').innerHTML = '<div class="loading"><div class="spin"></div> Carregando dados...</div>'; }
+function setContent(html) { document.getElementById('content').innerHTML = html; }
+function showError(msg) { setContent(`<div class="empty"><div class="e-icon">❌</div><p>${msg}</p><button class="btn btn-ghost" style="margin-top:12px" onclick="loadCurrentTab()">Tentar novamente</button></div>`); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function isToday(d) { const t = new Date(); return d.toDateString() === t.toDateString(); }
+
+// ══ INIT ══════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  loadInsights();
+});
 </script>
 </body>
 </html>
