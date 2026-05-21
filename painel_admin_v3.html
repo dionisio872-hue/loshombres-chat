@@ -491,15 +491,16 @@ function loadCurrentTab() {
 async function loadInsights() {
   setLoading();
   try {
-    const [leadsR, agsR, crR] = await Promise.all([
+    const results = await Promise.allSettled([
       listEntity('LeadConversa'),
       listEntity('Agendamento'),
       listEntity('SnapshotCreditos'),
     ]);
-    allLeads = leadsR.items || [];
-    allAgendamentos = agsR.items || [];
-    const creds = (crR.items || []).sort((a,b) => new Date(b.created_date) - new Date(a.created_date))[0];
-    updateCredits(creds);
+    allLeads = results[0].status==='fulfilled' ? (results[0].value.items||[]) : [];
+    allAgendamentos = results[1].status==='fulfilled' ? (results[1].value.items||[]) : [];
+    const crItems = results[2].status==='fulfilled' ? (results[2].value.items||[]) : [];
+    const creds = crItems.sort((a,b) => new Date(b.created_date)-new Date(a.created_date))[0];
+    if (creds) updateCredits(creds);
     renderInsights();
   } catch(e) { showError(e.message); }
 }
@@ -715,6 +716,15 @@ async function saveFluxo(id) {
   } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
 }
 
+async function deleteRegra(id) {
+  if (!confirm('Excluir esta regra?')) return;
+  try {
+    await deleteEntity('RegraAprendizado', id);
+    toast('🗑 Regra excluída');
+    loadRegras();
+  } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
+}
+
 async function toggleFluxoAtivo(id, checked) {
   try {
     await updateEntity('ConfiguracaoAgente', id, { ativo: checked });
@@ -863,15 +873,16 @@ function loadCurrentTab() {
 async function loadInsights() {
   setLoading();
   try {
-    const [leadsR, agsR, crR] = await Promise.all([
+    const results = await Promise.allSettled([
       listEntity('LeadConversa'),
       listEntity('Agendamento'),
       listEntity('SnapshotCreditos'),
     ]);
-    allLeads = leadsR.items || [];
-    allAgendamentos = agsR.items || [];
-    const creds = (crR.items || []).sort((a,b) => new Date(b.created_date) - new Date(a.created_date))[0];
-    updateCredits(creds);
+    allLeads = results[0].status==='fulfilled' ? (results[0].value.items||[]) : [];
+    allAgendamentos = results[1].status==='fulfilled' ? (results[1].value.items||[]) : [];
+    const crItems = results[2].status==='fulfilled' ? (results[2].value.items||[]) : [];
+    const creds = crItems.sort((a,b) => new Date(b.created_date)-new Date(a.created_date))[0];
+    if (creds) updateCredits(creds);
     renderInsights();
   } catch(e) { showError(e.message); }
 }
@@ -1824,8 +1835,8 @@ function showError(msg) {
   const extra = isAuth ? `
     <br><br>
     <button class="btn btn-teal btn-sm" onclick="localStorage.removeItem('lh_svc_token');location.reload()">🔄 Limpar token e relogar</button>
-  ` : `<br><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="init()">↺ Tentar novamente</button>`;
-  document.getElementById('mainContent').innerHTML = `
+  ` : `<br><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="loadCurrentTab()">↺ Tentar novamente</button>`;
+  document.getElementById('content').innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:400px;gap:16px">
       <div style="font-size:40px">❌</div>
       <div style="font-size:14px;color:var(--red);max-width:400px;text-align:center">${escHtml(msg)}</div>
