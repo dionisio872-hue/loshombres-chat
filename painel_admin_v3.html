@@ -1148,8 +1148,13 @@ let allInstrucoes = [];
 async function loadInstrucoes() {
   setLoading();
   try {
-    const r = await listEntity('ConfiguracaoAgente', { chave_fluxo: 'instrucoes' });
-    allInstrucoes = r.items || [];
+    // Busca instrucoes + midias_massagens (áudios/vídeos por massagem)
+    const [r1, r2] = await Promise.all([
+      listEntity('ConfiguracaoAgente', { chave_fluxo: 'instrucoes' }),
+      listEntity('ConfiguracaoAgente', { chave_fluxo: 'midias_massagens' }),
+    ]);
+    const r = [...(r1||[]), ...(r2||[])];
+    allInstrucoes = Array.isArray(r) ? r : (r.items || []);
     renderInstrucoes();
   } catch(e) { showError(e.message); }
 }
@@ -1207,7 +1212,7 @@ function renderInstrucoes() {
     + '<button class="btn btn-teal btn-sm" onclick="openAddInstrucaoModal()">+ Nova Instrução / Mídia</button>'
     + '</div>'
     + '<div style="margin-bottom:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:12px;color:var(--muted);line-height:1.7">'
-    + '<b style="color:var(--teal)">Como funciona:</b> Tudo aqui é acessado pelos bots via chave <code style="background:var(--surface3);padding:2px 6px;border-radius:4px;color:var(--gold)">instrucoes</code>. '
+    + '<b style="color:var(--teal)">Como funciona:</b> Tudo aqui é acessado pelos bots via chave <code style="background:var(--surface3);padding:2px 6px;border-radius:4px;color:var(--gold)">instrucoes</code> ou <code style="background:var(--surface3);padding:2px 6px;border-radius:4px;color:var(--gold)">midias_massagens</code>. '
     + 'Use <b>sub_categoria</b> para agrupar: '
     + '<code style="color:var(--teal)">audio_relaxante</code>, '
     + '<code style="color:var(--teal)">video_tantra</code>, '
