@@ -431,34 +431,6 @@ function toast(msg, type = 'ok') {
   setTimeout(() => el.remove(), 3000);
 }
 
-// ══ NAVIGATION ═══════════════════════════════════════════════
-function showTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  const nav = document.getElementById(`nav-${tab}`);
-  if (nav) nav.classList.add('active');
-
-  const titles = {
-    insights: ['📊 Insights', 'Métricas e resultados do sistema'],
-    fluxos: ['⚡ Fluxos', 'Prompts e configurações por agente'],
-    regras: ['📋 Regras', 'Diretrizes de comportamento da IA'],
-    conversas: ['💬 Conversas', 'Histórico de atendimentos'],
-    aprendizagens: ['🧩 Aprendizagens', 'Sugestões da IA para aprovar'],
-    leads: ['🎯 Leads', 'Clientes que interagiram'],
-    agendamentos: ['📅 Agendamentos', 'Reservas e confirmações'],
-    automacoes: ['🔁 Automações', 'Crons e triggers ativos'],
-    identidade: ['🧠 Identidade IA', 'Personalidade e comportamento base'],
-    instrucoes: ['📚 Instruções & Mídias', 'Banco de links, áudios, vídeos e regras dos bots'],
-  };
-  const [title, sub] = titles[tab] || ['–', ''];
-  document.getElementById('tb-title').textContent = title;
-  document.getElementById('tb-sub').textContent = sub;
-
-  // Tab bar: só mostra período no insights
-  document.getElementById('tab-bar').style.display = tab === 'insights' ? 'flex' : 'none';
-
-  loadCurrentTab();
-}
 
 function setAgent(agent) {
   currentAgent = agent;
@@ -837,6 +809,7 @@ function showTab(tab) {
     agendamentos: ['📅 Agendamentos', 'Reservas e confirmações'],
     automacoes: ['🔁 Automações', 'Crons e triggers ativos'],
     identidade: ['🧠 Identidade IA', 'Personalidade e comportamento base'],
+    instrucoes: ['📚 Instruções & Mídias', 'Banco de links, áudios, vídeos e regras dos bots'],
   };
   const [title, sub] = titles[tab] || ['–', ''];
   document.getElementById('tb-title').textContent = title;
@@ -867,20 +840,6 @@ function setPeriod(p) {
   if (currentTab === 'insights') renderInsights();
 }
 
-function loadCurrentTab() {
-  const fn = {
-    insights: loadInsights,
-    fluxos: loadFluxos,
-    regras: loadRegras,
-    conversas: loadConversas,
-    aprendizagens: loadAprendizagens,
-    leads: loadLeads,
-    agendamentos: loadAgendamentos,
-    automacoes: loadAutomacoes,
-    identidade: loadIdentidade,
-  }[currentTab];
-  if (fn) fn();
-}
 
 // ══ INSIGHTS ════════════════════════════════════════════════
 async function loadInsights() {
