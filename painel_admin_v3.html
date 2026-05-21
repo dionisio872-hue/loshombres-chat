@@ -369,11 +369,9 @@ async function apiFetch(path, opts = {}) {
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try { const j = await res.json(); msg = j.message || j.error || msg; } catch(e){}
-    // Token inválido — limpar e forçar relogin
-    if (res.status === 401 || res.status === 403 || msg.includes('private') || msg.includes('access')) {
-      localStorage.removeItem('lh_svc_token');
-      SVC_TOKEN = '';
-      msg = 'Token inválido ou expirado. Por favor, reabra com o link correto.';
+    // Erro de acesso
+    if (res.status === 401 || res.status === 403) {
+      msg = 'Erro de acesso ao proxy. Verifique a chave adminProxy.';
     }
     throw new Error(msg);
   }
