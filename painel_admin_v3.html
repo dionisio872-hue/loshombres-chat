@@ -1598,11 +1598,12 @@ function renderAprendizagens(filtro = 'todas') {
   const filtradas = filtro === 'ativas' ? items.filter(r => r.status)
     : filtro === 'pendentes' ? items.filter(r => !r.status)
     : items;
+  const totalPendentes = items.filter(r => !r.status).length;
 
   setContent(`
     <div class="sec-hdr">
       <h2>🧩 Aprendizagens da IA</h2>
-      <span style="font-size:12px;color:var(--muted)">${items.length} total · ${items.filter(r=>!r.status).length} aguardando aprovação</span>
+      <span style="font-size:12px;color:var(--muted)">${items.length} total · ${totalPendentes} aguardando aprovação</span>
     </div>
     <div style="margin-bottom:12px;font-size:12px;color:var(--muted)">
       💡 Sugestões geradas por análise de conversas. Ative as que fizerem sentido — são injetadas no prompt automaticamente.
