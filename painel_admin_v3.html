@@ -1230,7 +1230,7 @@ function renderRegras(filtro = 'todos') {
             <tr>
               <td style="max-width:340px">
                 <div style="font-size:13px;line-height:1.5">${escHtml((r.diretriz||'').slice(0,120))}${(r.diretriz||'').length>120?'…':''}</div>
-                ${r.resumo_dia?('<div style="font-size:11px;color:var(--muted);margin-top:3px">'+escHtml(r.resumo_dia.slice(0,80))+'</div>)':''}
+                ${r.resumo_dia?('<div style="font-size:11px;color:var(--muted);margin-top:3px">'+escHtml(r.resumo_dia.slice(0,80))+'</div>'):''}
               </td>
               <td><span class="badge ${fluxoBadge(r.fluxo)}">${r.fluxo||'geral'}</span></td>
               <td><span style="font-size:11px;color:var(--muted)">${r.origem||'manual'}</span></td>
@@ -1443,7 +1443,7 @@ function openConversa(id, canal) {
         `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">${escHtml(c.resumo||c.ultima_mensagem||'Sem mensagens gravadas')}</div>`
       }
     </div>
-    ${c.etapa_funil?('<div style="margin-top:10px;font-size:11px;color:var(--muted)">Etapa: <b>'+c.etapa_funil+'</b> · Contato: '+new Date(c.data_ultima_mensagem||c.updated_date).toLocaleString('pt-BR')+'</div>)':''}
+    ${c.etapa_funil?('<div style="margin-top:10px;font-size:11px;color:var(--muted)">Etapa: <b>'+c.etapa_funil+'</b> · Contato: '+new Date(c.data_ultima_mensagem||c.updated_date).toLocaleString('pt-BR')+'</div>'):''}
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="analisarConversa('${c.id}','${c._canal}')" style="background:var(--teal3);border:1px solid var(--teal);border-radius:8px;padding:8px 16px;color:var(--teal);cursor:pointer;font-size:12px;font-weight:700">🧩 Analisar com IA → Sugerir Regras</button>
     </div>
@@ -1550,7 +1550,7 @@ function renderAprendizagens(filtro = 'todas') {
         </div>
       \`).join('')
     }
-  \`);
+  `);
 }
 
 async function ativarAprendizagem(id, checked) {
@@ -1862,8 +1862,7 @@ window.addEventListener('error', (e) => {
 });
 window.addEventListener('load', () => {
   loadInsights();
-});
-</script>
+});</script>
 
 <!-- TOKEN MODAL -->
 <div id="tokenModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center">
