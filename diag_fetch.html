@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Diagnóstico Fetch</title></head>
+<body style="background:#0d1117;color:#fff;font-family:monospace;padding:20px">
+<h2>Diagnóstico Fetch – Los Hombres</h2>
+<div id="log"></div>
+<script>
+const APP_ID = '6a04cc22bf7a0dcea87e3c43';
+const PROXY_URL = `https://base44.app/api/apps/${APP_ID}/functions/adminProxy`;
+const ADMIN_KEY = 'loshombres2026';
+
+const log = (msg, color='#fff') => {
+  document.getElementById('log').innerHTML += `<div style="color:${color};margin:4px 0">${msg}</div>`;
+  console.log(msg);
+};
+
+async function test() {
+  log('🚀 Iniciando teste...');
+  log(`URL: ${PROXY_URL}?path=%2Fentities%2FLeadConversa&limit=2`);
+  
+  try {
+    const start = Date.now();
+    log('⏳ Fazendo fetch...');
+    
+    const res = await fetch(`${PROXY_URL}?path=${encodeURIComponent('/entities/LeadConversa')}&limit=2`, {
+      headers: { 'x-admin-key': ADMIN_KEY }
+    });
+    
+    log(`✅ Fetch respondeu em ${Date.now()-start}ms — status: ${res.status}`, '#4ade80');
+    
+    const data = await res.json();
+    log(`✅ JSON OK: ${JSON.stringify(data).substr(0,200)}`, '#4ade80');
+  } catch(e) {
+    log(`❌ ERRO: ${e.name}: ${e.message}`, '#f87171');
+    log(`Stack: ${e.stack}`, '#f87171');
+  }
+}
+
+test();
+</script>
+</body>
+</html>
