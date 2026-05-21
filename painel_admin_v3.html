@@ -491,18 +491,23 @@ function loadCurrentTab() {
 async function loadInsights() {
   setLoading();
   try {
-    const results = await Promise.allSettled([
+    // timeout de segurança
+    const withTimeout = (p) => Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timeout 15s')),15000))]);
+    const results = await withTimeout(Promise.allSettled([
       listEntity('LeadConversa'),
       listEntity('Agendamento'),
       listEntity('SnapshotCreditos'),
-    ]);
+    ]));
+    // mostrar erros individuais
+    const errs = results.filter(r=>r.status==='rejected').map(r=>r.reason?.message||'erro');
+    if(errs.length) console.warn('loadInsights parcial:', errs);
     allLeads = results[0].status==='fulfilled' ? (results[0].value.items||[]) : [];
     allAgendamentos = results[1].status==='fulfilled' ? (results[1].value.items||[]) : [];
     const crItems = results[2].status==='fulfilled' ? (results[2].value.items||[]) : [];
     const creds = crItems.sort((a,b) => new Date(b.created_date)-new Date(a.created_date))[0];
     if (creds) updateCredits(creds);
     renderInsights();
-  } catch(e) { showError(e.message); }
+  } catch(e) { showError('loadInsights: '+e.message); }
 }
 
 function filterByPeriod(items, field = 'created_date') {
@@ -1848,6 +1853,13 @@ function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function isToday(d) { const t = new Date(); return d.toDateString() === t.toDateString(); }
 
 // ══ INIT ══════════════════════════════════════════════════════
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('UnhandledRejection:', e.reason);
+  showError('Erro interno: ' + (e.reason?.message || String(e.reason)));
+});
+window.addEventListener('error', (e) => {
+  console.error('GlobalError:', e.message, 'L', e.lineno, 'C', e.colno);
+});
 window.addEventListener('load', () => {
   loadInsights();
 });
