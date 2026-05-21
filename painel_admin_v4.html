@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Los Hombres — Painel Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#071a1a;--surface:#0d2626;--surface2:#112e2e;--border:#1e4040;
+  --teal:#2dd4bf;--teal2:#14b8a6;--gold:#c9a84c;
+  --text:#e8f5f5;--muted:#6b9e9e;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  --radius:10px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+
+.shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.logo{padding:20px 16px 14px;border-bottom:1px solid var(--border)}
+.logo h1{font-size:16px;color:var(--teal);letter-spacing:1px}
+.logo small{font-size:11px;color:var(--muted);display:block;margin-top:2px}
+.nav{flex:1;padding:10px 8px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;transition:all .15s}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(45,212,191,.12);color:var(--teal);font-weight:600}
+.nav-item .ico{font-size:15px;width:18px;text-align:center}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar h2{font-size:16px;color:var(--teal);font-weight:600}
+.agent-toggle{display:flex;gap:6px}
+.btn-agent{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s}
+.btn-agent.active{background:var(--teal);color:#071a1a;border-color:var(--teal);font-weight:600}
+
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* Cards */
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.card-val{font-size:28px;font-weight:700;color:var(--teal)}
+.card-val.gold{color:var(--gold)}
+.card-val.green{color:var(--green)}
+.card-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* Table */
+.tbl-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--surface2);color:var(--muted);font-weight:500;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+td{padding:10px 14px;vertical-align:top}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-teal{background:rgba(45,212,191,.15);color:var(--teal)}
+.badge-gold{background:rgba(201,168,76,.15);color:var(--gold)}
+
+/* Fluxos / Config */
+.config-group{margin-bottom:20px}
+.config-group-title{font-size:12px;color:var(--gold);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.config-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}
+.config-item-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.config-key{font-size:12px;color:var(--gold);font-weight:600;font-family:monospace}
+.config-sub{font-size:11px;color:var(--muted);margin-top:2px}
+textarea.config-val{width:100%;min-height:80px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:10px;resize:vertical;font-family:inherit;line-height:1.5}
+textarea.config-val:focus{outline:none;border-color:var(--teal)}
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
+.btn-teal{background:var(--teal);color:#071a1a}
+.btn-teal:hover{background:var(--teal2)}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.btn-red:hover{background:rgba(239,68,68,.25)}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* Regras */
+.regra-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}
+.regra-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.regra-status{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.regra-ativa{background:var(--green)}
+.regra-inativa{background:var(--muted)}
+.regra-diretriz{font-size:13px;color:var(--text);line-height:1.5;flex:1}
+.regra-meta{font-size:11px;color:var(--muted);margin-top:6px}
+.regra-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+
+/* Leads */
+.lead-row td:first-child{color:var(--teal);font-weight:500}
+.lead-row td small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+
+/* Loading / Error */
+.loading-box{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;gap:12px;color:var(--muted)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:16px;color:var(--red);font-size:13px}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none}
+.toast{padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;animation:slideIn .2s ease;pointer-events:auto}
+.toast.ok{background:#0f766e;color:#fff}
+.toast.err{background:#7f1d1d;color:#fff}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;color:var(--teal);font-weight:600;margin-bottom:16px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+label.lbl{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;margin-top:12px}
+input.inp,select.inp,textarea.inp{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:8px 12px;font-family:inherit}
+input.inp:focus,select.inp:focus,textarea.inp:focus{outline:none;border-color:var(--teal)}
+textarea.inp{min-height:100px;resize:vertical}
+
+/* Sec header */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.sec-hdr h2{font-size:16px;color:var(--teal);font-weight:600}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.filter-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s}
+.filter-btn.active{background:var(--teal);color:#071a1a;border-color:var(--teal);font-weight:600}
+
+@media(max-width:768px){
+  .sidebar{width:56px}.sidebar .nav-item span{display:none}.logo h1,.logo small,.sidebar-footer{display:none}
+  .grid4{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="logo">
+      <h1>🌿 LOS HOMBRES</h1>
+      <small>Painel Admin v4</small>
+    </div>
+    <div class="nav" id="nav">
+      <button class="nav-item active" data-tab="insights" onclick="switchTab('insights')"><span class="ico">📊</span><span>Insights</span></button>
+      <button class="nav-item" data-tab="fluxos" onclick="switchTab('fluxos')"><span class="ico">⚙️</span><span>Fluxos</span></button>
+      <button class="nav-item" data-tab="regras" onclick="switchTab('regras')"><span class="ico">🧠</span><span>Regras IA</span></button>
+      <button class="nav-item" data-tab="conversas" onclick="switchTab('conversas')"><span class="ico">💬</span><span>Conversas</span></button>
+      <button class="nav-item" data-tab="leads" onclick="switchTab('leads')"><span class="ico">🎯</span><span>Leads</span></button>
+      <button class="nav-item" data-tab="agendamentos" onclick="switchTab('agendamentos')"><span class="ico">📅</span><span>Agendamentos</span></button>
+    </div>
+    <div class="sidebar-footer" id="sfooter">Carregando...</div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="tab-title">Insights</h2>
+      <div class="agent-toggle">
+        <button class="btn-agent active" id="ag-all" onclick="setAgent('all')">Todos</button>
+        <button class="btn-agent" id="ag-bot" onclick="setAgent('bot')">🤖 Bot</button>
+        <button class="btn-agent" id="ag-web" onclick="setAgent('web')">🌐 Web</button>
+      </div>
+    </div>
+    <div class="content" id="content">
+      <div class="loading-box"><div class="spinner"></div><span>Conectando ao painel...</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Editar</div>
+    <div id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-teal" id="modal-save" onclick="modalSave()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ CONFIG ══
+const PROXY = 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/adminProxy';
+const KEY = 'loshombres2026';
+
+// ══ STATE ══
+let currentTab = 'insights';
+let currentAgent = 'all';
+let allLeads = [], allAgs = [], allRegras = [], allFluxos = [], allConversas = [];
+let modalSaveFn = null;
+
+// ══ TAB NAMES ══
+const TAB_NAMES = { insights:'Insights', fluxos:'Configurações / Fluxos', regras:'Regras de IA', conversas:'Conversas', leads:'Leads', agendamentos:'Agendamentos' };
+
+// ══ UTILS ══
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(v) { return v ? new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'; }
+function fmtDate(v) { return v ? new Date(v).toLocaleDateString('pt-BR') : '—'; }
+function currency(v) { return 'R$' + (Number(v||0)).toLocaleString('pt-BR',{minimumFractionDigits:0}); }
+
+function toast(msg, type) {
+  type = type || 'ok';
+  var el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(function() { el.remove(); }, 3500);
+}
+
+function showLoading() {
+  document.getElementById('content').innerHTML = '<div class="loading-box"><div class="spinner"></div><span>Carregando...</span></div>';
+}
+
+function showError(msg) {
+  document.getElementById('content').innerHTML = '<div class="error-box">❌ Erro: ' + esc(msg) + '<br><br><button class="btn btn-ghost btn-sm" onclick="loadTab()">↻ Tentar novamente</button></div>';
+}
+
+// ══ API ══
+async function apiGet(path, extra) {
+  extra = extra || {};
+  var qs = Object.keys(extra).map(function(k) { return k + '=' + encodeURIComponent(extra[k]); }).join('&');
+  var url = PROXY + '?path=' + encodeURIComponent(path) + (qs ? '&' + qs : '');
+  var r = await fetch(url, { headers: { 'x-admin-key': KEY } });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function apiPut(path, data) {
+  var url = PROXY + '?path=' + encodeURIComponent(path);
+  var r = await fetch(url, { method: 'PUT', headers: { 'x-admin-key': KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function apiPost(path, data) {
+  var url = PROXY + '?path=' + encodeURIComponent(path);
+  var r = await fetch(url, { method: 'POST', headers: { 'x-admin-key': KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function apiDelete(path) {
+  var url = PROXY + '?path=' + encodeURIComponent(path);
+  var r = await fetch(url, { method: 'DELETE', headers: { 'x-admin-key': KEY } });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ══ SWITCH TAB ══
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-title').textContent = TAB_NAMES[tab] || tab;
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.tab === tab);
+  });
+  loadTab();
+}
+
+function setAgent(a) {
+  currentAgent = a;
+  ['all','bot','web'].forEach(function(x) {
+    document.getElementById('ag-' + x).classList.toggle('active', x === a);
+  });
+  loadTab();
+}
+
+function loadTab() {
+  var t = currentTab;
+  if (t === 'insights') loadInsights();
+  else if (t === 'fluxos') loadFluxos();
+  else if (t === 'regras') loadRegras();
+  else if (t === 'conversas') loadConversas();
+  else if (t === 'leads') loadLeads();
+  else if (t === 'agendamentos') loadAgendamentos();
+}
+
+// ══ INSIGHTS ══
+async function loadInsights() {
+  showLoading();
+  try {
+    var timer = setTimeout(function() { showError('Timeout ao carregar dados (15s). Verifique conexão.'); }, 15000);
+    var ld = await apiGet('/entities/LeadConversa', { limit: '500' });
+    var ag = await apiGet('/entities/Agendamento', { limit: '500' });
+    allLeads = ld.items || [];
+    allAgs = ag.items || [];
+    clearTimeout(timer);
+    renderInsights();
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function renderInsights() {
+  var leads = filterByAgent(allLeads, 'canal_origem');
+  var ags = filterByAgent(allAgs, 'unidade');
+  var confirmados = ags.filter(function(a) { return a.status === 'Confirmado'; });
+  var receita = confirmados.reduce(function(s,a) { return s + (Number(a.valor_total)||0); }, 0);
+  var taxa = leads.length ? ((confirmados.length / leads.length) * 100).toFixed(1) : 0;
+
+  var botLeads = allLeads.filter(function(l) { return (l.canal_origem||'').toLowerCase().includes('telegram'); });
+  var webLeads = allLeads.filter(function(l) { return (l.canal_origem||'').toLowerCase().includes('web'); });
+
+  // Top massagens
+  var mc = {};
+  leads.forEach(function(l) { if (l.massagem_interesse) mc[l.massagem_interesse] = (mc[l.massagem_interesse]||0) + 1; });
+  var topM = Object.entries(mc).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+
+  // Últimos 7 dias
+  var dias = [];
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date(Date.now() - i * 864e5);
+    var label = d.toLocaleDateString('pt-BR', {weekday:'short'});
+    var count = allLeads.filter(function(l) { return new Date(l.created_date).toDateString() === d.toDateString(); }).length;
+    dias.push({ label: label, val: count });
+  }
+  var maxD = Math.max.apply(null, dias.map(function(d){return d.val;})) || 1;
+
+  var topMHtml = topM.length ? topM.map(function(entry) {
+    var m = entry[0], n = entry[1];
+    var pct = Math.round((n / (topM[0][1]||1)) * 100);
+    return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>' + esc(m) + '</span><span style="color:var(--teal);font-weight:600">' + n + '</span></div><div style="height:6px;background:var(--border);border-radius:3px"><div style="height:6px;background:var(--teal);border-radius:3px;width:' + pct + '%"></div></div></div>';
+  }).join('') : '<p style="color:var(--muted);font-size:13px">Sem dados</p>';
+
+  var diasHtml = dias.map(function(d) {
+    var pct = Math.round((d.val / maxD) * 100);
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1"><div style="font-size:11px;color:var(--teal);font-weight:600">' + d.val + '</div><div style="width:100%;background:var(--border);border-radius:3px;height:60px;display:flex;align-items:flex-end"><div style="width:100%;background:var(--teal2);border-radius:3px;height:' + pct + '%"></div></div><div style="font-size:10px;color:var(--muted)">' + esc(d.label) + '</div></div>';
+  }).join('');
+
+  document.getElementById('content').innerHTML = '<div class="grid4"><div class="card"><div class="card-title">🎯 Leads</div><div class="card-val">' + leads.length + '</div><div class="card-sub">Bot: ' + botLeads.length + ' · Web: ' + webLeads.length + '</div></div><div class="card"><div class="card-title">📅 Agendamentos</div><div class="card-val gold">' + ags.length + '</div><div class="card-sub">Confirmados: ' + confirmados.length + '</div></div><div class="card"><div class="card-title">✅ Taxa Conversão</div><div class="card-val green">' + taxa + '%</div><div class="card-sub">leads → agendados</div></div><div class="card"><div class="card-title">💰 Receita</div><div class="card-val gold">' + currency(receita) + '</div><div class="card-sub">confirmados</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div class="card"><div class="card-title">📈 Últimos 7 dias — Leads</div><div style="display:flex;gap:6px;align-items:flex-end;height:80px;margin-top:10px">' + diasHtml + '</div></div><div class="card"><div class="card-title">💆 Top Massagens</div><div style="margin-top:10px">' + topMHtml + '</div></div></div>';
+
+  updateFooter();
+}
+
+function filterByAgent(arr, field) {
+  if (currentAgent === 'all') return arr;
+  return arr.filter(function(item) {
+    var v = (item[field] || item.canal_origem || '').toLowerCase();
+    if (currentAgent === 'bot') return v.includes('telegram') || v.includes('bot');
+    if (currentAgent === 'web') return v.includes('web') || v.includes('savassi') || v.includes('betim');
+    return true;
+  });
+}
+
+function updateFooter() {
+  document.getElementById('sfooter').innerHTML = 'Leads: ' + allLeads.length + ' · Ags: ' + allAgs.length;
+}
+
+// ══ FLUXOS ══
+async function loadFluxos() {
+  showLoading();
+  try {
+    var r = await apiGet('/entities/ConfiguracaoAgente', { limit: '200' });
+    allFluxos = r.items || [];
+    renderFluxos();
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function renderFluxos() {
+  var grupos = {};
+  allFluxos.forEach(function(f) {
+    var g = f.chave_fluxo || 'geral';
+    if (!grupos[g]) grupos[g] = [];
+    grupos[g].push(f);
+  });
+
+  var html = '<div class="sec-hdr"><h2>Configurações / Fluxos</h2><button class="btn btn-teal btn-sm" onclick="openNovoFluxo()">+ Novo</button></div>';
+
+  var keys = Object.keys(grupos);
+  if (keys.length === 0) {
+    html += '<p style="color:var(--muted);font-size:13px">Nenhuma configuração encontrada.</p>';
+  }
+
+  keys.forEach(function(g) {
+    html += '<div class="config-group"><div class="config-group-title">' + esc(g) + '</div>';
+    grupos[g].forEach(function(f) {
+      html += '<div class="config-item"><div class="config-item-header"><div><div class="config-key">' + esc(f.sub_categoria) + '</div><div class="config-sub">' + esc(f.descricao||'') + '</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-teal btn-sm" onclick="editFluxo(' + "'" + f.id + "'" + ')">Editar</button><button class="btn btn-red btn-sm" onclick="delFluxo(' + "'" + f.id + "'" + ')">✕</button></div></div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">Tipo: ' + esc(f.tipo_campo||'text') + ' · Ativo: ' + (f.ativo ? '✅' : '⏸') + '</div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;white-space:pre-wrap;max-height:120px;overflow-y:auto">' + esc(f.valor||'') + '</div></div>';
+    });
+    html += '</div>';
+  });
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function editFluxo(id) {
+  var f = allFluxos.find(function(x) { return x.id === id; });
+  if (!f) return;
+  document.getElementById('modal-title').textContent = 'Editar: ' + (f.sub_categoria||'');
+  document.getElementById('modal-body').innerHTML = '<label class="lbl">Valor / Conteúdo</label><textarea class="inp" id="m-valor" rows="8">' + esc(f.valor||'') + '</textarea><label class="lbl">Descrição</label><input class="inp" id="m-desc" value="' + esc(f.descricao||'') + '"><label class="lbl">Ativo</label><select class="inp" id="m-ativo"><option value="true"' + (f.ativo ? ' selected' : '') + '>Sim</option><option value="false"' + (!f.ativo ? ' selected' : '') + '>Não</option></select>';
+  modalSaveFn = async function() {
+    var valor = document.getElementById('m-valor').value;
+    var desc = document.getElementById('m-desc').value;
+    var ativo = document.getElementById('m-ativo').value === 'true';
+    await apiPut('/entities/ConfiguracaoAgente/' + id, { valor: valor, descricao: desc, ativo: ativo });
+    toast('✅ Configuração salva!');
+    closeModal();
+    loadFluxos();
+  };
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function openNovoFluxo() {
+  document.getElementById('modal-title').textContent = 'Nova Configuração';
+  document.getElementById('modal-body').innerHTML = '<label class="lbl">Chave (fluxo)</label><input class="inp" id="m-chave" placeholder="ex: atendimento_cliente"><label class="lbl">Sub-categoria</label><input class="inp" id="m-sub" placeholder="ex: prompt_base"><label class="lbl">Valor</label><textarea class="inp" id="m-valor" rows="6"></textarea><label class="lbl">Descrição</label><input class="inp" id="m-desc"><label class="lbl">Tipo</label><select class="inp" id="m-tipo"><option>text</option><option>prompt</option><option>url</option><option>number</option></select>';
+  modalSaveFn = async function() {
+    var data = {
+      chave_fluxo: document.getElementById('m-chave').value,
+      sub_categoria: document.getElementById('m-sub').value,
+      valor: document.getElementById('m-valor').value,
+      descricao: document.getElementById('m-desc').value,
+      tipo_campo: document.getElementById('m-tipo').value,
+      ativo: true
+    };
+    if (!data.chave_fluxo || !data.sub_categoria) { toast('Preencha chave e sub-categoria', 'err'); return; }
+    await apiPost('/entities/ConfiguracaoAgente', data);
+    toast('✅ Configuração criada!');
+    closeModal();
+    loadFluxos();
+  };
+  document.getElementById('modal').style.display = 'flex';
+}
+
+async function delFluxo(id) {
+  if (!confirm('Remover esta configuração?')) return;
+  try {
+    await apiDelete('/entities/ConfiguracaoAgente/' + id);
+    toast('🗑 Removido');
+    loadFluxos();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
+// ══ REGRAS ══
+async function loadRegras() {
+  showLoading();
+  try {
+    var r = await apiGet('/entities/RegraAprendizado', { limit: '200' });
+    allRegras = (r.items||[]).sort(function(a,b){ return new Date(b.created_date) - new Date(a.created_date); });
+    renderRegras('todas');
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function renderRegras(filtro) {
+  var items = allRegras;
+  if (filtro === 'ativas') items = allRegras.filter(function(r) { return r.status; });
+  if (filtro === 'inativas') items = allRegras.filter(function(r) { return !r.status; });
+
+  var filterHtml = ['todas','ativas','inativas'].map(function(f) {
+    return '<button class="filter-btn' + (f === filtro ? ' active' : '') + '" onclick="renderRegras(' + "'" + f + "'" + ')">' + f + '</button>';
+  }).join('');
+
+  var regrasHtml = items.length ? items.map(function(r) {
+    var statusClass = r.status ? 'regra-ativa' : 'regra-inativa';
+    var fluxoBadge = r.fluxo ? '<span class="badge badge-gold">' + esc(r.fluxo) + '</span>' : '';
+    return '<div class="regra-item"><div class="regra-header"><div class="regra-status ' + statusClass + '"></div><div class="regra-diretriz">' + esc(r.diretriz||'') + '</div>' + fluxoBadge + '</div><div class="regra-meta">Origem: ' + esc(r.origem||'—') + ' · ' + fmtDate(r.created_date) + (r.motivo ? ' · ' + esc(r.motivo) : '') + '</div><div class="regra-actions"><button class="btn btn-ghost btn-sm" onclick="toggleRegra(' + "'" + r.id + "'" + ',' + (!r.status) + ')">' + (r.status ? '⏸ Desativar' : '▶ Ativar') + '</button><button class="btn btn-ghost btn-sm" onclick="editRegra(' + "'" + r.id + "'" + ')">✏️ Editar</button><button class="btn btn-red btn-sm" onclick="delRegra(' + "'" + r.id + "'" + ')">🗑</button></div></div>';
+  }).join('') : '<p style="color:var(--muted);font-size:13px;padding:10px">Nenhuma regra encontrada.</p>';
+
+  document.getElementById('content').innerHTML = '<div class="sec-hdr"><h2>Regras de IA</h2><span style="font-size:12px;color:var(--muted)">' + allRegras.length + ' regras · ' + allRegras.filter(function(r){return r.status;}).length + ' ativas</span></div><div class="filter-row">' + filterHtml + '</div>' + regrasHtml;
+}
+
+async function toggleRegra(id, novoStatus) {
+  try {
+    await apiPut('/entities/RegraAprendizado/' + id, { status: novoStatus });
+    toast(novoStatus ? '✅ Ativada' : '⏸ Desativada');
+    loadRegras();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
+function editRegra(id) {
+  var r = allRegras.find(function(x) { return x.id === id; });
+  if (!r) return;
+  document.getElementById('modal-title').textContent = 'Editar Regra';
+  document.getElementById('modal-body').innerHTML = '<label class="lbl">Diretriz</label><textarea class="inp" id="m-dir" rows="5">' + esc(r.diretriz||'') + '</textarea><label class="lbl">Motivo</label><input class="inp" id="m-mot" value="' + esc(r.motivo||'') + '"><label class="lbl">Fluxo</label><input class="inp" id="m-flx" value="' + esc(r.fluxo||'') + '">';
+  modalSaveFn = async function() {
+    await apiPut('/entities/RegraAprendizado/' + id, { diretriz: document.getElementById('m-dir').value, motivo: document.getElementById('m-mot').value, fluxo: document.getElementById('m-flx').value });
+    toast('✅ Salvo');
+    closeModal();
+    loadRegras();
+  };
+  document.getElementById('modal').style.display = 'flex';
+}
+
+async function delRegra(id) {
+  if (!confirm('Remover esta regra?')) return;
+  try {
+    await apiDelete('/entities/RegraAprendizado/' + id);
+    toast('🗑 Removida');
+    loadRegras();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
+// ══ CONVERSAS ══
+async function loadConversas() {
+  showLoading();
+  try {
+    var r = await apiGet('/entities/ConversaCliente', { limit: '200' });
+    allConversas = (r.items||[]).sort(function(a,b){ return new Date(b.updated_date) - new Date(a.updated_date); });
+    renderConversas();
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function renderConversas() {
+  var items = filterByAgent(allConversas, 'canal_origem');
+
+  var rows = items.slice(0, 100).map(function(c) {
+    var statusClass = c.status === 'agendado' ? 'badge-green' : c.status === 'ativo' ? 'badge-teal' : 'badge-gold';
+    return '<tr><td><strong>' + esc(c.nome||'—') + '</strong><br><small>' + esc(c.whatsapp||'') + '</small></td><td><span class="badge ' + statusClass + '">' + esc(c.status||'—') + '</span></td><td>' + esc(c.massagem_interesse||'—') + '</td><td>' + esc(c.unidade_interesse||'—') + '</td><td>' + fmt(c.data_ultima_mensagem||c.updated_date) + '</td><td><button class="btn btn-ghost btn-sm" onclick="verConversa(' + "'" + c.id + "'" + ')">Ver</button></td></tr>';
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhuma conversa</td></tr>';
+
+  document.getElementById('content').innerHTML = '<div class="sec-hdr"><h2>Conversas</h2><span style="font-size:12px;color:var(--muted)">' + items.length + ' conversas</span></div><div class="tbl-wrap"><table><thead><tr><th>Cliente</th><th>Status</th><th>Massagem</th><th>Unidade</th><th>Último contato</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+function verConversa(id) {
+  var c = allConversas.find(function(x) { return x.id === id; });
+  if (!c) return;
+  var msgs = typeof c.mensagens === 'string' ? c.mensagens : JSON.stringify(c.mensagens, null, 2);
+  document.getElementById('modal-title').textContent = 'Conversa — ' + esc(c.nome||'');
+  document.getElementById('modal-body').innerHTML = '<pre style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;white-space:pre-wrap;max-height:400px;overflow-y:auto;color:var(--text)">' + esc(msgs||'(vazio)') + '</pre>';
+  modalSaveFn = null;
+  document.getElementById('modal-save').style.display = 'none';
+  document.getElementById('modal').style.display = 'flex';
+}
+
+// ══ LEADS ══
+async function loadLeads() {
+  showLoading();
+  try {
+    var r = await apiGet('/entities/LeadConversa', { limit: '500' });
+    allLeads = (r.items||[]).sort(function(a,b){ return new Date(b.created_date) - new Date(a.created_date); });
+    renderLeads('todos');
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function renderLeads(filtro) {
+  var items = filterByAgent(allLeads, 'canal_origem');
+  if (filtro && filtro !== 'todos') {
+    items = items.filter(function(l) { return l.etapa_funil === filtro; });
+  }
+
+  var etapas = ['todos','entrada','consulta_massagem','pediu_preco','acessou_agenda','pagou_sinal','confirmado'];
+  var filterHtml = etapas.map(function(e) {
+    return '<button class="filter-btn' + (e === filtro ? ' active' : '') + '" onclick="renderLeads(' + "'" + e + "'" + ')">' + e.replace(/_/g,' ') + '</button>';
+  }).join('');
+
+  var rows = items.slice(0, 100).map(function(l) {
+    var etapa = l.etapa_funil || 'entrada';
+    var etapaClass = etapa === 'confirmado' ? 'badge-green' : etapa === 'pagou_sinal' ? 'badge-teal' : etapa === 'pediu_preco' ? 'badge-yellow' : 'badge-gold';
+    var canal = (l.canal_origem||'').includes('telegram') ? '🤖 Bot' : '🌐 Web';
+    return '<tr class="lead-row"><td>' + esc(l.nome||'—') + '<br><small>' + esc(l.whatsapp||'') + '</small></td><td>' + canal + '</td><td>' + esc(l.massagem_interesse||'—') + '</td><td><span class="badge ' + etapaClass + '">' + etapa.replace(/_/g,' ') + '</span></td><td>' + fmt(l.data_ultimo_contato||l.created_date) + '</td></tr>';
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum lead</td></tr>';
+
+  document.getElementById('content').innerHTML = '<div class="sec-hdr"><h2>Leads</h2><span style="font-size:12px;color:var(--muted)">' + items.length + ' leads</span></div><div class="filter-row">' + filterHtml + '</div><div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>Canal</th><th>Massagem</th><th>Etapa</th><th>Último contato</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+// ══ AGENDAMENTOS ══
+async function loadAgendamentos() {
+  showLoading();
+  try {
+    var r = await apiGet('/entities/Agendamento', { limit: '500' });
+    allAgs = (r.items||[]).sort(function(a,b){ return new Date(b.created_date) - new Date(a.created_date); });
+    renderAgendamentos('todos');
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function renderAgendamentos(filtro) {
+  var items = allAgs;
+  if (filtro && filtro !== 'todos') {
+    items = items.filter(function(a) { return a.status === filtro; });
+  }
+
+  var statuses = ['todos','Confirmado','Aguardando sinal','Cancelado'];
+  var filterHtml = statuses.map(function(s) {
+    return '<button class="filter-btn' + (s === filtro ? ' active' : '') + '" onclick="renderAgendamentos(' + "'" + s + "'" + ')">' + s + '</button>';
+  }).join('');
+
+  var rows = items.slice(0, 100).map(function(a) {
+    var statusClass = a.status === 'Confirmado' ? 'badge-green' : a.status === 'Cancelado' ? 'badge-red' : 'badge-yellow';
+    return '<tr><td><strong>' + esc(a.nome_cliente||'—') + '</strong><br><small>' + esc(a.whatsapp||'') + '</small></td><td>' + esc(a.unidade||'—') + '</td><td>' + esc(a.massagem||'—') + '</td><td>' + esc(a.data_hora||'—') + '</td><td>' + currency(a.valor_total) + '</td><td><span class="badge ' + statusClass + '">' + esc(a.status||'—') + '</span></td></tr>';
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhum agendamento</td></tr>';
+
+  document.getElementById('content').innerHTML = '<div class="sec-hdr"><h2>Agendamentos</h2><span style="font-size:12px;color:var(--muted)">' + items.length + ' registros</span></div><div class="filter-row">' + filterHtml + '</div><div class="tbl-wrap"><table><thead><tr><th>Cliente</th><th>Unidade</th><th>Massagem</th><th>Data/Hora</th><th>Valor</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+// ══ MODAL ══
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  document.getElementById('modal-save').style.display = '';
+  modalSaveFn = null;
+}
+
+async function modalSave() {
+  if (!modalSaveFn) return;
+  var btn = document.getElementById('modal-save');
+  btn.textContent = 'Salvando...';
+  btn.disabled = true;
+  try {
+    await modalSaveFn();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.textContent = 'Salvar';
+    btn.disabled = false;
+  }
+}
+
+// ══ INIT ══
+window.addEventListener('DOMContentLoaded', function() {
+  loadInsights();
+});
+
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('Unhandled promise rejection:', e.reason);
+  if (document.getElementById('content').innerHTML.includes('Carregando')) {
+    showError(String(e.reason));
+  }
+});
+</script>
+</body>
+</html>
