@@ -333,8 +333,10 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
 <script>
 // ══ CONFIG ══════════════════════════════════════════════════
 const APP_ID = '6a04cc22bf7a0dcea87e3c43';
-const BASE_URL = `https://base44.app/api/apps/${APP_ID}`;
-let SVC_TOKEN = localStorage.getItem('lh_svc_token') || '';
+const PROXY_URL = `https://base44.app/api/apps/${APP_ID}/functions/adminProxy`;
+const ADMIN_KEY = 'loshombres2026';
+// Sem necessidade de token — painel usa adminProxy com chave fixa
+let SVC_TOKEN = 'proxy'; // apenas para compatibilidade
 
 // ══ STATE ════════════════════════════════════════════════════
 let currentTab = 'insights';
@@ -355,37 +357,24 @@ async function apiDelete(path) {
 }
 
 async function ensureToken() {
-  if (SVC_TOKEN) return true;
-  // 1) URL ?token=xxx
-  const urlToken = new URLSearchParams(window.location.search).get('token');
-  if (urlToken && urlToken !== 'SEU_TOKEN' && urlToken.length > 20) {
-    SVC_TOKEN = urlToken.trim();
-    localStorage.setItem('lh_svc_token', SVC_TOKEN);
-    return true;
-  }
-  // 2) Modal bonito
-  return new Promise(resolve => {
-    document.getElementById('tokenModal').style.display = 'flex';
-    document.getElementById('tokenSaveBtn').onclick = () => {
-      const v = document.getElementById('tokenInput').value.trim();
-      if (!v || v.length < 20) { document.getElementById('tokenError').style.display='block'; return; }
-      SVC_TOKEN = v;
-      localStorage.setItem('lh_svc_token', SVC_TOKEN);
-      document.getElementById('tokenModal').style.display = 'none';
-      resolve(true);
-    };
-    document.getElementById('tokenInput').onkeydown = e => { if(e.key==='Enter') document.getElementById('tokenSaveBtn').click(); };
-  });
+  return true; // Proxy com chave fixa — sem necessidade de token do usuário
 }
 
 async function apiFetch(path, opts = {}) {
-  if (!await ensureToken()) throw new Error('Sem token');
-  const headers = { 'Authorization': `Bearer ${SVC_TOKEN}`, ...(opts.headers||{}) };
+  // Usa adminProxy — sem token Bearer, sem expiração
+  const proxyUrl = `${PROXY_URL}?path=${encodeURIComponent(path)}`;
+  const headers = { 'x-admin-key': ADMIN_KEY, ...(opts.headers||{}) };
   if (opts.body) headers['Content-Type'] = 'application/json';
-  const res = await fetch(`${BASE_URL}${path}`, { ...opts, headers });
+  const res = await fetch(proxyUrl, { ...opts, headers });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try { const j = await res.json(); msg = j.message || j.error || msg; } catch(e){}
+    // Token inválido — limpar e forçar relogin
+    if (res.status === 401 || res.status === 403 || msg.includes('private') || msg.includes('access')) {
+      localStorage.removeItem('lh_svc_token');
+      SVC_TOKEN = '';
+      msg = 'Token inválido ou expirado. Por favor, reabra com o link correto.';
+    }
     throw new Error(msg);
   }
   return res.json();
@@ -393,19 +382,37 @@ async function apiFetch(path, opts = {}) {
 
 async function listEntity(name, query = {}) {
   const qs = new URLSearchParams({ limit: '500', ...Object.fromEntries(Object.entries(query).map(([k,v])=>[k,String(v)])) });
-  const raw = await apiFetch(`/entities/${name}?${qs}`);
-  // API retorna array direto OU {items:[]}
+  // Passa path + querystring como parâmetros separados para o proxy
+  const proxyUrl = `${PROXY_URL}?path=${encodeURIComponent('/entities/'+name)}&${qs.toString()}`;
+  const res = await fetch(proxyUrl, { headers: { 'x-admin-key': ADMIN_KEY } });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  const raw = await res.json();
   if (Array.isArray(raw)) return { items: raw };
   return raw;
 }
 async function updateEntity(name, id, data) {
-  return apiFetch(`/entities/${name}/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  const res = await fetch(`${PROXY_URL}?path=${encodeURIComponent('/entities/'+name+'/'+id)}`, {
+    method: 'PUT', headers: { 'x-admin-key': ADMIN_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||`HTTP ${res.status}`); }
+  return res.json();
 }
 async function createEntity(name, data) {
-  return apiFetch(`/entities/${name}`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await fetch(`${PROXY_URL}?path=${encodeURIComponent('/entities/'+name)}`, {
+    method: 'POST', headers: { 'x-admin-key': ADMIN_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||`HTTP ${res.status}`); }
+  return res.json();
 }
 async function deleteEntity(name, id) {
-  return apiFetch(`/entities/${name}/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${PROXY_URL}?path=${encodeURIComponent('/entities/'+name+'/'+id)}`, {
+    method: 'DELETE', headers: { 'x-admin-key': ADMIN_KEY }
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||`HTTP ${res.status}`); }
+  return res.json().catch(()=>({}));
 }
 
 // ══ TOAST ════════════════════════════════════════════════════
@@ -1620,7 +1627,20 @@ document.getElementById('modalBg').addEventListener('click', e => { if (e.target
 // ══ HELPERS ══════════════════════════════════════════════════
 function setLoading() { document.getElementById('content').innerHTML = '<div class="loading"><div class="spin"></div> Carregando dados...</div>'; }
 function setContent(html) { document.getElementById('content').innerHTML = html; }
-function showError(msg) { setContent(`<div class="empty"><div class="e-icon">❌</div><p>${msg}</p><button class="btn btn-ghost" style="margin-top:12px" onclick="loadCurrentTab()">Tentar novamente</button></div>`); }
+function showError(msg) {
+  const isAuth = msg.includes('private') || msg.includes('Token') || msg.includes('401') || msg.includes('403');
+  const extra = isAuth ? `
+    <br><br>
+    <button class="btn btn-teal btn-sm" onclick="localStorage.removeItem('lh_svc_token');location.reload()">🔄 Limpar token e relogar</button>
+  ` : `<br><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="init()">↺ Tentar novamente</button>`;
+  document.getElementById('mainContent').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:400px;gap:16px">
+      <div style="font-size:40px">❌</div>
+      <div style="font-size:14px;color:var(--red);max-width:400px;text-align:center">${escHtml(msg)}</div>
+      <div style="text-align:center">${extra}</div>
+    </div>`;
+}
+
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function isToday(d) { const t = new Date(); return d.toDateString() === t.toDateString(); }
 
