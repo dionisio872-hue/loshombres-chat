@@ -315,7 +315,7 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
     <div class="topbar-right">
       <span id="agent-badge" class="badge badge-green">🌐 Todos</span>
       <button class="btn btn-ghost btn-sm" onclick="loadCurrentTab()">↻ Atualizar</button>
-      <button class="btn btn-teal btn-sm" onclick="openAddFluxoModal()">+ Novo Fluxo</button>
+      <button class="btn btn-teal btn-sm" id="topbar-add-btn" onclick="openAddModal()">+ Novo</button>
     </div>
   </div>
 
@@ -806,6 +806,15 @@ async function marcarCompartilhado(id, agente) {
   } catch(e) { toast('❌ Erro: ' + e.message, 'err'); }
 }
 
+
+function openAddModal() {
+  if (currentTab === 'instrucoes') {
+    openAddInstrucaoModal();
+  } else {
+    openAddFluxoModal();
+  }
+}
+
 function openAddFluxoModal() {
   openModal('⚡ Novo Fluxo / Configuração', `
     <div class="fluxo-field"><label>Chave do Fluxo</label><input type="text" id="new-chave" placeholder="ex: cursos, tatuagem, atendimento_vip"></div>
@@ -821,9 +830,9 @@ function openAddFluxoModal() {
     if (!chave || !valor) return alert('Preencha chave e conteúdo.');
     try {
       await apiPost('/entities/ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor: valor + (kw ? '\n[KEYWORDS:'+kw+']' : ''), tipo_campo: 'textarea', descricao: kw ? 'Ativado por: '+kw : sub, ativo: true });
-      toast('Fluxo criado! Reflete imediatamente nos agentes.', 'success');
+      showToast('Fluxo criado! Reflete imediatamente nos agentes.', 'success');
       loadFluxos();
-    } catch(e) { toast('Erro: ' + e.message, 'error'); }
+    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
   });
 }
 
@@ -838,6 +847,13 @@ function toast(msg, type = 'ok') {
 // ══ NAVIGATION ═══════════════════════════════════════════════
 function showTab(tab) {
   currentTab = tab;
+  // Atualizar label do botão da topbar
+  const addBtn = document.getElementById('topbar-add-btn');
+  if (addBtn) {
+    if (tab === 'instrucoes') addBtn.textContent = '+ Nova Instrução';
+    else if (tab === 'fluxos') addBtn.textContent = '+ Novo Fluxo';
+    else addBtn.textContent = '+ Novo';
+  }
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const nav = document.getElementById(`nav-${tab}`);
   if (nav) nav.classList.add('active');
@@ -1447,9 +1463,9 @@ async function confirmarShareRegra(id) {
       fluxo: fluxoDest,
       aprovado_por: 'jonathan'
     });
-    toast('Regra duplicada para fluxo: ' + fluxoDest, 'success');
+    showToast('Regra duplicada para fluxo: ' + fluxoDest, 'success');
     loadRegras();
-  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+  } catch(e) { showToast('Erro: ' + e.message, 'error'); }
 }
 
 function openAddRegraModal() {
