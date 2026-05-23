@@ -663,8 +663,10 @@ async function loadFluxos() {
 function renderFluxos() {
   let items = [...allFluxos];
   // Filtrar por agente (via chave_fluxo)
-  if (currentAgent === 'bot') items = items.filter(f => (f.chave_fluxo||'').includes('telegram')||!(f.chave_fluxo||'').includes('web'));
-  if (currentAgent === 'web') items = items.filter(f => (f.chave_fluxo||'').includes('atendimento_cliente')||!(f.chave_fluxo||'').includes('telegram'));
+  const BOT_CHAVES = ['telegram','telegrambot','telegram_bot'];
+  const WEB_CHAVES = ['atendimento_cliente','agendamento','midias_massagens','instrucoes','reengajamento','aprendizagem'];
+  if (currentAgent === 'bot') items = items.filter(f => { const c=(f.chave_fluxo||'').toLowerCase(); return BOT_CHAVES.some(k=>c.includes(k)) || (!WEB_CHAVES.some(k=>c.includes(k)) && c!==''); });
+  if (currentAgent === 'web') items = items.filter(f => { const c=(f.chave_fluxo||'').toLowerCase(); return WEB_CHAVES.some(k=>c.includes(k)) || (!BOT_CHAVES.some(k=>c.includes(k)) && c!==''); });
 
   // Agrupar por chave_fluxo
   const grupos = {};
@@ -1032,8 +1034,10 @@ async function loadFluxos() {
 function renderFluxos() {
   let items = [...allFluxos];
   // Filtrar por agente (via chave_fluxo)
-  if (currentAgent === 'bot') items = items.filter(f => (f.chave_fluxo||'').includes('telegram')||!(f.chave_fluxo||'').includes('web'));
-  if (currentAgent === 'web') items = items.filter(f => (f.chave_fluxo||'').includes('atendimento_cliente')||!(f.chave_fluxo||'').includes('telegram'));
+  const BOT_CHAVES = ['telegram','telegrambot','telegram_bot'];
+  const WEB_CHAVES = ['atendimento_cliente','agendamento','midias_massagens','instrucoes','reengajamento','aprendizagem'];
+  if (currentAgent === 'bot') items = items.filter(f => { const c=(f.chave_fluxo||'').toLowerCase(); return BOT_CHAVES.some(k=>c.includes(k)) || (!WEB_CHAVES.some(k=>c.includes(k)) && c!==''); });
+  if (currentAgent === 'web') items = items.filter(f => { const c=(f.chave_fluxo||'').toLowerCase(); return WEB_CHAVES.some(k=>c.includes(k)) || (!BOT_CHAVES.some(k=>c.includes(k)) && c!==''); });
 
   // Agrupar por chave_fluxo
   const grupos = {};
@@ -2052,7 +2056,10 @@ window.addEventListener('load', () => {
     <div id="sim-web-msgs" class="sim-msgs">
       <div class="sim-msg bot">Olá! Seja bem-vindo ao Estúdio Los Hombres. Como posso te ajudar hoje? 🌿</div>
     </div>
-    <div class="sim-notice">Conversa real com o chatCliente. Mudanças no painel levam até 30 min para refletir.</div>
+    <div class="sim-notice" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+  <span>⚡ Mudanças no painel: até 30 min para refletir.</span>
+  <button onclick="forcarCacheBust('web')" style="background:#0f766e33;border:1px solid #0f766e;color:#2dd4bf;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;flex-shrink:0" title="Reinicia a conversa com novo sessionId — força o agente a recarregar o prompt na próxima chamada">🔄 Forçar reload</button>
+</div>
     <div class="sim-input-area">
       <textarea id="sim-web-input" class="sim-input" rows="1" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarWebChat()}"></textarea>
       <button class="sim-send" onclick="enviarWebChat()">➤</button>
@@ -2079,7 +2086,10 @@ window.addEventListener('load', () => {
     <div id="sim-tg-msgs" class="sim-msgs">
       <div class="sim-msg bot">Olá! Bem-vindo ao Los Hombres. Como posso ajudar? 🌿</div>
     </div>
-    <div class="sim-notice">Conversa real com o telegramBot. Mesmo prompt, mesmo banco.</div>
+    <div class="sim-notice" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+  <span>⚡ Mesmo prompt base do bot. Reload: até 30 min.</span>
+  <button onclick="forcarCacheBust('tg')" style="background:#1a6e8e33;border:1px solid #1a6e8e;color:#67d7f0;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;flex-shrink:0" title="Reinicia a conversa e força recarga do prompt no backend">🔄 Forçar reload</button>
+</div>
     <div class="sim-input-area">
       <textarea id="sim-tg-input" class="sim-input" rows="1" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarTgSim()}"></textarea>
       <button class="sim-send" onclick="enviarTgSim()">➤</button>
@@ -2145,7 +2155,7 @@ async function enviarWebChat() {
   try {
     var r = await fetch('https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente', {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('lh_token')||'')},
+      headers: {'Content-Type':'application/json', 'x-admin-key': 'loshombres2026'},
       body: JSON.stringify({mensagem: msg, historico: _simWebHist, sessionId: _simWebId})
     });
     var d = await r.json();
@@ -2185,21 +2195,16 @@ async function enviarTgSim() {
     }
   };
   try {
-    var r = await fetch('https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/telegramBot', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('lh_token')||'')},
-      body: JSON.stringify(fakeUpdate)
-    });
-    typing.remove();
-    // telegramBot responde via sendMessage ao Telegram real
-    // Para simulação, chamamos o chatCliente com o mesmo prompt e mostramos a resposta
+    // Simulação usa chatCliente diretamente (mesmo prompt base, mesmo banco)
+    // O telegramBot real envia ao Telegram — não retorna resposta para o painel
     var r2 = await fetch('https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente', {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('lh_token')||'')},
+      headers: {'Content-Type':'application/json', 'x-admin-key': 'loshombres2026'},
       body: JSON.stringify({mensagem: msg, historico: _simTgHist, sessionId: _simTgId})
     });
+    typing.remove();
     var d2 = await r2.json();
-    var resposta = d2.resposta || 'Sem resposta';
+    var resposta = d2.resposta || d2.erro || 'Sem resposta';
     _adicionarMsg('sim-tg-msgs', 'bot', resposta);
     _simTgHist.push({role:'assistant', content: resposta});
   } catch(e) {
@@ -2215,6 +2220,33 @@ document.addEventListener('keydown', function(e) {
     document.getElementById('sim-tg-overlay').classList.remove('open');
   }
 });
+
+// Forçar reload de cache — gera novo sessionId e envia msg especial de "aquecimento"
+// O backend tem cache de 30min por instância serverless — um novo sessionId
+// pode cair em uma instância diferente (já com cache renovado)
+async function forcarCacheBust(canal) {
+  var isWeb = canal === 'web';
+  var msgsId = isWeb ? 'sim-web-msgs' : 'sim-tg-msgs';
+  var notice = _adicionarMsg(msgsId, 'bot typing', '🔄 Reiniciando sessão e recarregando prompt...');
+  // Gerar novo sessionId — força nova instância serverless (potencialmente sem cache)
+  if (isWeb) {
+    _simWebHist = [];
+    _simWebId = 'painel_sim_web_bust_' + Date.now();
+  } else {
+    _simTgHist = [];
+    _simTgId = 'painel_sim_tg_bust_' + Date.now();
+  }
+  // Fazer uma chamada de aquecimento silenciosa para forçar recarga do ConfiguracaoAgente
+  try {
+    await fetch('https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'x-admin-key': 'loshombres2026'},
+      body: JSON.stringify({mensagem: 'oi', historico: [], sessionId: (isWeb ? _simWebId : _simTgId) + '_warmup'})
+    });
+  } catch(_) {}
+  notice.remove();
+  _adicionarMsg(msgsId, 'bot', '✅ Sessão reiniciada. Novo prompt carregado — pode testar!');
+}
 </script>
 </body>
 </html>
