@@ -821,9 +821,9 @@ function openAddFluxoModal() {
     if (!chave || !valor) return alert('Preencha chave e conteúdo.');
     try {
       await apiPost('/entities/ConfiguracaoAgente', { chave_fluxo: chave, sub_categoria: sub, valor: valor + (kw ? '\n[KEYWORDS:'+kw+']' : ''), tipo_campo: 'textarea', descricao: kw ? 'Ativado por: '+kw : sub, ativo: true });
-      showToast('Fluxo criado! Reflete imediatamente nos agentes.', 'success');
+      toast('Fluxo criado! Reflete imediatamente nos agentes.', 'success');
       loadFluxos();
-    } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+    } catch(e) { toast('Erro: ' + e.message, 'error'); }
   });
 }
 
@@ -1447,9 +1447,9 @@ async function confirmarShareRegra(id) {
       fluxo: fluxoDest,
       aprovado_por: 'jonathan'
     });
-    showToast('Regra duplicada para fluxo: ' + fluxoDest, 'success');
+    toast('Regra duplicada para fluxo: ' + fluxoDest, 'success');
     loadRegras();
-  } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
 }
 
 function openAddRegraModal() {
