@@ -362,6 +362,28 @@ function mkAv() {
   return img;
 }
 
+function renderMd(txt) {
+  // Converte [label](url) em <a> clicável e quebras de linha em <br>
+  var safe = txt
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  // Links markdown: [label](url)
+  safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, function(_, label, url) {
+    return '<a href="' + url + '" target="_blank" rel="noopener" style="color:#c9a84c;text-decoration:underline;">' + label + '</a>';
+  });
+  // URLs nuas: https://...
+  safe = safe.replace(/(?<!")https?:\/\/[^\s<>"'\)]+/g, function(url) {
+    return '<a href="' + url + '" target="_blank" rel="noopener" style="color:#c9a84c;text-decoration:underline;">' + url + '</a>';
+  });
+  // Negrito **texto**
+  safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Quebra de linha
+  safe = safe.replace(/
+/g, '<br>');
+  return safe;
+}
+
 function addMsg(txt, tipo, extra) {
   var row = document.createElement('div');
   row.className = 'row ' + tipo;
@@ -370,7 +392,7 @@ function addMsg(txt, tipo, extra) {
   col.className = 'col';
   var bub = document.createElement('div');
   bub.className = 'bub ' + tipo;
-  bub.textContent = txt;
+  bub.innerHTML = renderMd(txt);
   var ts = document.createElement('div');
   ts.className = 'ts';
   ts.textContent = hora();
@@ -539,6 +561,15 @@ function processarResposta(r) {
     au.controls = true; au.src = r.audio;
     au.style.cssText = 'width:100%;margin-top:6px;border-radius:8px;';
     _lastCol.appendChild(au);
+  }
+  if (r.video && _lastCol) {
+    var vBtn = document.createElement('a');
+    vBtn.href = r.video;
+    vBtn.target = '_blank';
+    vBtn.rel = 'noopener';
+    vBtn.textContent = '▶ Assistir vídeo';
+    vBtn.style.cssText = 'display:inline-block;margin-top:6px;padding:6px 14px;background:#c9a84c;color:#0d2b22;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;';
+    _lastCol.appendChild(vBtn);
   }
   if (r.links && r.links.length > 0 && _lastCol) {
     var linksWrap = document.createElement('div');
