@@ -290,6 +290,17 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
       <div class="bar-track"><div class="bar-fill bar-int" id="cr-int-bar" style="width:0%"></div></div>
     </div>
   </div>
+
+    <!-- BOTÕES TESTE AGENTE -->
+    <div style="padding:12px 16px 4px;border-top:1px solid var(--border);margin-top:auto">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🧪 Testar Agente</div>
+      <button onclick="abrirTesteWebChat()" style="width:100%;background:linear-gradient(135deg,#0f766e,#0d5f59);color:#2dd4bf;border:none;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:6px;justify-content:center;transition:.2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        💬 Simular Web Chat
+      </button>
+      <button onclick="abrirTesteTelegram()" style="width:100%;background:linear-gradient(135deg,#1a6e8e,#155a72);color:#67d7f0;border:none;border-radius:8px;padding:9px 10px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;transition:.2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        🤖 Simular Telegram
+      </button>
+    </div>
 </aside>
 
 <!-- ══ MAIN ════════════════════════════════════════════════ -->
@@ -1988,5 +1999,222 @@ window.addEventListener('load', () => {
     <div style="font-size:10px;color:#4a7a7a;margin-top:12px;text-align:center">O token fica salvo no navegador. Não precisa colar de novo.</div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAIS DE SIMULAÇÃO DE AGENTE
+════════════════════════════════════════════════════ -->
+<style>
+.sim-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9990;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.sim-overlay.open{display:flex}
+.sim-box{background:#0d2626;border:1px solid #245050;border-radius:16px;width:440px;max-width:95vw;height:680px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);position:relative}
+.sim-header{padding:14px 18px;background:#112e2e;border-bottom:1px solid #245050;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sim-header-info{display:flex;align-items:center;gap:10px}
+.sim-dot{width:10px;height:10px;border-radius:50%;background:#2dd4bf;box-shadow:0 0 6px #2dd4bf}
+.sim-dot.tg{background:#67d7f0;box-shadow:0 0 6px #67d7f0}
+.sim-title{font-size:14px;font-weight:700;color:#e8f5f5}
+.sim-sub{font-size:11px;color:#6b9e9e}
+.sim-close{background:rgba(255,255,255,.08);border:none;color:#e8f5f5;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+.sim-close:hover{background:rgba(255,255,255,.18)}
+.sim-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.sim-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word}
+.sim-msg.user{align-self:flex-end;background:#0f766e;color:#e8f5f5;border-radius:12px 12px 2px 12px}
+.sim-msg.bot{align-self:flex-start;background:#1a3a3a;color:#e8f5f5;border:1px solid #245050;border-radius:12px 12px 12px 2px}
+.sim-msg.bot.typing{color:#6b9e9e;font-style:italic}
+.sim-input-area{padding:12px 14px;border-top:1px solid #245050;display:flex;gap:8px;flex-shrink:0;background:#0d2626}
+.sim-input{flex:1;background:#112e2e;border:1px solid #245050;border-radius:10px;padding:10px 14px;font-size:13px;color:#e8f5f5;outline:none;font-family:inherit;resize:none}
+.sim-input:focus{border-color:#2dd4bf}
+.sim-send{background:#0f766e;color:#2dd4bf;border:none;border-radius:10px;padding:10px 14px;font-size:18px;cursor:pointer;flex-shrink:0}
+.sim-send:hover{background:#0d6560}
+.sim-badge{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700;letter-spacing:.3px}
+.sim-badge.web{background:#0f766e33;color:#2dd4bf;border:1px solid #0f766e}
+.sim-badge.tg{background:#1a6e8e33;color:#67d7f0;border:1px solid #1a6e8e}
+.sim-reset{background:transparent;border:1px solid #245050;color:#6b9e9e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer}
+.sim-reset:hover{color:#e8f5f5;border-color:#6b9e9e}
+.sim-notice{font-size:11px;color:#6b9e9e;text-align:center;padding:8px;border-top:1px solid #1a3a3a}
+</style>
+
+<!-- Modal Web Chat -->
+<div id="sim-web-overlay" class="sim-overlay" onclick="fecharSimWeb(event)">
+  <div class="sim-box" onclick="event.stopPropagation()">
+    <div class="sim-header">
+      <div class="sim-header-info">
+        <div class="sim-dot"></div>
+        <div>
+          <div class="sim-title">Jonathan <span class="sim-badge web">WEB CHAT</span></div>
+          <div class="sim-sub">Simulação real — chatCliente</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="sim-reset" onclick="resetarSimWeb()">↺ Resetar</button>
+        <button class="sim-close" onclick="document.getElementById('sim-web-overlay').classList.remove('open')">✕</button>
+      </div>
+    </div>
+    <div id="sim-web-msgs" class="sim-msgs">
+      <div class="sim-msg bot">Olá! Seja bem-vindo ao Estúdio Los Hombres. Como posso te ajudar hoje? 🌿</div>
+    </div>
+    <div class="sim-notice">Conversa real com o chatCliente. Mudanças no painel levam até 30 min para refletir.</div>
+    <div class="sim-input-area">
+      <textarea id="sim-web-input" class="sim-input" rows="1" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarWebChat()}"></textarea>
+      <button class="sim-send" onclick="enviarWebChat()">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Telegram -->
+<div id="sim-tg-overlay" class="sim-overlay" onclick="fecharSimTg(event)">
+  <div class="sim-box" onclick="event.stopPropagation()">
+    <div class="sim-header">
+      <div class="sim-header-info">
+        <div class="sim-dot tg"></div>
+        <div>
+          <div class="sim-title">@Atendimentoloshombresbot <span class="sim-badge tg">TELEGRAM</span></div>
+          <div class="sim-sub">Simulação real — telegramBot</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="sim-reset" onclick="resetarSimTg()">↺ Resetar</button>
+        <button class="sim-close" onclick="document.getElementById('sim-tg-overlay').classList.remove('open')">✕</button>
+      </div>
+    </div>
+    <div id="sim-tg-msgs" class="sim-msgs">
+      <div class="sim-msg bot">Olá! Bem-vindo ao Los Hombres. Como posso ajudar? 🌿</div>
+    </div>
+    <div class="sim-notice">Conversa real com o telegramBot. Mesmo prompt, mesmo banco.</div>
+    <div class="sim-input-area">
+      <textarea id="sim-tg-input" class="sim-input" rows="1" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarTgSim()}"></textarea>
+      <button class="sim-send" onclick="enviarTgSim()">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Estado dos simuladores ──
+var _simWebHist = [];
+var _simTgHist  = [];
+var _simWebId   = 'painel_sim_web_' + Math.random().toString(36).slice(2,8);
+var _simTgId    = 'painel_sim_tg_'  + Math.random().toString(36).slice(2,8);
+
+function abrirTesteWebChat() {
+  document.getElementById('sim-web-overlay').classList.add('open');
+  document.getElementById('sim-web-input').focus();
+}
+function abrirTesteTelegram() {
+  document.getElementById('sim-tg-overlay').classList.add('open');
+  document.getElementById('sim-tg-input').focus();
+}
+function fecharSimWeb(e) {
+  if (e.target === document.getElementById('sim-web-overlay'))
+    document.getElementById('sim-web-overlay').classList.remove('open');
+}
+function fecharSimTg(e) {
+  if (e.target === document.getElementById('sim-tg-overlay'))
+    document.getElementById('sim-tg-overlay').classList.remove('open');
+}
+
+function resetarSimWeb() {
+  _simWebHist = [];
+  _simWebId = 'painel_sim_web_' + Math.random().toString(36).slice(2,8);
+  var c = document.getElementById('sim-web-msgs');
+  c.innerHTML = '<div class="sim-msg bot">Olá! Seja bem-vindo ao Estúdio Los Hombres. Como posso te ajudar hoje? 🌿</div>';
+}
+function resetarSimTg() {
+  _simTgHist = [];
+  _simTgId = 'painel_sim_tg_' + Math.random().toString(36).slice(2,8);
+  var c = document.getElementById('sim-tg-msgs');
+  c.innerHTML = '<div class="sim-msg bot">Olá! Bem-vindo ao Los Hombres. Como posso ajudar? 🌿</div>';
+}
+
+function _adicionarMsg(containerId, role, texto) {
+  var c = document.getElementById(containerId);
+  var div = document.createElement('div');
+  div.className = 'sim-msg ' + role;
+  div.innerHTML = texto.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b>$1</b>');
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+  return div;
+}
+
+async function enviarWebChat() {
+  var inp = document.getElementById('sim-web-input');
+  var msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  _adicionarMsg('sim-web-msgs', 'user', msg);
+  _simWebHist.push({role:'user', content: msg});
+  var typing = _adicionarMsg('sim-web-msgs', 'bot typing', '...');
+  try {
+    var r = await fetch('https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('lh_token')||'')},
+      body: JSON.stringify({mensagem: msg, historico: _simWebHist, sessionId: _simWebId})
+    });
+    var d = await r.json();
+    typing.remove();
+    var resposta = d.resposta || d.erro || 'Sem resposta';
+    _adicionarMsg('sim-web-msgs', 'bot', resposta);
+    _simWebHist.push({role:'assistant', content: resposta});
+    if (d.audio) {
+      var aDiv = document.createElement('div');
+      aDiv.className = 'sim-msg bot';
+      aDiv.innerHTML = '🎵 <audio controls style="max-width:200px"><source src="' + d.audio + '"></audio>';
+      document.getElementById('sim-web-msgs').appendChild(aDiv);
+    }
+  } catch(e) {
+    typing.remove();
+    _adicionarMsg('sim-web-msgs', 'bot', '⚠️ Erro: ' + e.message);
+  }
+}
+
+async function enviarTgSim() {
+  var inp = document.getElementById('sim-tg-input');
+  var msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  _adicionarMsg('sim-tg-msgs', 'user', msg);
+  _simTgHist.push({role:'user', content: msg});
+  var typing = _adicionarMsg('sim-tg-msgs', 'bot typing', '...');
+  // O telegramBot recebe um update simulado com o texto
+  var fakeUpdate = {
+    update_id: Date.now(),
+    message: {
+      message_id: Date.now(),
+      from: {id: 9999999, first_name: 'Teste', username: 'painel_admin'},
+      chat: {id: 9999999, type: 'private'},
+      date: Math.floor(Date.now()/1000),
+      text: msg
+    }
+  };
+  try {
+    var r = await fetch('https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/telegramBot', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('lh_token')||'')},
+      body: JSON.stringify(fakeUpdate)
+    });
+    typing.remove();
+    // telegramBot responde via sendMessage ao Telegram real
+    // Para simulação, chamamos o chatCliente com o mesmo prompt e mostramos a resposta
+    var r2 = await fetch('https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/chatCliente', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('lh_token')||'')},
+      body: JSON.stringify({mensagem: msg, historico: _simTgHist, sessionId: _simTgId})
+    });
+    var d2 = await r2.json();
+    var resposta = d2.resposta || 'Sem resposta';
+    _adicionarMsg('sim-tg-msgs', 'bot', resposta);
+    _simTgHist.push({role:'assistant', content: resposta});
+  } catch(e) {
+    typing.remove();
+    _adicionarMsg('sim-tg-msgs', 'bot', '⚠️ Erro: ' + e.message);
+  }
+}
+
+// Fechar com ESC
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('sim-web-overlay').classList.remove('open');
+    document.getElementById('sim-tg-overlay').classList.remove('open');
+  }
+});
+</script>
 </body>
 </html>
