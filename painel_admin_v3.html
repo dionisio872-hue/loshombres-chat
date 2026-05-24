@@ -214,7 +214,10 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
-  /* Sidebar hidden por padrão no mobile, abre via overlay */
+  /* Fix: remover overflow:hidden para position:fixed funcionar */
+  html,body{overflow:auto !important}
+  .shell{overflow:visible !important;height:auto;min-height:100vh}
+  /* Sidebar deslizante */
   .sidebar{display:flex;position:fixed;top:0;left:0;height:100%;width:260px;z-index:1000;transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.5)}
   .sidebar.mob-open{transform:translateX(0)}
   /* Overlay escuro atrás da sidebar */
@@ -230,8 +233,10 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
   /* Grid */
   .grid-4{grid-template-columns:repeat(2,1fr)}
   .grid-3{grid-template-columns:1fr}
-  /* Content padding menor */
-  .content{padding:12px}
+  /* Content padding menor e scroll */
+  .content{padding:12px;overflow-y:auto;-webkit-overflow-scrolling:touch;height:calc(100vh - 110px)}
+  /* .main não corta o overlay */
+  .main{overflow:visible}
   /* Tab bar scroll horizontal */
   .tab-bar{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;gap:4px}
   .tab{white-space:nowrap;padding:6px 12px;font-size:12px}
