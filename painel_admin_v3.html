@@ -2225,6 +2225,18 @@ async function enviarWebChat() {
       aDiv.innerHTML = '🎵 <audio controls style="max-width:200px"><source src="' + d.audio + '"></audio>';
       document.getElementById('sim-web-msgs').appendChild(aDiv);
     }
+    if (d.video) {
+      var vDivW = document.createElement('div');
+      vDivW.className = 'sim-msg bot';
+      vDivW.innerHTML = '▶ <a href="' + d.video + '" target="_blank" style="color:#c9a84c;text-decoration:underline;">Assistir vídeo</a>';
+      document.getElementById('sim-web-msgs').appendChild(vDivW);
+    }
+    if (d.links && d.links.length > 0) {
+      var lDivW = document.createElement('div');
+      lDivW.className = 'sim-msg bot';
+      lDivW.innerHTML = d.links.map(function(lk){return '<a href="'+lk.url+'" target="_blank" style="display:inline-block;margin:2px;padding:3px 8px;background:#1a4a3a;color:#c9a84c;border:1px solid #c9a84c55;border-radius:12px;font-size:11px;text-decoration:none;">'+lk.label+'</a>';}).join(' ');
+      document.getElementById('sim-web-msgs').appendChild(lDivW);
+    }
   } catch(e) {
     typing.remove();
     _adicionarMsg('sim-web-msgs', 'bot', '⚠️ Erro: ' + e.message);
@@ -2263,6 +2275,24 @@ async function enviarTgSim() {
     var resposta = d2.resposta || d2.erro || 'Sem resposta';
     _adicionarMsg('sim-tg-msgs', 'bot', resposta);
     _simTgHist.push({role:'assistant', content: resposta});
+    if (d2.audio) {
+      var aDivT = document.createElement('div');
+      aDivT.className = 'sim-msg bot';
+      aDivT.innerHTML = '🎵 <audio controls style="max-width:200px"><source src="' + d2.audio + '"></audio>';
+      document.getElementById('sim-tg-msgs').appendChild(aDivT);
+    }
+    if (d2.video) {
+      var vDivT = document.createElement('div');
+      vDivT.className = 'sim-msg bot';
+      vDivT.innerHTML = '▶ <a href="' + d2.video + '" target="_blank" style="color:#c9a84c;text-decoration:underline;">Assistir vídeo</a>';
+      document.getElementById('sim-tg-msgs').appendChild(vDivT);
+    }
+    if (d2.links && d2.links.length > 0) {
+      var lDivT = document.createElement('div');
+      lDivT.className = 'sim-msg bot';
+      lDivT.innerHTML = d2.links.map(function(lk){return '<a href="'+lk.url+'" target="_blank" style="display:inline-block;margin:2px;padding:3px 8px;background:#1a4a3a;color:#c9a84c;border:1px solid #c9a84c55;border-radius:12px;font-size:11px;text-decoration:none;">'+lk.label+'</a>';}).join(' ');
+      document.getElementById('sim-tg-msgs').appendChild(lDivT);
+    }
   } catch(e) {
     typing.remove();
     _adicionarMsg('sim-tg-msgs', 'bot', '⚠️ Erro: ' + e.message);
