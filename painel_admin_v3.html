@@ -214,9 +214,38 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
-  .sidebar{display:none}
+  /* Sidebar hidden por padrão no mobile, abre via overlay */
+  .sidebar{display:flex;position:fixed;top:0;left:0;height:100%;width:260px;z-index:1000;transform:translateX(-100%);transition:transform .25s ease;box-shadow:4px 0 24px rgba(0,0,0,.5)}
+  .sidebar.mob-open{transform:translateX(0)}
+  /* Overlay escuro atrás da sidebar */
+  .mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999}
+  .mob-overlay.active{display:block}
+  /* Botão hambúrguer */
+  .mob-ham{display:flex;align-items:center;justify-content:center;width:36px;height:36px;cursor:pointer;background:var(--surface3);border:1px solid var(--border);border-radius:8px;font-size:18px;margin-right:8px;flex-shrink:0}
+  /* Ajustes topbar */
+  .topbar{padding:10px 12px;gap:6px;flex-wrap:nowrap}
+  .topbar-right{gap:4px}
+  .topbar-right .btn{padding:4px 8px;font-size:11px}
+  #topbar-add-btn{padding:4px 8px;font-size:11px}
+  /* Grid */
   .grid-4{grid-template-columns:repeat(2,1fr)}
-  .grid-3{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:1fr}
+  /* Content padding menor */
+  .content{padding:12px}
+  /* Tab bar scroll horizontal */
+  .tab-bar{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;gap:4px}
+  .tab{white-space:nowrap;padding:6px 12px;font-size:12px}
+  /* Tabelas scroll */
+  .tbl-wrap{overflow-x:auto}
+  /* Texto topbar menor */
+  #tb-title{font-size:13px !important}
+  .tb-sub{font-size:11px}
+  /* Shell ocupa tudo */
+  .shell{height:100%;overflow:hidden}
+}
+@media(min-width:901px){
+  .mob-ham{display:none}
+  .mob-overlay{display:none !important}
 }
 </style>
 </head>
@@ -306,11 +335,17 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
 <!-- ══ MAIN ════════════════════════════════════════════════ -->
 <div class="main">
 
+  <!-- Overlay mobile -->
+  <div class="mob-overlay" id="mobOverlay" onclick="closeMobMenu()"></div>
+
   <!-- Topbar -->
   <div class="topbar">
-    <div>
-      <div class="topbar h1" id="tb-title" style="font-size:15px;font-weight:700">📊 Insights</div>
-      <div class="tb-sub" id="tb-sub">Visão geral do sistema</div>
+    <div style="display:flex;align-items:center;min-width:0">
+      <div class="mob-ham" id="mobHam" onclick="toggleMobMenu()">☰</div>
+      <div style="min-width:0">
+        <div class="topbar h1" id="tb-title" style="font-size:15px;font-weight:700">📊 Insights</div>
+        <div class="tb-sub" id="tb-sub">Visão geral do sistema</div>
+      </div>
     </div>
     <div class="topbar-right">
       <span id="agent-badge" class="badge badge-green">🌐 Todos</span>
@@ -2263,6 +2298,31 @@ async function forcarCacheBust(canal) {
   notice.remove();
   _adicionarMsg(msgsId, 'bot', '✅ Sessão reiniciada. Novo prompt carregado — pode testar!');
 }
+</script>
+
+<script>
+// ── MOBILE MENU ──────────────────────────────────────────────────────────────
+function toggleMobMenu() {
+  var sb = document.querySelector('.sidebar');
+  var ov = document.getElementById('mobOverlay');
+  if (!sb) return;
+  var open = sb.classList.toggle('mob-open');
+  if (ov) ov.classList.toggle('active', open);
+}
+function closeMobMenu() {
+  var sb = document.querySelector('.sidebar');
+  var ov = document.getElementById('mobOverlay');
+  if (sb) sb.classList.remove('mob-open');
+  if (ov) ov.classList.remove('active');
+}
+// Fechar menu ao clicar num item da sidebar no mobile
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      if (window.innerWidth <= 900) closeMobMenu();
+    });
+  });
+});
 </script>
 </body>
 </html>
