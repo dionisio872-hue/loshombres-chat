@@ -1874,26 +1874,170 @@ function renderAgendamentos(filtro='todos') {
 }
 
 // ══ AUTOMAÇÕES ═══════════════════════════════════════════════
-function loadAutomacoes() {
-  const autos = [
-    { icon:'📊', name:'Relatório de Expediente', link:'https://cron-job.org', editFn:'cronRelatorioExpediente', desc:'Relatório diário às 19h — divergências Calendar vs Planilha', status:'ativo', proxima:'Hoje 19:00', canal:'Grupo JG', freq:'Diário' },
-    { icon:'🔍', name:'Vistoria de Agenda', link:'https://cron-job.org', editFn:'cronVistoriaAgenda', desc:'Verifica agendamentos pendentes e alerta', status:'ativo', proxima:'Periódico', canal:'Grupo JG', freq:'Periódico' },
-    { icon:'🔄', name:'Reengajamento', link:'https://cron-job.org', editFn:'cronReengajamento', desc:'Contata leads inativos após período definido', status:'ativo', proxima:'Periódico', canal:'WhatsApp', freq:'Periódico' },
-    { icon:'👋', link:'https://cron-job.org', editFn:'cronAbandonados', name:'Abandonados', desc:'Follow-up para conversas sem resposta', status:'ativo', proxima:'Periódico', canal:'Telegram Bot', freq:'Periódico' },
-    { icon:'🧠', name:'Aprendizagem Diária', desc:'Analisa logs e sugere novas regras de comportamento', status:'ativo', proxima:'19:00', canal:'Grupo JG', freq:'Diário' },
-    { icon:'💳', name:'Monitor de Créditos', desc:'Snapshot periódico do uso de créditos Base44', status:'ativo', proxima:'Periódico', canal:'–', freq:'Periódico' },
-  ];
+const AUTOS_CONFIG = [
+  {
+    icon:'📊', name:'Relatório de Expediente', editFn:'cronRelatorioExpediente',
+    desc:'Relatório diário às 19h — divergências Calendar vs Planilha',
+    status:'ativo', proxima:'Hoje 19:00', canal:'Grupo JG', freq:'Diário',
+    campos:[
+      { key:'horario_envio', label:'Horário de Envio', tipo:'text', placeholder:'19:00', hint:'Horário BRT (ex: 19:00). Ajuste também no cron-job.org.' },
+      { key:'grupo_telegram', label:'ID do Grupo Telegram', tipo:'text', placeholder:'-1003866193031', hint:'ID do grupo que recebe o relatório.' },
+      { key:'email_destino', label:'E-mail destino', tipo:'text', placeholder:'dionisio872@gmail.com', hint:'E-mail que recebe cópia do relatório.' },
+      { key:'prompt_relatorio', label:'Prompt / Lógica do Relatório', tipo:'textarea', placeholder:'Descreva o que o relatório deve analisar e reportar...', hint:'Texto livre — define o que a automação verifica e reporta.' },
+    ]
+  },
+  {
+    icon:'🔍', name:'Vistoria de Agenda', editFn:'cronVistoriaAgenda',
+    desc:'Verifica agendamentos pendentes e alerta',
+    status:'ativo', proxima:'Periódico', canal:'Grupo JG', freq:'Periódico',
+    campos:[
+      { key:'intervalo_horas', label:'Intervalo (horas)', tipo:'text', placeholder:'4', hint:'De quantas em quantas horas a vistoria roda. Ajuste no cron-job.org também.' },
+      { key:'email_destino', label:'E-mail destino', tipo:'text', placeholder:'dionisio872@gmail.com', hint:'E-mail que recebe o alerta de agenda.' },
+      { key:'antecedencia_alerta_min', label:'Antecedência mínima para alertar (min)', tipo:'text', placeholder:'60', hint:'Alerta se agendamento estiver a menos de X minutos sem confirmação.' },
+      { key:'prompt_vistoria', label:'Prompt / Lógica da Vistoria', tipo:'textarea', placeholder:'Descreva o que a vistoria deve verificar...', hint:'Define quais casos geram alerta.' },
+    ]
+  },
+  {
+    icon:'🔄', name:'Reengajamento', editFn:'cronReengajamento',
+    desc:'Contata leads inativos após período definido',
+    status:'ativo', proxima:'Periódico', canal:'WhatsApp', freq:'Periódico',
+    campos:[
+      { key:'dias_inatividade', label:'Dias de inatividade para reengajar', tipo:'text', placeholder:'3', hint:'Leads sem resposta há X dias entram no fluxo de reengajamento.' },
+      { key:'msg_relaxante', label:'Mensagem — Relaxante Sensual', tipo:'textarea', placeholder:'Olá! Queria saber se você ainda tem interesse...', hint:'Mensagem enviada para leads interessados nessa massagem.' },
+      { key:'msg_tantrica', label:'Mensagem — Tântrica Experience', tipo:'textarea', placeholder:'Olá! Você chegou a ver os detalhes...', hint:'Mensagem para leads interessados em Tântrica.' },
+      { key:'msg_nuru', label:'Mensagem — Nuru Summa', tipo:'textarea', placeholder:'Olá! Vi que você perguntou sobre a Nuru...', hint:'Mensagem para leads interessados em Nuru.' },
+      { key:'msg_default', label:'Mensagem padrão (outros)', tipo:'textarea', placeholder:'Olá! Vi que você entrou em contato...', hint:'Usada quando a massagem de interesse não é identificada.' },
+    ]
+  },
+  {
+    icon:'👋', name:'Abandonados', editFn:'cronAbandonados',
+    desc:'Follow-up para conversas sem resposta',
+    status:'ativo', proxima:'Periódico', canal:'Telegram Bot', freq:'Periódico',
+    campos:[
+      { key:'horas_abandono', label:'Horas sem resposta para marcar como abandonado', tipo:'text', placeholder:'2', hint:'Após X horas sem interação, o lead é marcado como abandonado.' },
+      { key:'prompt_abandono', label:'Prompt / Lógica do Follow-up', tipo:'textarea', placeholder:'Descreva o comportamento do follow-up...', hint:'Define o que acontece com leads marcados como abandonados.' },
+    ]
+  },
+  {
+    icon:'🧠', name:'Aprendizagem Diária', editFn:'cronAprendizagem',
+    desc:'Analisa logs e sugere novas regras de comportamento',
+    status:'ativo', proxima:'19:00', canal:'Grupo JG', freq:'Diário',
+    campos:[
+      { key:'horario_analise', label:'Horário de Análise', tipo:'text', placeholder:'19:00', hint:'Horário BRT em que a IA analisa os logs do dia.' },
+      { key:'prompt_analise', label:'Prompt de Análise (instrução para a IA)', tipo:'textarea', placeholder:'Analise as conversas de hoje e sugira melhorias...', hint:'Instrução enviada para o GPT-4o para gerar sugestões de aprendizado.' },
+      { key:'grupo_telegram', label:'ID do Grupo Telegram', tipo:'text', placeholder:'-1003866193031', hint:'Grupo que recebe as sugestões de aprendizado.' },
+    ]
+  },
+  {
+    icon:'💳', name:'Monitor de Créditos', editFn:'monitorCreditos',
+    desc:'Snapshot periódico do uso de créditos Base44',
+    status:'ativo', proxima:'Periódico', canal:'–', freq:'Periódico',
+    campos:[
+      { key:'alerta_msg_pct', label:'Alertar créditos mensagem acima de (%)', tipo:'text', placeholder:'80', hint:'Envia alerta quando uso de créditos de mensagem passar desse %.' },
+      { key:'alerta_intg_pct', label:'Alertar créditos integração acima de (%)', tipo:'text', placeholder:'80', hint:'Envia alerta quando uso de créditos de integração passar desse %.' },
+    ]
+  },
+];
 
+async function abrirEditorAutomacao(idx) {
+  const a = AUTOS_CONFIG[idx];
+  if (!a) return;
+
+  // Carregar valores salvos no banco (chave_fluxo = editFn, sub_categoria = campo.key)
+  let valoresSalvos = {};
+  try {
+    const r = await listEntity('ConfiguracaoAgente');
+    const items = r.items || [];
+    const deste = items.filter(i => i.chave_fluxo === a.editFn);
+    deste.forEach(i => { valoresSalvos[i.sub_categoria] = { id: i.id, valor: i.valor }; });
+  } catch(e) { console.warn('Erro carregar config:', e); }
+
+  const camposHtml = a.campos.map(c => {
+    const salvo = valoresSalvos[c.key];
+    const val = escHtml(salvo ? salvo.valor : '');
+    const inputId = `auto-field-${c.key}`;
+    const input = c.tipo === 'textarea'
+      ? `<textarea id="${inputId}" rows="5" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px;resize:vertical">${val}</textarea>`
+      : `<input id="${inputId}" type="text" value="${val}" placeholder="${escHtml(c.placeholder||'')}" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px">`;
+    return `
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--teal4);margin-bottom:4px">${escHtml(c.label)}</label>
+        ${input}
+        ${c.hint ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">💡 ${escHtml(c.hint)}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  // Guardar mapa de IDs existentes para save/update
+  window._autoValoresSalvos = valoresSalvos;
+  window._autoCfg = a;
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-auto';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `
+    <div style="background:var(--bg1);border:1px solid var(--teal3);border-radius:12px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;position:relative">
+      <button onclick="document.getElementById('modal-auto').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <span style="font-size:28px">${a.icon}</span>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--teal4)">${escHtml(a.name)}</div>
+          <div style="font-size:12px;color:var(--muted)">${escHtml(a.desc)}</div>
+        </div>
+      </div>
+      <div style="margin:12px 0;padding:10px;background:var(--bg2);border-radius:6px;font-size:12px;color:var(--muted)">
+        ⚠️ Após salvar, os valores são gravados no banco e lidos pelas funções backend na próxima execução — sem necessidade de redeploy.
+      </div>
+      <div id="auto-campos">${camposHtml}</div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button onclick="salvarAutomacao()" class="btn btn-teal" style="flex:1">💾 Salvar Configurações</button>
+        <button onclick="document.getElementById('modal-auto').remove()" class="btn btn-ghost" style="flex:1">Cancelar</button>
+      </div>
+      <div id="auto-save-status" style="margin-top:10px;font-size:12px;text-align:center"></div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function salvarAutomacao() {
+  const a = window._autoCfg;
+  const salvo = window._autoValoresSalvos || {};
+  const status = document.getElementById('auto-save-status');
+  status.textContent = '⏳ Salvando...';
+  status.style.color = 'var(--teal4)';
+  let ok = 0, err = 0;
+  for (const c of a.campos) {
+    const el = document.getElementById(`auto-field-${c.key}`);
+    if (!el) continue;
+    const valor = el.value || el.textContent || '';
+    try {
+      if (salvo[c.key] && salvo[c.key].id) {
+        await updateEntity('ConfiguracaoAgente', salvo[c.key].id, { valor });
+      } else {
+        await createEntity('ConfiguracaoAgente', { chave_fluxo: a.editFn, sub_categoria: c.key, valor, tipo_campo: c.tipo, descricao: c.label, ativo: true });
+      }
+      ok++;
+    } catch(e) { console.error('Erro ao salvar campo', c.key, e); err++; }
+  }
+  if (err === 0) {
+    status.textContent = `✅ ${ok} configurações salvas com sucesso! Ativas na próxima execução.`;
+    status.style.color = '#4ade80';
+    setTimeout(() => { document.getElementById('modal-auto')?.remove(); }, 2000);
+  } else {
+    status.textContent = `⚠️ ${ok} salvas, ${err} com erro. Verifique o console.`;
+    status.style.color = '#f97316';
+  }
+}
+
+function loadAutomacoes() {
   setContent(`
     <div class="sec-hdr">
       <h2>Automações Ativas</h2>
       <a href="https://app.cron-job.org" target="_blank" class="btn btn-ghost btn-sm">⚙️ cron-job.org</a>
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:16px">
-      💡 As automações são disparadas via <b>cron-job.org</b> (conta: loshombresestudiospa1@gmail.com). Clique em cada uma para ver detalhes ou pausar.
+      💡 As automações são disparadas via <b>cron-job.org</b> (conta: loshombresestudiospa1@gmail.com). <b>Clique em cada card para editar a lógica e configurações</b> — salvo direto no banco, sem redeploy.
     </div>
-    ${autos.map(a => `
-      <div class="auto-item">
+    ${AUTOS_CONFIG.map((a, idx) => `
+      <div class="auto-item" onclick="abrirEditorAutomacao(${idx})" style="cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--teal4)'" onmouseout="this.style.borderColor=''">
         <div class="auto-icon">${a.icon}</div>
         <div class="auto-info">
           <div class="auto-name">${a.name}</div>
@@ -1906,6 +2050,7 @@ function loadAutomacoes() {
         <div class="auto-meta">
           <div class="auto-next">⏰ ${a.proxima}</div>
           <div style="margin-top:6px"><span class="badge badge-green" style="font-size:10px">● ${a.status}</span></div>
+          <div style="margin-top:6px;font-size:10px;color:var(--teal4)">✏️ Editar</div>
         </div>
       </div>
     `).join('')}
