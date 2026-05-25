@@ -1939,62 +1939,115 @@ const AUTOS_CONFIG = [
   },
 ];
 
+// URLs de disparo de cada automação
+const AUTO_URLS = {
+  cronRelatorioExpediente: 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronRelatorioExpediente?secret=loshombres2026',
+  cronVistoriaAgenda:      'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronVistoriaAgenda?secret=loshombres2026',
+  cronReengajamento:       'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronReengajamento?secret=loshombres2026',
+  cronAbandonados:         'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronAbandonados?secret=loshombres2026',
+  cronAprendizagem:        'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronAprendizagem?secret=loshombres2026',
+  monitorCreditos:         'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/monitorCreditos?secret=loshombres2026',
+};
+
+async function dispararAutomacao(editFn, btnEl) {
+  const url = AUTO_URLS[editFn];
+  if (!url) { alert('URL de disparo não configurada para: ' + editFn); return; }
+  const status = document.getElementById('auto-save-status');
+  btnEl.disabled = true;
+  btnEl.textContent = '⏳ Disparando...';
+  if (status) { status.textContent = '⏳ Executando automação...'; status.style.color = 'var(--teal4)'; }
+  try {
+    const r = await fetch(url);
+    const txt = await r.text();
+    let res;
+    try { res = JSON.parse(txt); } catch(_) { res = { raw: txt }; }
+    const resumo = res.ok ? '✅ Executado com sucesso!' : (res.erro || res.error || res.raw || 'Sem resposta JSON');
+    if (status) { status.innerHTML = `<b style="color:#4ade80">▶ Resultado:</b> <span style="color:var(--fg)">${escHtml(String(resumo).slice(0,300))}</span>`; }
+    btnEl.textContent = '✅ Disparado';
+    setTimeout(() => { btnEl.disabled = false; btnEl.textContent = '▶ Disparar Agora'; }, 3000);
+  } catch(e) {
+    if (status) { status.textContent = '❌ Erro: ' + e.message; status.style.color = '#f97316'; }
+    btnEl.disabled = false; btnEl.textContent = '▶ Disparar Agora';
+  }
+}
+
 async function abrirEditorAutomacao(idx) {
   const a = AUTOS_CONFIG[idx];
   if (!a) return;
 
-  // Carregar valores salvos no banco (chave_fluxo = editFn, sub_categoria = campo.key)
+  // Mostrar modal com loading imediato para boa UX
+  const modal = document.createElement('div');
+  modal.id = 'modal-auto';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `
+    <div style="background:var(--bg1);border:1px solid var(--teal3);border-radius:12px;max-width:660px;width:100%;max-height:92vh;overflow-y:auto;padding:24px;position:relative">
+      <button onclick="document.getElementById('modal-auto').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:28px">${a.icon}</span>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--teal4)">${escHtml(a.name)}</div>
+            <div style="font-size:12px;color:var(--muted)">${escHtml(a.desc)}</div>
+          </div>
+        </div>
+        <button id="btn-disparar" onclick="dispararAutomacao('${a.editFn||''}', this)"
+          style="background:var(--bg2);border:1px solid var(--teal3);color:var(--teal4);border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap"
+          ${!AUTO_URLS[a.editFn] ? 'disabled title="Sem URL configurada"' : ''}>
+          ▶ Disparar Agora
+        </button>
+      </div>
+      <div style="margin:12px 0;padding:10px;background:var(--bg2);border-radius:6px;font-size:12px;color:var(--muted)">
+        ⚠️ Edite os campos abaixo e salve — os valores são gravados no banco e lidos na próxima execução <b>sem redeploy</b>. O botão <b>▶ Disparar</b> executa a automação agora para testar.
+      </div>
+      <div id="auto-campos" style="min-height:80px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">⏳ Carregando configurações salvas...</div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button onclick="salvarAutomacao()" class="btn btn-teal" style="flex:1">💾 Salvar Configurações</button>
+        <button onclick="document.getElementById('modal-auto').remove()" class="btn btn-ghost">Cancelar</button>
+      </div>
+      <div id="auto-save-status" style="margin-top:10px;font-size:12px;text-align:center;min-height:18px"></div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Carregar valores salvos no banco em paralelo (chave_fluxo = editFn)
   let valoresSalvos = {};
   try {
     const r = await listEntity('ConfiguracaoAgente');
     const items = r.items || [];
-    const deste = items.filter(i => i.chave_fluxo === a.editFn);
-    deste.forEach(i => { valoresSalvos[i.sub_categoria] = { id: i.id, valor: i.valor }; });
-  } catch(e) { console.warn('Erro carregar config:', e); }
+    // Filtrar pelo editFn da automação atual
+    items.filter(i => i.chave_fluxo === a.editFn).forEach(i => {
+      valoresSalvos[i.sub_categoria] = { id: i.id, valor: i.valor };
+    });
+  } catch(e) { console.warn('Erro carregar config do banco:', e); }
 
+  // Renderizar campos com valores herdados do banco
   const camposHtml = a.campos.map(c => {
     const salvo = valoresSalvos[c.key];
-    const val = escHtml(salvo ? salvo.valor : '');
+    const val = escHtml(salvo ? (salvo.valor || '') : '');
+    const temValor = salvo && salvo.valor && salvo.valor.trim().length > 0;
     const inputId = `auto-field-${c.key}`;
+    const badge = temValor
+      ? `<span style="font-size:10px;background:#14532d;color:#4ade80;padding:2px 6px;border-radius:4px;margin-left:6px">✓ salvo</span>`
+      : `<span style="font-size:10px;background:var(--bg2);color:var(--muted);padding:2px 6px;border-radius:4px;margin-left:6px">padrão</span>`;
     const input = c.tipo === 'textarea'
-      ? `<textarea id="${inputId}" rows="5" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px;resize:vertical">${val}</textarea>`
-      : `<input id="${inputId}" type="text" value="${val}" placeholder="${escHtml(c.placeholder||'')}" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px">`;
+      ? `<textarea id="${inputId}" rows="5" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid ${temValor?'var(--teal4)':'var(--teal3)'};border-radius:6px;padding:8px;color:var(--fg);font-size:13px;resize:vertical;font-family:inherit">${val}</textarea>`
+      : `<input id="${inputId}" type="text" value="${val}" placeholder="${escHtml(c.placeholder||'')}" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid ${temValor?'var(--teal4)':'var(--teal3)'};border-radius:6px;padding:8px;color:var(--fg);font-size:13px">`;
     return `
       <div style="margin-bottom:16px">
-        <label style="display:block;font-size:12px;font-weight:700;color:var(--teal4);margin-bottom:4px">${escHtml(c.label)}</label>
+        <div style="display:flex;align-items:center;margin-bottom:4px">
+          <label style="font-size:12px;font-weight:700;color:var(--teal4)">${escHtml(c.label)}</label>
+          ${badge}
+        </div>
         ${input}
         ${c.hint ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">💡 ${escHtml(c.hint)}</div>` : ''}
       </div>`;
   }).join('');
 
-  // Guardar mapa de IDs existentes para save/update
+  // Injetar campos no modal já aberto
+  document.getElementById('auto-campos').innerHTML = camposHtml || '<div style="color:var(--muted);font-size:13px">Nenhum campo configurável para esta automação.</div>';
+
+  // Guardar estado para salvarAutomacao
   window._autoValoresSalvos = valoresSalvos;
   window._autoCfg = a;
-
-  const modal = document.createElement('div');
-  modal.id = 'modal-auto';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  modal.innerHTML = `
-    <div style="background:var(--bg1);border:1px solid var(--teal3);border-radius:12px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;position:relative">
-      <button onclick="document.getElementById('modal-auto').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-        <span style="font-size:28px">${a.icon}</span>
-        <div>
-          <div style="font-size:16px;font-weight:700;color:var(--teal4)">${escHtml(a.name)}</div>
-          <div style="font-size:12px;color:var(--muted)">${escHtml(a.desc)}</div>
-        </div>
-      </div>
-      <div style="margin:12px 0;padding:10px;background:var(--bg2);border-radius:6px;font-size:12px;color:var(--muted)">
-        ⚠️ Após salvar, os valores são gravados no banco e lidos pelas funções backend na próxima execução — sem necessidade de redeploy.
-      </div>
-      <div id="auto-campos">${camposHtml}</div>
-      <div style="display:flex;gap:10px;margin-top:8px">
-        <button onclick="salvarAutomacao()" class="btn btn-teal" style="flex:1">💾 Salvar Configurações</button>
-        <button onclick="document.getElementById('modal-auto').remove()" class="btn btn-ghost" style="flex:1">Cancelar</button>
-      </div>
-      <div id="auto-save-status" style="margin-top:10px;font-size:12px;text-align:center"></div>
-    </div>`;
-  document.body.appendChild(modal);
 }
 
 async function salvarAutomacao() {
@@ -2007,20 +2060,33 @@ async function salvarAutomacao() {
   for (const c of a.campos) {
     const el = document.getElementById(`auto-field-${c.key}`);
     if (!el) continue;
-    const valor = el.value || el.textContent || '';
+    const valor = el.value !== undefined ? el.value : (el.textContent || '');
     try {
       if (salvo[c.key] && salvo[c.key].id) {
         await updateEntity('ConfiguracaoAgente', salvo[c.key].id, { valor });
       } else {
-        await createEntity('ConfiguracaoAgente', { chave_fluxo: a.editFn, sub_categoria: c.key, valor, tipo_campo: c.tipo, descricao: c.label, ativo: true });
+        await createEntity('ConfiguracaoAgente', {
+          chave_fluxo: a.editFn, sub_categoria: c.key, valor,
+          tipo_campo: c.tipo, descricao: c.label, ativo: true
+        });
       }
       ok++;
+      // Atualizar badge visual do campo para "salvo"
+      const lbl = el.closest('div[style*="margin-bottom:16px"]');
+      if (lbl) {
+        const badge = lbl.querySelector('span[style*="background"]');
+        if (badge) { badge.textContent = '✓ salvo'; badge.style.background = '#14532d'; badge.style.color = '#4ade80'; }
+        el.style.borderColor = 'var(--teal4)';
+      }
     } catch(e) { console.error('Erro ao salvar campo', c.key, e); err++; }
   }
   if (err === 0) {
-    status.textContent = `✅ ${ok} configurações salvas com sucesso! Ativas na próxima execução.`;
-    status.style.color = '#4ade80';
-    setTimeout(() => { document.getElementById('modal-auto')?.remove(); }, 2000);
+    status.innerHTML = `<span style="color:#4ade80">✅ ${ok} configurações salvas!</span> <span style="color:var(--muted)">Ativas na próxima execução.</span>`;
+    // Atualizar cache interno para que o disparo use os novos valores
+    const r2 = await listEntity('ConfiguracaoAgente').catch(() => ({ items: [] }));
+    const items2 = (r2.items || []).filter(i => i.chave_fluxo === a.editFn);
+    window._autoValoresSalvos = {};
+    items2.forEach(i => { window._autoValoresSalvos[i.sub_categoria] = { id: i.id, valor: i.valor }; });
   } else {
     status.textContent = `⚠️ ${ok} salvas, ${err} com erro. Verifique o console.`;
     status.style.color = '#f97316';
