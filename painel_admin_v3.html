@@ -1659,17 +1659,38 @@ async function executarAjuste(id) {
       toast('⏳ Executando — aguarde relatório no Telegram (~2-5min)');
       closeModal();
 
-      // 2. Disparar payload compactado via adminProxy → Telegram do agente
-      await fetch(`https://base44.app/api/apps/${APP_ID}/functions/adminProxy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          secret: ADMIN_KEY,
-          action: 'telegram_alert',
-          chat_id: '-1003866193031',
-          text: payload
-        })
-      }).catch(() => {});
+      // 2. Executar via backend (autônomo — não depende do chat do agente)
+      let execOk = false;
+      try {
+        const execResp = await fetch(
+          `https://base44.app/api/apps/${APP_ID}/functions/adminProxy?path=%2Fexecutar-ajuste`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
+            body: JSON.stringify({ ajuste_id: id })
+          }
+        );
+        const execData = await execResp.json().catch(() => ({}));
+        execOk = !!execData.ok;
+        if (execOk) {
+          toast('✅ Análise concluída! Resultado no Telegram do grupo.');
+        } else {
+          throw new Error(execData.erro || 'Resposta inválida do backend');
+        }
+      } catch(backendErr) {
+        // Fallback automático: envia via Telegram para o agente processar
+        await fetch(`https://base44.app/api/apps/${APP_ID}/functions/adminProxy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            secret: ADMIN_KEY,
+            action: 'telegram_alert',
+            chat_id: '-1003866193031',
+            text: payload + '\n\n⚠️ BACKEND INDISPONÍVEL: Processe manualmente via chat.'
+          })
+        }).catch(() => {});
+        toast('⚠️ Backend falhou — enviado via Telegram (fallback)');
+      }
 
       loadAjustes();
     } catch(e) {
