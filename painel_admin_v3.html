@@ -1448,6 +1448,7 @@ function renderAjustes() {
                  <td style="font-size:11px;color:var(--muted)">${fmtDataCurtaBRT(a.created_date)}</td>
                  <td>
                    <button class="icon-btn" title="Ver detalhes" onclick="verDetalheAjuste('${a.id}')">🔍</button>
+                   <button class="icon-btn" title="Executar agora" onclick="executarAjuste('${a.id}')" style="color:#2dd4bf">▶</button>
                    <button class="icon-btn" onclick="editAjuste('${a.id}')">✏️</button>
                    <button class="icon-btn icon-del" onclick="deleteItem('AjusteFluxo','${a.id}',loadAjustes)">🗑</button>
                  </td>
@@ -1474,7 +1475,7 @@ function openNovoAjusteModal() {
     </div>
     <div style="margin-bottom:4px">
       <label class="field-label">Observações adicionais <span style="color:var(--muted)">(opcional)</span></label>
-      <input id="aj-obs" class="field-input" placeholder="Ex: não quebrar o fluxo de agendamento atual" />
+      <input id="aj-obs" class="field-input" value="Patch cirúrgico obrigatório. Sem regressões. Sem quebrar layout. Sem efeito cascata. Sem chamadas LLM diretas em automações." />
     </div>
     <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.5">
       ℹ️ Após salvar, o ajuste fica com status <b>Pendente</b>. Eu serei notificado e vou analisar, gerar o código e aplicar após sua aprovação.
@@ -1508,17 +1509,22 @@ function editAjuste(id) {
         ${statusOpts.map(s => `<option value="${s}" ${a.status===s?'selected':''}>${s}</option>`).join('')}
       </select>
     </div>
-    <div style="margin-bottom:4px">
+    <div style="margin-bottom:14px">
       <label class="field-label">Observações</label>
       <input id="aj-obs" class="field-input" value="${escHtml(a.observacoes||'')}" />
+    </div>
+    <div style="margin-bottom:4px">
+      <label class="field-label">Backup / Versão anterior <span style="color:var(--muted)">(preencho eu antes de aplicar)</span></label>
+      <textarea id="aj-backup" rows="3" class="field-input" style="font-size:11px;font-family:monospace">${escHtml(a.patch_gerado||'')}</textarea>
     </div>
   `, async () => {
     const desc   = document.getElementById('aj-desc').value.trim();
     const status = document.getElementById('aj-status').value;
     const obs    = document.getElementById('aj-obs').value.trim();
+    const backup = document.getElementById('aj-backup') ? document.getElementById('aj-backup').value.trim() : '';
     if (!desc) { toast('Descrição obrigatória', 'err'); return; }
     try {
-      await updateEntity('AjusteFluxo', id, { descricao: desc, status, observacoes: obs });
+      await updateEntity('AjusteFluxo', id, { descricao: desc, status, observacoes: obs, patch_gerado: backup || undefined });
       toast('✅ Ajuste atualizado');
       closeModal();
       loadAjustes();
@@ -1553,6 +1559,61 @@ function verDetalheAjuste(id) {
     </div>
   `);
   document.getElementById('modalSaveBtn').style.display = 'none';
+  // Botões de ação no detalhe
+  const actionsDiv = document.createElement('div');
+  actionsDiv.style = 'display:flex;gap:8px;margin-top:4px;padding-top:12px;border-top:1px solid var(--border)';
+  actionsDiv.innerHTML = `
+    <button onclick="executarAjuste('${a.id}')" style="flex:1;background:var(--teal3);border:1px solid var(--teal);color:var(--teal);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">▶ Executar Agora</button>
+    ${a.status === 'ativo' ? `<button onclick="reverterAjuste('${a.id}')" style="flex:1;background:#450a0a22;border:1px solid #f87171;color:#f87171;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">↩ Reverter</button>` : ''}
+  `;
+  document.getElementById('modalBody').appendChild(actionsDiv);
+}
+
+
+// ── executarAjuste: notifica o agente via Telegram + muda status ─
+async function executarAjuste(id) {
+  const a = allAjustes.find(x => x.id === id);
+  if (!a) return;
+  if (!confirm('Enviar este ajuste para execução?\n\n"' + (a.descricao||'').slice(0,80) + '..."')) return;
+  try {
+    // 1. Atualizar status para em_analise
+    await updateEntity('AjusteFluxo', id, { status: 'em_analise' });
+    toast('⏳ Ajuste enviado para análise — aguarde notificação no Telegram');
+    // 2. Notificar via Telegram (dispara backend)
+    const msg = encodeURIComponent(
+      '🔧 *NOVO AJUSTE PARA EXECUTAR*\n\n' +
+      '*Função:* ' + (a.fluxo_afetado||'–') + '\n' +
+      '*Descrição:* ' + (a.descricao||'').slice(0,300) + '\n\n' +
+      '*Obs:* ' + (a.observacoes||'–') + '\n\n' +
+      '_ID: ' + id + '_'
+    );
+    await fetch(`https://base44.app/api/apps/${APP_ID}/functions/adminProxy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: ADMIN_KEY,
+        action: 'telegram_alert',
+        chat_id: '-1003866193031',
+        text: decodeURIComponent(msg)
+      })
+    }).catch(() => {});
+    loadAjustes();
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+// ── reverterAjuste: volta status para pendente e registra reversão ─
+async function reverterAjuste(id) {
+  const a = allAjustes.find(x => x.id === id);
+  if (!a) return;
+  if (!confirm('Reverter este ajuste?\nO status voltará para "pendente" e o agente será notificado.')) return;
+  try {
+    await updateEntity('AjusteFluxo', id, {
+      status: 'pendente',
+      observacoes: (a.observacoes||'') + ' | ↩ REVERTIDO em ' + new Date().toLocaleDateString('pt-BR')
+    });
+    toast('↩ Ajuste revertido — notifique o agente para desfazer o código');
+    loadAjustes();
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
 }
 
 // ══ REGRAS ══════════════════════════════════════════════════
