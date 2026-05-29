@@ -312,6 +312,9 @@ input:checked+.slider:before{transform:translateX(16px);background:var(--teal)}
     <div class="nav-item" onclick="showTab('instrucoes')" id="nav-instrucoes">
       <span class="ni-icon">📚</span> Instruções & Mídias
     </div>
+    <div class="nav-item" onclick="showTab('ajustes')" id="nav-ajustes">
+      <span class="ni-icon">🔧</span> Fluxos Avançados
+    </div>
   </div>
 
   <div class="sb-bottom">
@@ -544,6 +547,7 @@ function loadCurrentTab() {
     automacoes: loadAutomacoes,
     identidade: loadIdentidade,
     instrucoes: loadInstrucoes,
+    ajustes: loadAjustes,
   }[currentTab];
   if (fn) fn();
 }
@@ -848,7 +852,9 @@ async function marcarCompartilhado(id, agente) {
 
 
 function openAddModal() {
-  if (currentTab === 'instrucoes') {
+  if (currentTab === 'ajustes') {
+    openNovoAjusteModal();
+  } else if (currentTab === 'instrucoes') {
     openAddInstrucaoModal();
   } else {
     openAddFluxoModal();
@@ -892,6 +898,7 @@ function showTab(tab) {
   if (addBtn) {
     if (tab === 'instrucoes') addBtn.textContent = '+ Nova Instrução';
     else if (tab === 'fluxos') addBtn.textContent = '+ Novo Fluxo';
+    else if (tab === 'ajustes') addBtn.textContent = '+ Novo Ajuste';
     else addBtn.textContent = '+ Novo';
   }
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -909,6 +916,7 @@ function showTab(tab) {
     automacoes: ['🔁 Automações', 'Crons e triggers ativos'],
     identidade: ['🧠 Identidade IA', 'Personalidade e comportamento base'],
     instrucoes: ['📚 Instruções & Mídias', 'Banco de links, áudios, vídeos e regras dos bots'],
+    ajustes: ['🔧 Fluxos Avançados', 'Peça ajustes em português — eu converto em código'],
   };
   const [title, sub] = titles[tab] || ['–', ''];
   document.getElementById('tb-title').textContent = title;
@@ -1373,6 +1381,178 @@ function openAddInstrucaoModal(grupoFixo) {
       loadInstrucoes();
     } catch(e) { toast('Erro: ' + e.message, 'err'); }
   });
+}
+
+// ══ FLUXOS AVANÇADOS ═══════════════════════════════════════
+let allAjustes = [];
+
+async function loadAjustes() {
+  setLoading();
+  try {
+    const r = await listEntity('AjusteFluxo');
+    allAjustes = (r.items || []).sort((a,b) => new Date(b.created_date) - new Date(a.created_date));
+    renderAjustes();
+  } catch(e) { showError(e.message); }
+}
+
+function renderAjustes() {
+  const statusBadge = {
+    pendente:    '<span class="badge" style="background:#78350f22;color:#f59e0b">⏳ Pendente</span>',
+    em_analise:  '<span class="badge" style="background:#1e3a5f;color:#60a5fa">🔍 Em análise</span>',
+    aprovado:    '<span class="badge" style="background:#14532d22;color:#4ade80">✅ Aprovado</span>',
+    ativo:       '<span class="badge badge-teal">🚀 Ativo</span>',
+    reprovado:   '<span class="badge" style="background:#450a0a22;color:#f87171">❌ Reprovado</span>',
+  };
+  const fluxoBadge = {
+    chatCliente:             '💬 chatCliente',
+    telegramBot:             '🤖 telegramBot',
+    cronRelatorioExpediente: '📊 Relatório',
+    cronReengajamento:       '♻️ Reengajamento',
+    cronVistoriaAgenda:      '📅 Vistoria',
+    geral:                   '🌐 Geral',
+  };
+
+  setContent(`
+    <div class="sec-hdr">
+      <h2>🔧 Fluxos Avançados</h2>
+      <button class="btn btn-teal btn-sm" onclick="openNovoAjusteModal()">+ Novo Ajuste</button>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--muted);line-height:1.6">
+      💡 <b style="color:var(--text)">Como funciona:</b> Escreva em português o que quer mudar.
+      Eu analiso, gero o código correspondente e aplico com segurança após sua aprovação.<br>
+      <span style="font-size:11px;opacity:.7">Regras de texto → aba <b>Regras</b> &nbsp;|&nbsp; Preços e horários → aba <b>Fluxos</b> &nbsp;|&nbsp; Lógica de código → aqui</span>
+    </div>
+    ${allAjustes.length === 0
+      ? `<div class="empty">
+           <div class="e-icon">🔧</div>
+           <p>Nenhum ajuste ainda</p>
+           <p style="font-size:12px;color:var(--muted);margin-top:4px">Clique em <b>+ Novo Ajuste</b> para pedir uma mudança</p>
+         </div>`
+      : `<div class="tbl-wrap"><table>
+           <thead><tr>
+             <th>Descrição</th>
+             <th>Função</th>
+             <th>Status</th>
+             <th>Data</th>
+             <th>Ações</th>
+           </tr></thead>
+           <tbody>
+             ${allAjustes.map(a => `
+               <tr>
+                 <td style="max-width:320px">
+                   <div style="font-size:13px;color:var(--text);line-height:1.5">${escHtml((a.descricao||'').slice(0,120))}${(a.descricao||'').length>120?'…':''}</div>
+                   ${a.observacoes ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">💬 ${escHtml(a.observacoes)}</div>` : ''}
+                 </td>
+                 <td><span class="badge badge-teal" style="font-size:10px">${fluxoBadge[a.fluxo_afetado]||a.fluxo_afetado||'–'}</span></td>
+                 <td>${statusBadge[a.status]||a.status||'–'}</td>
+                 <td style="font-size:11px;color:var(--muted)">${fmtDataCurtaBRT(a.created_date)}</td>
+                 <td>
+                   <button class="icon-btn" title="Ver detalhes" onclick="verDetalheAjuste('${a.id}')">🔍</button>
+                   <button class="icon-btn" onclick="editAjuste('${a.id}')">✏️</button>
+                   <button class="icon-btn icon-del" onclick="deleteItem('AjusteFluxo','${a.id}',loadAjustes)">🗑</button>
+                 </td>
+               </tr>`).join('')}
+           </tbody>
+         </table></div>`
+    }
+  `);
+}
+
+function openNovoAjusteModal() {
+  const fluxos = ['chatCliente','telegramBot','cronRelatorioExpediente','cronReengajamento','cronVistoriaAgenda','geral'];
+  openModal('🔧 Novo Ajuste de Fluxo', `
+    <div style="margin-bottom:14px">
+      <label class="field-label">O que você quer mudar? <span style="color:var(--muted)">(escreva em português)</span></label>
+      <textarea id="aj-desc" rows="5" class="field-input" style="resize:vertical"
+        placeholder="Ex: Quando o token do Google falhar, avisar o cliente e disparar alerta no Telegram com emoji de urgência"></textarea>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="field-label">Qual função será afetada?</label>
+      <select id="aj-fluxo" class="field-input">
+        ${fluxos.map(f => `<option value="${f}">${f}</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin-bottom:4px">
+      <label class="field-label">Observações adicionais <span style="color:var(--muted)">(opcional)</span></label>
+      <input id="aj-obs" class="field-input" placeholder="Ex: não quebrar o fluxo de agendamento atual" />
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.5">
+      ℹ️ Após salvar, o ajuste fica com status <b>Pendente</b>. Eu serei notificado e vou analisar, gerar o código e aplicar após sua aprovação.
+    </div>
+  `, async () => {
+    const desc  = document.getElementById('aj-desc').value.trim();
+    const fluxo = document.getElementById('aj-fluxo').value;
+    const obs   = document.getElementById('aj-obs').value.trim();
+    if (!desc) { toast('Descreva o ajuste antes de salvar', 'err'); return; }
+    try {
+      await createEntity('AjusteFluxo', { descricao: desc, fluxo_afetado: fluxo, status: 'pendente', observacoes: obs });
+      toast('✅ Ajuste enviado! Vou analisar em breve.');
+      closeModal();
+      loadAjustes();
+    } catch(e) { toast('Erro: ' + e.message, 'err'); }
+  });
+}
+
+function editAjuste(id) {
+  const a = allAjustes.find(x => x.id === id);
+  if (!a) return;
+  const statusOpts = ['pendente','em_analise','aprovado','ativo','reprovado'];
+  openModal('✏️ Editar Ajuste', `
+    <div style="margin-bottom:14px">
+      <label class="field-label">Descrição</label>
+      <textarea id="aj-desc" rows="4" class="field-input">${escHtml(a.descricao||'')}</textarea>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="field-label">Status</label>
+      <select id="aj-status" class="field-input">
+        ${statusOpts.map(s => `<option value="${s}" ${a.status===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin-bottom:4px">
+      <label class="field-label">Observações</label>
+      <input id="aj-obs" class="field-input" value="${escHtml(a.observacoes||'')}" />
+    </div>
+  `, async () => {
+    const desc   = document.getElementById('aj-desc').value.trim();
+    const status = document.getElementById('aj-status').value;
+    const obs    = document.getElementById('aj-obs').value.trim();
+    if (!desc) { toast('Descrição obrigatória', 'err'); return; }
+    try {
+      await updateEntity('AjusteFluxo', id, { descricao: desc, status, observacoes: obs });
+      toast('✅ Ajuste atualizado');
+      closeModal();
+      loadAjustes();
+    } catch(e) { toast('Erro: ' + e.message, 'err'); }
+  });
+}
+
+function verDetalheAjuste(id) {
+  const a = allAjustes.find(x => x.id === id);
+  if (!a) return;
+  const statusColor = { pendente:'#f59e0b', em_analise:'#60a5fa', aprovado:'#4ade80', ativo:'#2dd4bf', reprovado:'#f87171' };
+  openModal('🔍 Detalhe do Ajuste', `
+    <div style="display:flex;flex-direction:column;gap:12px;font-size:13px">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">DESCRIÇÃO</div>
+        <div style="color:var(--text);line-height:1.6;white-space:pre-wrap">${escHtml(a.descricao||'–')}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">FUNÇÃO</div>
+          <div class="badge badge-teal" style="font-size:11px">${a.fluxo_afetado||'–'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">STATUS</div>
+          <div style="font-weight:700;color:${statusColor[a.status]||'var(--text)'}">${a.status||'–'}</div>
+        </div>
+      </div>
+      ${a.impacto ? `<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">ONDE AFETA (preenchido por mim)</div><div style="color:var(--text)">${escHtml(a.impacto)}</div></div>` : ''}
+      ${a.patch_gerado ? `<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">CÓDIGO GERADO</div><pre style="background:var(--surface2);padding:10px;border-radius:8px;font-size:11px;overflow-x:auto;white-space:pre-wrap">${escHtml(a.patch_gerado)}</pre></div>` : ''}
+      ${a.observacoes ? `<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">OBSERVAÇÕES</div><div style="color:var(--text)">${escHtml(a.observacoes)}</div></div>` : ''}
+      <div style="font-size:11px;color:var(--muted)">Criado em: ${fmtDataHoraBRT(a.created_date)} ${a.data_aplicacao ? '| Aplicado em: ' + fmtDataCurtaBRT(a.data_aplicacao) : ''}</div>
+    </div>
+  `);
+  document.getElementById('modalSaveBtn').style.display = 'none';
 }
 
 // ══ REGRAS ══════════════════════════════════════════════════
@@ -1874,559 +2054,26 @@ function renderAgendamentos(filtro='todos') {
 }
 
 // ══ AUTOMAÇÕES ═══════════════════════════════════════════════
-
-// ══ COMPONENTE DE DESTINOS MÚLTIPLOS ════════════════════════════
-// Converte campos email_destino/grupo_telegram em seletor visual com tags
-
-const DESTINOS_PRESET = [
-  { id:'telegram_grupo_jg',  label:'Grupo Gestão JG',     icon:'📱', value:'telegram:-1003866193031' },
-  { id:'telegram_admin',     label:'Jonathan (pessoal)',   icon:'👤', value:'telegram:7200577395' },
-  { id:'telegram_canal',     label:'Canal @jontattomassocanal1', icon:'📢', value:'telegram:-1002293107186' },
-  { id:'email_jonathan',     label:'E-mail Jonathan',     icon:'📧', value:'email:dionisio872@gmail.com' },
-  { id:'whatsapp_jonathan',  label:'WhatsApp Jonathan',   icon:'💬', value:'whatsapp:5531983244713' },
-];
-
-// Estado global do componente de destinos
-let _destinosAtivos = []; // array de strings: "telegram:-1003866193031", "email:x@y.com", etc.
-let _destinoContainerId = '';
-
-function renderDestinoTag(valor, idx) {
-  const preset = DESTINOS_PRESET.find(p => p.value === valor);
-  const [tipo, ...rest] = valor.split(':');
-  const label = preset ? `${preset.icon} ${preset.label}` : `${tipo === 'email' ? '📧' : tipo === 'telegram' ? '📱' : '💬'} ${rest.join(':')}`;
-  return `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--teal3);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--teal4)">
-    ${escHtml(label)}
-    <button onclick="_removerDestino(${idx})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0;line-height:1" title="Remover">×</button>
-  </span>`;
-}
-
-function renderComponenteDestinos(containerId, destinosIniciais) {
-  _destinoContainerId = containerId;
-  _destinosAtivos = [...(destinosIniciais || [])];
-  _atualizarUI();
-}
-
-function _atualizarUI() {
-  const el = document.getElementById(_destinoContainerId);
-  if (!el) return;
-  const tags = _destinosAtivos.map((v, i) => renderDestinoTag(v, i)).join('');
-  el.innerHTML = `
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:32px" id="${_destinoContainerId}-tags">
-      ${tags || '<span style="color:var(--muted);font-size:12px">Nenhum destino adicionado ainda.</span>'}
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <select id="${_destinoContainerId}-preset" style="background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:6px 10px;color:var(--fg);font-size:12px;flex:1">
-        <option value="">— Selecionar destino pré-definido —</option>
-        ${DESTINOS_PRESET.map(p => `<option value="${p.value}">${p.icon} ${escHtml(p.label)}</option>`).join('')}
-        <option value="__email__">📧 E-mail personalizado...</option>
-        <option value="__telegram__">📱 ID Telegram personalizado...</option>
-        <option value="__whatsapp__">💬 WhatsApp personalizado...</option>
-      </select>
-      <button onclick="_adicionarDestinoPreset()" style="background:var(--teal3);border:1px solid var(--teal);border-radius:6px;padding:6px 12px;color:var(--teal4);font-size:12px;cursor:pointer;font-weight:700">+ Adicionar</button>
-    </div>
-    <div id="${_destinoContainerId}-custom" style="margin-top:6px;display:none">
-      <input id="${_destinoContainerId}-custom-val" type="text" placeholder="Digite o valor (ex: email@dominio.com ou -1001234567890)" 
-        style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:7px;color:var(--fg);font-size:12px">
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:5px">💡 Você pode adicionar múltiplos destinos. Salvo como lista separada por vírgula no banco.</div>
-  `;
-}
-
-function _adicionarDestinoPreset() {
-  const sel = document.getElementById(_destinoContainerId + '-preset');
-  const customDiv = document.getElementById(_destinoContainerId + '-custom');
-  const customVal = document.getElementById(_destinoContainerId + '-custom-val');
-  if (!sel) return;
-  const val = sel.value;
-  if (!val) return;
-  if (val.startsWith('__')) {
-    // Campo personalizado
-    customDiv.style.display = 'block';
-    customVal.placeholder = val === '__email__' ? 'email@dominio.com' : val === '__telegram__' ? '-1001234567890' : '5531999999999';
-    customVal.dataset.tipo = val === '__email__' ? 'email' : val === '__telegram__' ? 'telegram' : 'whatsapp';
-    customVal.onkeydown = (e) => { if (e.key === 'Enter') _adicionarCustom(); };
-    customVal.focus();
-    return;
-  }
-  customDiv.style.display = 'none';
-  if (!_destinosAtivos.includes(val)) {
-    _destinosAtivos.push(val);
-    _atualizarUI();
-  }
-  sel.value = '';
-}
-
-function _adicionarCustom() {
-  const customVal = document.getElementById(_destinoContainerId + '-custom-val');
-  if (!customVal) return;
-  const tipo = customVal.dataset.tipo || 'email';
-  const v = customVal.value.trim();
-  if (!v) return;
-  const final = `${tipo}:${v}`;
-  if (!_destinosAtivos.includes(final)) {
-    _destinosAtivos.push(final);
-    _atualizarUI();
-  }
-}
-
-function _removerDestino(idx) {
-  _destinosAtivos.splice(idx, 1);
-  _atualizarUI();
-}
-
-function getDestinosAtivos() {
-  return [..._destinosAtivos];
-}
-
-// ══ MODAL NOVA AUTOMAÇÃO ═════════════════════════════════════════
-function abrirModalNovaAutomacao() {
-  const modal = document.createElement('div');
-  modal.id = 'modal-nova-auto';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  modal.innerHTML = `
-    <div style="background:var(--bg1);border:1px solid var(--teal3);border-radius:12px;max-width:660px;width:100%;max-height:92vh;overflow-y:auto;padding:24px;position:relative">
-      <button onclick="document.getElementById('modal-nova-auto').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
-      <div style="font-size:16px;font-weight:700;color:var(--teal4);margin-bottom:16px">✨ Nova Automação</div>
-
-      <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Ícone</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${['📊','🔔','🤖','📅','💬','🔄','🧠','⚡','🎯','💳'].map(e =>
-            `<span onclick="_selecionarIcone('${e}',this)" style="font-size:24px;cursor:pointer;padding:4px 6px;border-radius:6px;border:2px solid transparent" data-emoji="${e}">${e}</span>`
-          ).join('')}
-        </div>
-        <input id="nova-auto-icone" type="hidden" value="📊">
-      </div>
-
-      <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Nome da Automação *</label>
-        <input id="nova-auto-nome" type="text" placeholder="Ex: Relatório Semanal" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px">
-      </div>
-
-      <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Descrição</label>
-        <input id="nova-auto-desc" type="text" placeholder="O que essa automação faz?" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px">
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        <div>
-          <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Frequência</label>
-          <select id="nova-auto-freq" style="width:100%;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px">
-            <option>Diário</option><option>Periódico</option><option>Semanal</option><option>Mensal</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Tipo de Trigger</label>
-          <select id="nova-auto-trigger" style="width:100%;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px" onchange="_toggleTrigger(this.value)">
-            <option value="agendado">⏰ Agendado (cron)</option>
-            <option value="evento">⚡ Por ação (evento)</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="nova-auto-horario-div" style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Horário (BRT)</label>
-        <input id="nova-auto-horario" type="text" placeholder="19:00" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px">
-      </div>
-
-      <div id="nova-auto-evento-div" style="margin-bottom:14px;display:none">
-        <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Gatilho</label>
-        <select id="nova-auto-evento" style="width:100%;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px">
-          <option value="novo_agendamento">Novo agendamento confirmado</option>
-          <option value="lead_abandonou">Lead abandonou a conversa</option>
-          <option value="novo_lead">Novo lead recebido (Web ou Telegram)</option>
-          <option value="pix_recebido">PIX recebido e validado</option>
-          <option value="formulario_preenchido">Novo cliente (formulário preenchido)</option>
-          <option value="webhook_custom">Evento personalizado (webhook)</option>
-        </select>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Destinos</label>
-        <div id="nova-auto-destinos-container" style="background:var(--bg2);border:1px solid var(--teal3);border-radius:8px;padding:10px"></div>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Links úteis</label>
-        <input id="nova-auto-links" type="text" placeholder="https://... (separe múltiplos com vírgula)" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px">
-      </div>
-
-      <div style="margin-bottom:16px">
-        <label style="font-size:12px;font-weight:700;color:var(--teal4);display:block;margin-bottom:4px">Prompt / Lógica</label>
-        <textarea id="nova-auto-prompt" rows="4" placeholder="Descreva o que a automação deve fazer..." style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--teal3);border-radius:6px;padding:8px;color:var(--fg);font-size:13px;resize:vertical;font-family:inherit"></textarea>
-      </div>
-
-      <div style="display:flex;gap:10px;margin-top:4px">
-        <button onclick="salvarNovaAutomacao()" class="btn btn-teal" style="flex:1">✨ Criar Automação</button>
-        <button onclick="document.getElementById('modal-nova-auto').remove()" class="btn btn-ghost">Cancelar</button>
-      </div>
-      <div id="nova-auto-status" style="margin-top:10px;font-size:12px;text-align:center;min-height:18px"></div>
-    </div>`;
-  document.body.appendChild(modal);
-  // Inicializar componente de destinos
-  renderComponenteDestinos('nova-auto-destinos-container', []);
-}
-
-function _selecionarIcone(emoji, el) {
-  document.querySelectorAll('[data-emoji]').forEach(e => e.style.borderColor = 'transparent');
-  el.style.borderColor = 'var(--teal4)';
-  document.getElementById('nova-auto-icone').value = emoji;
-}
-
-function _toggleTrigger(val) {
-  const hDiv = document.getElementById('nova-auto-horario-div');
-  const eDiv = document.getElementById('nova-auto-evento-div');
-  if (val === 'evento') { hDiv.style.display='none'; eDiv.style.display='block'; }
-  else { hDiv.style.display='block'; eDiv.style.display='none'; }
-}
-
-async function salvarNovaAutomacao() {
-  const nome  = (document.getElementById('nova-auto-nome')?.value||'').trim();
-  const icon  = document.getElementById('nova-auto-icone')?.value || '📊';
-  const desc  = (document.getElementById('nova-auto-desc')?.value||'').trim();
-  const freq  = document.getElementById('nova-auto-freq')?.value || 'Diário';
-  const trigger = document.getElementById('nova-auto-trigger')?.value || 'agendado';
-  const horario = (document.getElementById('nova-auto-horario')?.value||'').trim();
-  const evento  = document.getElementById('nova-auto-evento')?.value || '';
-  const links   = (document.getElementById('nova-auto-links')?.value||'').trim();
-  const prompt  = (document.getElementById('nova-auto-prompt')?.value||'').trim();
-  const destinos = getDestinosAtivos();
-  const status = document.getElementById('nova-auto-status');
-
-  if (!nome) { toast('Informe o nome da automação', 'err'); return; }
-  status.textContent = '⏳ Salvando...'; status.style.color='var(--teal4)';
-
-  const chave = 'automacao_custom_' + Date.now();
-  const campos = [
-    { sub_categoria:'nome',         valor: nome },
-    { sub_categoria:'icone',        valor: icon },
-    { sub_categoria:'descricao',    valor: desc },
-    { sub_categoria:'frequencia',   valor: freq },
-    { sub_categoria:'trigger_tipo', valor: trigger },
-    { sub_categoria:'horario',      valor: horario },
-    { sub_categoria:'evento_gatilho', valor: evento },
-    { sub_categoria:'links',        valor: links },
-    { sub_categoria:'prompt',       valor: prompt },
-    { sub_categoria:'destinos_extra', valor: JSON.stringify(destinos) },
-    { sub_categoria:'status',       valor: 'ativo' },
+function loadAutomacoes() {
+  const autos = [
+    { icon:'📊', name:'Relatório de Expediente', link:'https://cron-job.org', editFn:'cronRelatorioExpediente', desc:'Relatório diário às 19h — divergências Calendar vs Planilha', status:'ativo', proxima:'Hoje 19:00', canal:'Grupo JG', freq:'Diário' },
+    { icon:'🔍', name:'Vistoria de Agenda', link:'https://cron-job.org', editFn:'cronVistoriaAgenda', desc:'Verifica agendamentos pendentes e alerta', status:'ativo', proxima:'Periódico', canal:'Grupo JG', freq:'Periódico' },
+    { icon:'🔄', name:'Reengajamento', link:'https://cron-job.org', editFn:'cronReengajamento', desc:'Contata leads inativos após período definido', status:'ativo', proxima:'Periódico', canal:'WhatsApp', freq:'Periódico' },
+    { icon:'👋', link:'https://cron-job.org', editFn:'cronAbandonados', name:'Abandonados', desc:'Follow-up para conversas sem resposta', status:'ativo', proxima:'Periódico', canal:'Telegram Bot', freq:'Periódico' },
+    { icon:'🧠', name:'Aprendizagem Diária', desc:'Analisa logs e sugere novas regras de comportamento', status:'ativo', proxima:'19:00', canal:'Grupo JG', freq:'Diário' },
+    { icon:'💳', name:'Monitor de Créditos', desc:'Snapshot periódico do uso de créditos Base44', status:'ativo', proxima:'Periódico', canal:'–', freq:'Periódico' },
   ];
 
-  let ok = 0, err = 0;
-  for (const c of campos) {
-    try {
-      await createEntity('ConfiguracaoAgente', {
-        chave_fluxo: chave, sub_categoria: c.sub_categoria, valor: c.valor,
-        tipo_campo: 'text', descricao: c.sub_categoria, ativo: true
-      });
-      ok++;
-    } catch(e) { console.error(e); err++; }
-  }
-
-  if (err === 0) {
-    status.innerHTML = '<span style="color:#4ade80">✅ Automação criada!</span>';
-    setTimeout(() => {
-      document.getElementById('modal-nova-auto')?.remove();
-      loadAutomacoes(); // recarregar lista
-    }, 1200);
-  } else {
-    status.textContent = `⚠️ ${ok} salvas, ${err} com erro.`;
-    status.style.color = '#f97316';
-  }
-}
-
-// ══ FIM COMPONENTE DESTINOS ══════════════════════════════════════
-
-const AUTOS_CONFIG = [
-  {
-    icon:'📊', name:'Relatório de Expediente', editFn:'cronRelatorioExpediente',
-    desc:'Relatório diário às 19h — divergências Calendar vs Planilha',
-    status:'ativo', proxima:'Hoje 19:00', canal:'Grupo JG', freq:'Diário',
-    campos:[
-      { key:'horario_envio', label:'Horário de Envio', tipo:'text', placeholder:'19:00', hint:'Horário BRT (ex: 19:00). Ajuste também no cron-job.org.' },
-      { key:'grupo_telegram', label:'ID do Grupo Telegram', tipo:'text', placeholder:'-1003866193031', hint:'ID do grupo que recebe o relatório.' },
-      { key:'email_destino', label:'E-mail destino (principal)', tipo:'text', placeholder:'dionisio872@gmail.com', hint:'E-mail principal. Use o seletor de destinos abaixo para adicionar mais.' },
-      { key:'destinos_extra', label:'Destinos adicionais', tipo:'destinos', placeholder:'', hint:'Adicione múltiplos destinos: Telegram, e-mail, WhatsApp.' },
-      { key:'prompt_relatorio', label:'Prompt / Lógica do Relatório', tipo:'textarea', placeholder:'Descreva o que o relatório deve analisar e reportar...', hint:'Texto livre — define o que a automação verifica e reporta.' },
-    ]
-  },
-  {
-    icon:'🔍', name:'Vistoria de Agenda', editFn:'cronVistoriaAgenda',
-    desc:'Verifica agendamentos pendentes e alerta',
-    status:'ativo', proxima:'Periódico', canal:'Grupo JG', freq:'Periódico',
-    campos:[
-      { key:'intervalo_horas', label:'Intervalo (horas)', tipo:'text', placeholder:'4', hint:'De quantas em quantas horas a vistoria roda. Ajuste no cron-job.org também.' },
-      { key:'email_destino', label:'E-mail destino (principal)', tipo:'text', placeholder:'dionisio872@gmail.com', hint:'E-mail principal.' },
-      { key:'destinos_extra', label:'Destinos adicionais', tipo:'destinos', placeholder:'', hint:'Adicione múltiplos destinos.' },
-      { key:'antecedencia_alerta_min', label:'Antecedência mínima para alertar (min)', tipo:'text', placeholder:'60', hint:'Alerta se agendamento estiver a menos de X minutos sem confirmação.' },
-      { key:'prompt_vistoria', label:'Prompt / Lógica da Vistoria', tipo:'textarea', placeholder:'Descreva o que a vistoria deve verificar...', hint:'Define quais casos geram alerta.' },
-    ]
-  },
-  {
-    icon:'🔄', name:'Reengajamento', editFn:'cronReengajamento',
-    desc:'Contata leads inativos após período definido',
-    status:'ativo', proxima:'Periódico', canal:'WhatsApp', freq:'Periódico',
-    campos:[
-      { key:'dias_inatividade', label:'Dias de inatividade para reengajar', tipo:'text', placeholder:'3', hint:'Leads sem resposta há X dias entram no fluxo de reengajamento.' },
-      { key:'msg_relaxante', label:'Mensagem — Relaxante Sensual', tipo:'textarea', placeholder:'Olá! Queria saber se você ainda tem interesse...', hint:'Mensagem enviada para leads interessados nessa massagem.' },
-      { key:'msg_tantrica', label:'Mensagem — Tântrica Experience', tipo:'textarea', placeholder:'Olá! Você chegou a ver os detalhes...', hint:'Mensagem para leads interessados em Tântrica.' },
-      { key:'msg_nuru', label:'Mensagem — Nuru Summa', tipo:'textarea', placeholder:'Olá! Vi que você perguntou sobre a Nuru...', hint:'Mensagem para leads interessados em Nuru.' },
-      { key:'msg_default', label:'Mensagem padrão (outros)', tipo:'textarea', placeholder:'Olá! Vi que você entrou em contato...', hint:'Usada quando a massagem de interesse não é identificada.' },
-    ]
-  },
-  {
-    icon:'👋', name:'Abandonados', editFn:'cronAbandonados',
-    desc:'Follow-up para conversas sem resposta',
-    status:'ativo', proxima:'Periódico', canal:'Telegram Bot', freq:'Periódico',
-    campos:[
-      { key:'horas_abandono', label:'Horas sem resposta para marcar como abandonado', tipo:'text', placeholder:'2', hint:'Após X horas sem interação, o lead é marcado como abandonado.' },
-      { key:'prompt_abandono', label:'Prompt / Lógica do Follow-up', tipo:'textarea', placeholder:'Descreva o comportamento do follow-up...', hint:'Define o que acontece com leads marcados como abandonados.' },
-    ]
-  },
-  {
-    icon:'🧠', name:'Aprendizagem Diária', editFn:'cronAprendizagem',
-    desc:'Analisa logs e sugere novas regras de comportamento',
-    status:'ativo', proxima:'19:00', canal:'Grupo JG', freq:'Diário',
-    campos:[
-      { key:'horario_analise', label:'Horário de Análise', tipo:'text', placeholder:'19:00', hint:'Horário BRT em que a IA analisa os logs do dia.' },
-      { key:'prompt_analise', label:'Prompt de Análise (instrução para a IA)', tipo:'textarea', placeholder:'Analise as conversas de hoje e sugira melhorias...', hint:'Instrução enviada para o GPT-4o para gerar sugestões de aprendizado.' },
-      { key:'grupo_telegram', label:'ID do Grupo Telegram (principal)', tipo:'text', placeholder:'-1003866193031', hint:'Grupo principal.' },
-      { key:'destinos_extra', label:'Destinos adicionais', tipo:'destinos', placeholder:'', hint:'Adicione múltiplos destinos.' },
-    ]
-  },
-  {
-    icon:'💳', name:'Monitor de Créditos', editFn:'monitorCreditos',
-    desc:'Snapshot periódico do uso de créditos Base44',
-    status:'ativo', proxima:'Periódico', canal:'–', freq:'Periódico',
-    campos:[
-      { key:'alerta_msg_pct', label:'Alertar créditos mensagem acima de (%)', tipo:'text', placeholder:'80', hint:'Envia alerta quando uso de créditos de mensagem passar desse %.' },
-      { key:'alerta_intg_pct', label:'Alertar créditos integração acima de (%)', tipo:'text', placeholder:'80', hint:'Envia alerta quando uso de créditos de integração passar desse %.' },
-    ]
-  },
-];
-
-// URLs de disparo de cada automação
-const AUTO_URLS = {
-  cronRelatorioExpediente: 'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronRelatorioExpediente?secret=loshombres2026',
-  cronVistoriaAgenda:      'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronVistoriaAgenda?secret=loshombres2026',
-  cronReengajamento:       'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronReengajamento?secret=loshombres2026',
-  cronAbandonados:         'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronAbandonados?secret=loshombres2026',
-  cronAprendizagem:        'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/cronAprendizagem?secret=loshombres2026',
-  monitorCreditos:         'https://base44.app/api/apps/6a04cc22bf7a0dcea87e3c43/functions/monitorCreditos?secret=loshombres2026',
-};
-
-async function dispararAutomacao(editFn, btnEl) {
-  const url = AUTO_URLS[editFn];
-  if (!url) { alert('URL de disparo não configurada para: ' + editFn); return; }
-  const status = document.getElementById('auto-save-status');
-  btnEl.disabled = true;
-  btnEl.textContent = '⏳ Disparando...';
-  if (status) { status.textContent = '⏳ Executando automação...'; status.style.color = 'var(--teal4)'; }
-  try {
-    const r = await fetch(url);
-    const txt = await r.text();
-    let res;
-    try { res = JSON.parse(txt); } catch(_) { res = { raw: txt }; }
-    const resumo = res.ok ? '✅ Executado com sucesso!' : (res.erro || res.error || res.raw || 'Sem resposta JSON');
-    if (status) { status.innerHTML = `<b style="color:#4ade80">▶ Resultado:</b> <span style="color:var(--fg)">${escHtml(String(resumo).slice(0,300))}</span>`; }
-    btnEl.textContent = '✅ Disparado';
-    setTimeout(() => { btnEl.disabled = false; btnEl.textContent = '▶ Disparar Agora'; }, 3000);
-  } catch(e) {
-    if (status) { status.textContent = '❌ Erro: ' + e.message; status.style.color = '#f97316'; }
-    btnEl.disabled = false; btnEl.textContent = '▶ Disparar Agora';
-  }
-}
-
-async function abrirEditorAutomacao(idx) {
-  const a = AUTOS_CONFIG[idx];
-  if (!a) return;
-
-  // Mostrar modal com loading imediato para boa UX
-  const modal = document.createElement('div');
-  modal.id = 'modal-auto';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  modal.innerHTML = `
-    <div style="background:var(--bg1);border:1px solid var(--teal3);border-radius:12px;max-width:660px;width:100%;max-height:92vh;overflow-y:auto;padding:24px;position:relative">
-      <button onclick="document.getElementById('modal-auto').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:28px">${a.icon}</span>
-          <div>
-            <div style="font-size:16px;font-weight:700;color:var(--teal4)">${escHtml(a.name)}</div>
-            <div style="font-size:12px;color:var(--muted)">${escHtml(a.desc)}</div>
-          </div>
-        </div>
-        <button id="btn-disparar" onclick="dispararAutomacao('${a.editFn||''}', this)"
-          style="background:var(--bg2);border:1px solid var(--teal3);color:var(--teal4);border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap"
-          ${!AUTO_URLS[a.editFn] ? 'disabled title="Sem URL configurada"' : ''}>
-          ▶ Disparar Agora
-        </button>
-      </div>
-      <div style="margin:12px 0;padding:10px;background:var(--bg2);border-radius:6px;font-size:12px;color:var(--muted)">
-        ⚠️ Edite os campos abaixo e salve — os valores são gravados no banco e lidos na próxima execução <b>sem redeploy</b>. O botão <b>▶ Disparar</b> executa a automação agora para testar.
-      </div>
-      <div id="auto-campos" style="min-height:80px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">⏳ Carregando configurações salvas...</div>
-      <div style="display:flex;gap:10px;margin-top:8px">
-        <button onclick="salvarAutomacao()" class="btn btn-teal" style="flex:1">💾 Salvar Configurações</button>
-        <button onclick="document.getElementById('modal-auto').remove()" class="btn btn-ghost">Cancelar</button>
-      </div>
-      <div id="auto-save-status" style="margin-top:10px;font-size:12px;text-align:center;min-height:18px"></div>
-    </div>`;
-  document.body.appendChild(modal);
-
-  // Carregar valores salvos no banco em paralelo (chave_fluxo = editFn)
-  let valoresSalvos = {};
-  try {
-    const r = await listEntity('ConfiguracaoAgente');
-    const items = r.items || [];
-    // Filtrar pelo editFn da automação atual
-    items.filter(i => i.chave_fluxo === a.editFn).forEach(i => {
-      valoresSalvos[i.sub_categoria] = { id: i.id, valor: i.valor };
-    });
-  } catch(e) { console.warn('Erro carregar config do banco:', e); }
-
-  // Renderizar campos com valores herdados do banco
-  const camposHtml = a.campos.filter(c => c.tipo !== 'destinos').map(c => {
-    const salvo = valoresSalvos[c.key];
-    const val = escHtml(salvo ? (salvo.valor || '') : '');
-    const temValor = salvo && salvo.valor && salvo.valor.trim().length > 0;
-    const inputId = `auto-field-${c.key}`;
-    const badge = temValor
-      ? `<span style="font-size:10px;background:#14532d;color:#4ade80;padding:2px 6px;border-radius:4px;margin-left:6px">✓ salvo</span>`
-      : `<span style="font-size:10px;background:var(--bg2);color:var(--muted);padding:2px 6px;border-radius:4px;margin-left:6px">padrão</span>`;
-    const input = c.tipo === 'textarea'
-      ? `<textarea id="${inputId}" rows="5" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid ${temValor?'var(--teal4)':'var(--teal3)'};border-radius:6px;padding:8px;color:var(--fg);font-size:13px;resize:vertical;font-family:inherit">${val}</textarea>`
-      : `<input id="${inputId}" type="text" value="${val}" placeholder="${escHtml(c.placeholder||'')}" style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid ${temValor?'var(--teal4)':'var(--teal3)'};border-radius:6px;padding:8px;color:var(--fg);font-size:13px">`;
-    return `
-      <div style="margin-bottom:16px">
-        <div style="display:flex;align-items:center;margin-bottom:4px">
-          <label style="font-size:12px;font-weight:700;color:var(--teal4)">${escHtml(c.label)}</label>
-          ${badge}
-        </div>
-        ${input}
-        ${c.hint ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">💡 ${escHtml(c.hint)}</div>` : ''}
-      </div>`;
-  }).join('');
-
-  // Injetar campos comuns no modal
-  document.getElementById('auto-campos').innerHTML = camposHtml || '<div style="color:var(--muted);font-size:13px">Nenhum campo configurável para esta automação.</div>';
-
-  // Guardar estado para salvarAutomacao
-  window._autoValoresSalvos = valoresSalvos;
-  window._autoCfg = a;
-
-  // Renderizar componente de destinos múltiplos (se a automação tem campo tipo 'destinos')
-  const campoDestinos = a.campos.find(c => c.tipo === 'destinos');
-  if (campoDestinos) {
-    // Injetar container de destinos no auto-campos
-    const autoContainer = document.getElementById('auto-campos');
-    if (autoContainer) {
-      const destDiv = document.createElement('div');
-      destDiv.style.marginBottom = '16px';
-      const salvoDestinos = valoresSalvos['destinos_extra'];
-      let destinosIniciais = [];
-      if (salvoDestinos?.valor) {
-        try { destinosIniciais = JSON.parse(salvoDestinos.valor); }
-        catch(_) { if (salvoDestinos.valor.includes(':')) destinosIniciais = salvoDestinos.valor.split(',').map(s=>s.trim()).filter(Boolean); }
-      }
-      const badge = destinosIniciais.length > 0
-        ? `<span style="font-size:10px;background:#14532d;color:#4ade80;padding:2px 6px;border-radius:4px;margin-left:6px">✓ ${destinosIniciais.length} destino(s)</span>`
-        : `<span style="font-size:10px;background:var(--bg2);color:var(--muted);padding:2px 6px;border-radius:4px;margin-left:6px">nenhum</span>`;
-      destDiv.innerHTML = `
-        <div style="display:flex;align-items:center;margin-bottom:6px">
-          <label style="font-size:12px;font-weight:700;color:var(--teal4)">${escHtml(campoDestinos.label)}</label>
-          ${badge}
-        </div>
-        <div id="auto-destinos-container" style="background:var(--bg2);border:1px solid var(--teal3);border-radius:8px;padding:10px"></div>
-        ${campoDestinos.hint ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">💡 ${escHtml(campoDestinos.hint)}</div>` : ''}`;
-      autoContainer.appendChild(destDiv);
-      // Inicializar componente após DOM estar pronto
-      setTimeout(() => renderComponenteDestinos('auto-destinos-container', destinosIniciais), 50);
-    }
-  }
-}
-
-async function salvarAutomacao() {
-  const a = window._autoCfg;
-  const salvo = window._autoValoresSalvos || {};
-  const status = document.getElementById('auto-save-status');
-  status.textContent = '⏳ Salvando...';
-  status.style.color = 'var(--teal4)';
-  let ok = 0, err = 0;
-  // Incluir destinos_extra do componente se existir
-  const temDestinosComp = a.campos.some(c => c.tipo === 'destinos');
-  const camposEfetivos = [...a.campos];
-  if (temDestinosComp && document.getElementById('auto-destinos-container')) {
-    const destinosVal = JSON.stringify(getDestinosAtivos());
-    // Garantir que destinos_extra aparece nos campos efetivos com o valor do componente
-    const idxD = camposEfetivos.findIndex(c => c.key === 'destinos_extra');
-    if (idxD >= 0) camposEfetivos[idxD] = { ...camposEfetivos[idxD], _valorOverride: destinosVal };
-    else camposEfetivos.push({ key: 'destinos_extra', tipo: 'hidden', _valorOverride: destinosVal });
-  }
-  for (const c of camposEfetivos) {
-    // Se campo tem override (destinos do componente visual), usar diretamente
-    if (c._valorOverride !== undefined) {
-      try {
-        if (salvo[c.key]?.id) {
-          await updateEntity('ConfiguracaoAgente', salvo[c.key].id, { valor: c._valorOverride });
-        } else {
-          await createEntity('ConfiguracaoAgente', {
-            chave_fluxo: a.editFn, sub_categoria: c.key, valor: c._valorOverride,
-            tipo_campo: 'json', descricao: c.label || c.key, ativo: true
-          });
-        }
-        ok++; continue;
-      } catch(e2) { console.error('Erro destinos_extra:', e2); err++; continue; }
-    }
-    if (c.tipo === 'destinos') continue; // campo visual, sem input DOM
-    const el = document.getElementById(`auto-field-${c.key}`);
-    if (!el) continue;
-    const valor = el.value !== undefined ? el.value : (el.textContent || '');
-    try {
-      if (salvo[c.key] && salvo[c.key].id) {
-        await updateEntity('ConfiguracaoAgente', salvo[c.key].id, { valor });
-      } else {
-        await createEntity('ConfiguracaoAgente', {
-          chave_fluxo: a.editFn, sub_categoria: c.key, valor,
-          tipo_campo: c.tipo, descricao: c.label, ativo: true
-        });
-      }
-      ok++;
-      // Atualizar badge visual do campo para "salvo"
-      const lbl = el.closest('div[style*="margin-bottom:16px"]');
-      if (lbl) {
-        const badge = lbl.querySelector('span[style*="background"]');
-        if (badge) { badge.textContent = '✓ salvo'; badge.style.background = '#14532d'; badge.style.color = '#4ade80'; }
-        el.style.borderColor = 'var(--teal4)';
-      }
-    } catch(e) { console.error('Erro ao salvar campo', c.key, e); err++; }
-  }
-  if (err === 0) {
-    status.innerHTML = `<span style="color:#4ade80">✅ ${ok} configurações salvas!</span> <span style="color:var(--muted)">Ativas na próxima execução.</span>`;
-    // Atualizar cache interno para que o disparo use os novos valores
-    const r2 = await listEntity('ConfiguracaoAgente').catch(() => ({ items: [] }));
-    const items2 = (r2.items || []).filter(i => i.chave_fluxo === a.editFn);
-    window._autoValoresSalvos = {};
-    items2.forEach(i => { window._autoValoresSalvos[i.sub_categoria] = { id: i.id, valor: i.valor }; });
-  } else {
-    status.textContent = `⚠️ ${ok} salvas, ${err} com erro. Verifique o console.`;
-    status.style.color = '#f97316';
-  }
-}
-
-function loadAutomacoes() {
   setContent(`
     <div class="sec-hdr">
       <h2>Automações Ativas</h2>
-      <div style="display:flex;gap:8px">
-        <button onclick="abrirModalNovaAutomacao()" class="btn btn-teal btn-sm">✨ Nova</button>
-        <a href="https://app.cron-job.org" target="_blank" class="btn btn-ghost btn-sm">⚙️ cron-job.org</a>
-      </div>
+      <a href="https://app.cron-job.org" target="_blank" class="btn btn-ghost btn-sm">⚙️ cron-job.org</a>
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:16px">
-      💡 As automações são disparadas via <b>cron-job.org</b> (conta: loshombresestudiospa1@gmail.com). <b>Clique em cada card para editar a lógica e configurações</b> — salvo direto no banco, sem redeploy.
+      💡 As automações são disparadas via <b>cron-job.org</b> (conta: loshombresestudiospa1@gmail.com). Clique em cada uma para ver detalhes ou pausar.
     </div>
-    ${AUTOS_CONFIG.map((a, idx) => `
-      <div class="auto-item" onclick="abrirEditorAutomacao(${idx})" style="cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--teal4)'" onmouseout="this.style.borderColor=''">
+    ${autos.map(a => `
+      <div class="auto-item">
         <div class="auto-icon">${a.icon}</div>
         <div class="auto-info">
           <div class="auto-name">${a.name}</div>
@@ -2439,12 +2086,9 @@ function loadAutomacoes() {
         <div class="auto-meta">
           <div class="auto-next">⏰ ${a.proxima}</div>
           <div style="margin-top:6px"><span class="badge badge-green" style="font-size:10px">● ${a.status}</span></div>
-          <div style="margin-top:6px;font-size:10px;color:var(--teal4)">✏️ Editar</div>
         </div>
       </div>
     `).join('')}
-
-    <div id="auto-custom-container" style="margin-top:0"><!-- custom automacoes carregadas aqui --></div>
 
     <div class="card" style="margin-top:16px;border-color:var(--teal3)">
       <div class="card-title">🔗 Links rápidos</div>
@@ -2456,46 +2100,6 @@ function loadAutomacoes() {
       </div>
     </div>
   `);
-  // Carregar automações custom do banco (criadas pelo usuário)
-  _carregarAutomacoesCustom();
-}
-
-async function _carregarAutomacoesCustom() {
-  try {
-    const r = await listEntity('ConfiguracaoAgente');
-    const items = r.items || [];
-    // Agrupar por chave_fluxo que começa com 'automacao_custom_'
-    const custom = {};
-    items.filter(i => (i.chave_fluxo||'').startsWith('automacao_custom_')).forEach(i => {
-      if (!custom[i.chave_fluxo]) custom[i.chave_fluxo] = {};
-      custom[i.chave_fluxo][i.sub_categoria] = i.valor;
-    });
-    const container = document.getElementById('auto-custom-container');
-    if (!container) return;
-    const chaves = Object.keys(custom);
-    if (chaves.length === 0) { container.innerHTML = ''; return; }
-    container.innerHTML = chaves.map(chave => {
-      const c = custom[chave];
-      if (!c.nome) return '';
-      const destinos = c.destinos_extra ? JSON.parse(c.destinos_extra||'[]').length : 0;
-      return `<div class="auto-item" style="cursor:default;border-color:var(--teal3)">
-        <div class="auto-icon">${escHtml(c.icone||'📊')}</div>
-        <div class="auto-info">
-          <div class="auto-name">${escHtml(c.nome)}</div>
-          <div class="auto-desc">${escHtml(c.descricao||'–')}</div>
-          <div style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">
-            <span class="badge badge-teal" style="font-size:10px">${escHtml(c.frequencia||'–')}</span>
-            <span class="badge badge-gray" style="font-size:10px">${c.trigger_tipo==='evento'?'⚡ '+escHtml(c.evento_gatilho||'–'):'⏰ '+escHtml(c.horario||'–')}</span>
-            ${destinos>0?`<span class="badge" style="font-size:10px;background:var(--bg2);color:var(--teal4)">📍 ${destinos} destino(s)</span>`:''}
-          </div>
-        </div>
-        <div class="auto-meta">
-          <div style="margin-top:6px"><span class="badge badge-green" style="font-size:10px">● ${escHtml(c.status||'ativo')}</span></div>
-          <div style="margin-top:6px;font-size:10px">✨ custom</div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e) { console.warn('[auto-custom]', e); }
 }
 
 // ══ IDENTIDADE ═══════════════════════════════════════════════
