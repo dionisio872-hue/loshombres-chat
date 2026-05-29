@@ -1473,20 +1473,38 @@ function openNovoAjusteModal() {
         ${fluxos.map(f => `<option value="${f}">${f}</option>`).join('')}
       </select>
     </div>
-    <div style="margin-bottom:4px">
+    <div style="margin-bottom:14px">
       <label class="field-label">Observações adicionais <span style="color:var(--muted)">(opcional)</span></label>
       <input id="aj-obs" class="field-input" value="Patch cirúrgico obrigatório. Sem regressões. Sem quebrar layout. Sem efeito cascata. Sem chamadas LLM diretas em automações." />
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+      <div>
+        <label class="field-label">Estimativa de créditos <span style="color:var(--muted)">(sua previsão)</span></label>
+        <select id="aj-estimativa" class="field-input">
+          <option value="2-4">🟢 2-4 — Muito simples (1 linha)</option>
+          <option value="5-8" selected>🟡 5-8 — Simples (bloco pequeno)</option>
+          <option value="9-10">🟠 9-10 — Médio (múltiplos blocos)</option>
+          <option value="10+">🔴 10+ — Complexo (requer revisão)</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Limite máximo</label>
+        <input id="aj-limite" class="field-input" type="number" value="10" min="1" max="50" />
+      </div>
+    </div>
     <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.5">
-      ℹ️ Após salvar, o ajuste fica com status <b>Pendente</b>. Eu serei notificado e vou analisar, gerar o código e aplicar após sua aprovação.
+      ⚡ O comando será compactado automaticamente em <b>1 única mensagem</b> — economia máxima de créditos.<br>
+      🛡 Se ultrapassar o limite, a execução é <b>abortada</b> automaticamente.
     </div>
   `, async () => {
     const desc  = document.getElementById('aj-desc').value.trim();
     const fluxo = document.getElementById('aj-fluxo').value;
     const obs   = document.getElementById('aj-obs').value.trim();
+    const estimativa = document.getElementById('aj-estimativa') ? document.getElementById('aj-estimativa').value : '5-8';
+    const limite = document.getElementById('aj-limite') ? parseInt(document.getElementById('aj-limite').value)||10 : 10;
     if (!desc) { toast('Descreva o ajuste antes de salvar', 'err'); return; }
     try {
-      await createEntity('AjusteFluxo', { descricao: desc, fluxo_afetado: fluxo, status: 'pendente', observacoes: obs });
+      await createEntity('AjusteFluxo', { descricao: desc, fluxo_afetado: fluxo, status: 'pendente', observacoes: obs + ' | ESTIMATIVA:' + estimativa + ' LIMITE:' + limite });
       toast('✅ Ajuste enviado! Vou analisar em breve.');
       closeModal();
       loadAjustes();
@@ -1570,35 +1588,98 @@ function verDetalheAjuste(id) {
 }
 
 
-// ── executarAjuste: notifica o agente via Telegram + muda status ─
+// ── executarAjuste: popup estimativa + payload compactado + anti-repeat ─
+const _ajEmExecucao = new Set(); // proteção anti-repeat por ID
+
 async function executarAjuste(id) {
   const a = allAjustes.find(x => x.id === id);
   if (!a) return;
-  if (!confirm('Enviar este ajuste para execução?\n\n"' + (a.descricao||'').slice(0,80) + '..."')) return;
-  try {
-    // 1. Atualizar status para em_analise
-    await updateEntity('AjusteFluxo', id, { status: 'em_analise' });
-    toast('⏳ Ajuste enviado para análise — aguarde notificação no Telegram');
-    // 2. Notificar via Telegram (dispara backend)
-    const msg = encodeURIComponent(
-      '🔧 *NOVO AJUSTE PARA EXECUTAR*\n\n' +
-      '*Função:* ' + (a.fluxo_afetado||'–') + '\n' +
-      '*Descrição:* ' + (a.descricao||'').slice(0,300) + '\n\n' +
-      '*Obs:* ' + (a.observacoes||'–') + '\n\n' +
-      '_ID: ' + id + '_'
-    );
-    await fetch(`https://base44.app/api/apps/${APP_ID}/functions/adminProxy`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        secret: ADMIN_KEY,
-        action: 'telegram_alert',
-        chat_id: '-1003866193031',
-        text: decodeURIComponent(msg)
-      })
-    }).catch(() => {});
-    loadAjustes();
-  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+
+  // Proteção anti-repeat: bloqueia se já está em execução
+  if (_ajEmExecucao.has(id)) { toast('⚠️ Este ajuste já está sendo processado', 'err'); return; }
+  if (a.status === 'em_analise') { toast('⚠️ Já está em análise — aguarde o retorno', 'err'); return; }
+
+  // Extrair estimativa e limite das observações
+  const obsStr = a.observacoes || '';
+  const estMatch = obsStr.match(/ESTIMATIVA:([\d\+\-]+)/);
+  const limMatch  = obsStr.match(/LIMITE:(\d+)/);
+  const estimativa = estMatch ? estMatch[1] : '5-8';
+  const limite     = limMatch  ? parseInt(limMatch[1]) : 10;
+  const estNum     = estimativa === '10+' ? 12 : parseInt(estimativa.split('-')[1] || estimativa) || 8;
+  const corEst     = estNum <= 4 ? '#4ade80' : estNum <= 8 ? '#f59e0b' : '#f87171';
+
+  // Montar preview do payload compactado
+  const payload = [
+    '🔧 AJUSTE — EXECUTAR AGORA (1 COMANDO)',
+    '',
+    'FUNÇÃO: ' + (a.fluxo_afetado || '–'),
+    'DESCRIÇÃO: ' + (a.descricao || ''),
+    'REGRAS: 1-read_file ANTES de qualquer coisa | 2-patch Python no sandbox | 3-write_file | 4-deploy do arquivo salvo',
+    'PROIBIDO: reescrever arquivo inteiro | inventar código | mudar layout | efeito cascata | LLM em automações',
+    'PROTEÇÕES: sem regressões | patch cirúrgico | deploy pontual | testar após aplicar',
+    'OBS: ' + obsStr.replace(/\s*\|?\s*ESTIMATIVA:[^\|]+/g,'').replace(/\s*\|?\s*LIMITE:\d+/g,'').trim(),
+    'ESTIMATIVA: ~' + estimativa + ' créditos | LIMITE MÁXIMO: ' + limite + ' créditos — ABORTAR se ultrapassar',
+    'ID_BANCO: ' + id + ' — atualizar status para "ativo" e preencher impacto + patch_gerado ao concluir',
+    'RELATÓRIO FINAL: enviar para Telegram grupo -1003866193031 com: o que foi feito | créditos gastos | teste aprovado (s/n)',
+  ].join('\n');
+
+  // Popup de confirmação com estimativa visual
+  const confirmHtml = document.createElement('div');
+  confirmHtml.innerHTML = `
+    <div style="font-size:13px;color:var(--text);margin-bottom:12px;line-height:1.6">
+      Você está prestes a executar este ajuste. O agente receberá <b>1 único comando compactado</b> com todas as instruções.
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted)">
+      <b style="color:var(--text)">📋 Função:</b> ${a.fluxo_afetado || '–'}<br>
+      <b style="color:var(--text)">📝 Ajuste:</b> ${(a.descricao||'').slice(0,120)}${(a.descricao||'').length>120?'…':''}<br>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">ESTIMATIVA</div>
+        <div style="font-size:20px;font-weight:700;color:${corEst}">~${estimativa}</div>
+        <div style="font-size:10px;color:var(--muted)">créditos</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">LIMITE MÁXIMO</div>
+        <div style="font-size:20px;font-weight:700;color:#f87171">${limite}</div>
+        <div style="font-size:10px;color:var(--muted)">créditos — aborta se passar</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);padding:8px;background:#1a1a1a;border-radius:6px;font-family:monospace;line-height:1.5;max-height:80px;overflow:hidden">
+      ${payload.slice(0,300).replace(/\n/g,'<br>')}…
+    </div>
+  `;
+
+  openModal('⚡ Confirmar Execução', confirmHtml.innerHTML, async () => {
+    if (_ajEmExecucao.has(id)) return;
+    _ajEmExecucao.add(id);
+    try {
+      // 1. Bloquear status imediatamente (anti-repeat no banco)
+      await updateEntity('AjusteFluxo', id, { status: 'em_analise' });
+      toast('⏳ Executando — aguarde relatório no Telegram (~2-5min)');
+      closeModal();
+
+      // 2. Disparar payload compactado via adminProxy → Telegram do agente
+      await fetch(`https://base44.app/api/apps/${APP_ID}/functions/adminProxy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: ADMIN_KEY,
+          action: 'telegram_alert',
+          chat_id: '-1003866193031',
+          text: payload
+        })
+      }).catch(() => {});
+
+      loadAjustes();
+    } catch(e) {
+      _ajEmExecucao.delete(id);
+      toast('Erro ao executar: ' + e.message, 'err');
+    } finally {
+      // Liberar trava local após 30s (segurança)
+      setTimeout(() => _ajEmExecucao.delete(id), 30000);
+    }
+  });
 }
 
 // ── reverterAjuste: volta status para pendente e registra reversão ─
